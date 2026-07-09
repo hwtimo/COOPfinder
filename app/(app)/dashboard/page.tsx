@@ -6,6 +6,7 @@ import { MetricCard } from "@/components/app/metric-card";
 import { CardSection } from "@/components/app/card-section";
 import { StatusBadge, DeadlineBadge } from "@/components/app/status-badge";
 import { EmptyState } from "@/components/app/empty-state";
+import { DashboardRecentJobRow } from "@/components/app/dashboard-recent-job-row";
 import {
   mockJobs,
   mockMetrics,
@@ -50,7 +51,7 @@ export default function DashboardPage() {
       />
 
       {/* Metric row — DESIGN.md §9.1 */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
         {mockMetrics.map((m) => (
           <MetricCard
             key={m.label}
@@ -161,50 +162,7 @@ export default function DashboardPage() {
                   </thead>
                   <tbody className="divide-y">
                     {recent.map((job) => (
-                      <tr
-                        key={job.id}
-                        className="transition-colors hover:bg-muted/50"
-                      >
-                        <td className="px-5 py-3">
-                          <Link
-                            href="/jobs"
-                            className="rounded-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            {job.role}
-                          </Link>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {job.term}
-                          </p>
-                        </td>
-                        <td className="px-5 py-3 text-text-secondary">
-                          {job.company}
-                        </td>
-                        <td className="px-5 py-3 text-text-secondary">
-                          {job.location}
-                        </td>
-                        <td className="px-5 py-3">
-                          <StatusBadge status={job.status} />
-                        </td>
-                        <td className="px-5 py-3 text-text-secondary">
-                          {job.resumeVersion ?? "Not tailored"}
-                        </td>
-                        <td className="px-5 py-3 text-right text-text-secondary tabular-nums">
-                          {job.match === null ? "Not analyzed" : `${job.match}%`}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <Link
-                            href={
-                              job.nextAction.includes("Tailor")
-                                ? "/resumes"
-                                : "/applications"
-                            }
-                            className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-brand hover:text-brand/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            {job.nextAction}
-                            <ArrowRight className="size-3" aria-hidden />
-                          </Link>
-                        </td>
-                      </tr>
+                      <DashboardRecentJobRow key={job.id} job={job} />
                     ))}
                   </tbody>
                 </table>
@@ -216,6 +174,7 @@ export default function DashboardPage() {
                   title="No recent jobs yet"
                   description="Save a Canadian co-op posting to analyze the role, tailor a resume, and track the next step."
                   actionLabel="Add first job"
+                  onActionHref="/jobs"
                 />
               </div>
             )}
@@ -241,7 +200,7 @@ export default function DashboardPage() {
                 {upcoming.map((job) => (
                   <li key={job.id}>
                     <Link
-                      href="/jobs"
+                      href={`/jobs/${job.id}`}
                       className="block px-5 py-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <div className="flex items-start justify-between gap-3">

@@ -346,6 +346,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                   type="button"
                   variant="outline"
                   className="h-9 justify-start rounded-md"
+                  disabled
+                  title="Status updates are not available in this mock build"
                 >
                   <CheckCircle2 className="size-4" aria-hidden />
                   Mark as ready
@@ -354,6 +356,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                   type="button"
                   variant="outline"
                   className="h-9 justify-start rounded-md"
+                  disabled
+                  title="Deadline editing is not available in this mock build"
                 >
                   <CalendarPlus className="size-4" aria-hidden />
                   Add deadline
@@ -362,6 +366,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                   type="button"
                   variant="outline"
                   className="h-9 justify-start rounded-md"
+                  disabled
+                  title="Notes editing is not available in this mock build"
                 >
                   <PencilLine className="size-4" aria-hidden />
                   Save notes

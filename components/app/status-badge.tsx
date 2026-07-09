@@ -58,7 +58,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap",
         config.className,
         className,
       )}
@@ -67,7 +67,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
         className={cn("size-1.5 shrink-0 rounded-full", config.dotClassName)}
         aria-hidden
       />
-      {config.label}
+      <span className="min-w-0 truncate">{config.label}</span>
     </span>
   );
 }
@@ -94,7 +94,7 @@ export function DeadlineBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums",
+        "inline-flex max-w-full items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums",
         tone,
         className,
       )}

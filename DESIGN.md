@@ -1045,3 +1045,119 @@ Before shipping a screen, check:
 - Are errors recoverable?
 - Does it work with keyboard?
 - Would a student use this weekly during co-op search?
+
+---
+
+## 22. Pre-Login Onboarding & Guest Mode
+
+Added 2026-07-09 with the product-led onboarding strategy
+(see PRODUCT_STRATEGY.md). These rules govern everything a signed-out
+visitor sees.
+
+### 22.1 Principles
+
+- **Value before identity.** A guest must reach a useful, personalized moment
+  (match feedback from their draft profile) before any signup prompt.
+- **Login is "save your progress", never a wall.** Gate prompts always name
+  the concrete thing the account preserves or unlocks.
+- **Guest mode is honest.** The UI states plainly what is on-device only,
+  what an account saves, and what the starter catalog is (a small curated
+  sample, not a job search engine).
+- **No AI for guests.** Guest match feedback is deterministic (skill overlap,
+  term fit, work authorization) and labeled as such.
+- Same design system as the app: dark sidebar shell may be simplified for
+  guests, but colors, cards, spacing, and typography are unchanged. No
+  marketing gradients on `/start`.
+
+### 22.2 The `/start` guided onboarding
+
+Layout: single centered column (960px max, like form pages), stepped but
+skippable. Steps: school/program/term → work authorization → target roles →
+skills → experiences/projects (repeatable lightweight entries).
+
+- A persistent **match feedback panel** (sticky right rail on desktop, inline
+  card on mobile) updates as the guest types:
+  - "6 roles in the starter catalog match your profile"
+  - "Add skills to improve matching" / "Add one more project to strengthen
+    matches"
+  - Each matched role links to its guest job detail.
+- Every input step is optional; "Skip" is visible. The panel degrades
+  gracefully ("Add skills to see matches").
+- Draft persistence chip near the title: **"Saved on this device only"** with
+  a short tooltip: "Your draft lives in this browser. Create a free account
+  to keep it."
+- The signup prompt card appears **after** the first non-zero match count,
+  pinned below the feedback panel:
+  - Title: "Your profile matches 6 roles"
+  - Body: "Create a free account to save your profile, save jobs, track
+    applications, and tailor your resume. 2 free tailoring credits included."
+  - Primary: "Create free account" · Secondary: "Keep exploring"
+
+### 22.3 Login gate UX (public pages)
+
+- Gates are **inline cards or popovers at the action**, not redirects. The
+  blocked action stays visible (disabled button + gate card beside/below it).
+- Gate copy pattern: *what you tried* + *what the account does*:
+  - Save job → "Save this job to your list — free account, takes a minute."
+  - Full analysis → "Log in to run the full AI analysis of this posting."
+  - Tailor → "Tailoring uses AI credits. New accounts include 2 free credits."
+- Gate buttons deep-link to `/login?next=<current>&reason=<action>` so the
+  login page subtitle can echo the reason ("Log in to save this job").
+- Never stack more than one gate prompt per viewport. If multiple actions are
+  gated, gate on interaction, not on page load.
+- Guest topbar: replace avatar/notifications with "Log in" (ghost) and
+  "Get started" (primary). Guest sidebar: Jobs + "Start your profile" active;
+  private items visible but with a small lock icon and gate-on-click —
+  locked items are a teaser, not dead ends.
+
+### 22.4 Eligibility & matching language
+
+Use exactly this vocabulary. Matching is computed; eligibility is the user's
+own legal/program situation — do not conflate them.
+
+| Say | Never say |
+|---|---|
+| "N roles match your profile" | "You are eligible for N jobs" |
+| "Appears eligible based on what you entered" (work-auth/term filters only) | "You qualify" / "You are eligible" |
+| "Estimated match — directional only" | "Perfect match" / match as a promise |
+| "Based on skill overlap with your draft profile" | anything implying AI judged the guest |
+| "Improve matching by adding …" | "Guaranteed interviews/results" |
+
+Counts must always be scoped: "…in the starter catalog", never implying the
+count covers the whole market.
+
+### 22.5 Free credit messaging
+
+- Signup value line: "2 free tailoring credits included — no card required."
+- In the tailoring workspace Actions card: a quiet counter,
+  "Credits: 2 · tailoring uses 1" (tabular numerals, muted text — not a
+  banner, not a badge storm).
+- At 0 credits: generation button disabled with inline text "You've used your
+  free credits. Upgrade for unlimited tailoring." plus a single secondary
+  upgrade link. No modal ambush, no countdown timers.
+- Application tracking is described as **free** wherever plans are mentioned:
+  "Tracking is free."
+
+### 22.6 Guest empty states
+
+Follow §10 patterns, with guest-specific copy:
+
+- `/jobs` guest header note: "Starter catalog — a small set of Canadian co-op
+  postings we maintain by hand. Add your own postings with a free account."
+- Guest job detail, gated analysis panel: dashed card — "Full AI analysis is
+  available with a free account. It breaks down requirements, keywords, and
+  what's missing from your resume." Action: "Create free account".
+- `/start` with empty catalog matches: "No matches yet — add skills or widen
+  target roles. Matching uses skill overlap, not AI."
+- Post-signup import prompt (existing account + device draft): "Import the
+  draft profile from this device? N entries." Actions: "Import" /
+  "Discard draft".
+
+### 22.7 Guest quality checklist (additions to §21)
+
+- Can a guest reach personalized value with zero AI calls and zero network
+  writes?
+- Does every gate name its concrete benefit?
+- Is "on this device only" visible wherever draft data is edited?
+- Is the starter catalog labeled as curated and small?
+- Does eligibility/matching copy pass §22.4?

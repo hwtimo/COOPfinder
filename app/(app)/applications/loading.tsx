@@ -47,16 +47,15 @@ export default function ApplicationsLoading() {
                         </div>
                         <Skeleton className="h-5 w-20 rounded-full" />
                       </div>
-                      <Skeleton className="mt-4 h-3 w-28" />
+                      <div className="mt-3">
+                        <Skeleton className="h-5 w-20 rounded-full" />
+                      </div>
+                      <Skeleton className="mt-3 h-3 w-28" />
                       <div className="mt-3 flex gap-2">
                         <Skeleton className="h-5 w-20 rounded-full" />
-                        <Skeleton className="h-5 w-28 rounded-full" />
+                        <Skeleton className="h-5 w-24 rounded-full" />
                       </div>
-                      <div className="mt-4 space-y-2 border-t pt-3">
-                        <Skeleton className="h-3 w-20" />
-                        <Skeleton className="h-3 w-full" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
+                      <Skeleton className="mt-3 h-8 w-full rounded-md" />
                     </div>
                   ),
                 )}

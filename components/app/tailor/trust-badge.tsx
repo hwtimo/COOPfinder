@@ -35,13 +35,13 @@ export function TrustBadge({ label, className }: TrustBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+        "inline-flex max-w-full items-center gap-1 overflow-hidden rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap",
         tone,
         className,
       )}
     >
       <Icon className="size-3 shrink-0" aria-hidden />
-      {label}
+      <span className="min-w-0 truncate">{label}</span>
     </span>
   );
 }

@@ -413,3 +413,201 @@ coopfinder/
 6. **주 6:** 폴리싱, SFU CSSS 등 클럽 대상 베타
 
 **V1에서 의도적으로 뺀 것** (계획서의 "하지 말 것" + 추가): URL scraping, cover letter(스키마만 자리 잡아둠 — `resume_versions`와 동일 패턴으로 V1.5에 추가 용이), DOCX export, OCR, 이메일 알림/deadline reminder, 결제(베타 기간엔 수동 제한만).
+
+---
+
+# Auth & Guest Model v2 (2026-07-09) — supersedes blanket-auth assumptions above
+
+> Adopted with the product-led onboarding strategy in
+> [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md). Where earlier sections of this
+> document assume "all app routes behind login", **this section wins.**
+> Written in English for coding agents. The existing initial migration
+> (`supabase/migrations/202607090001_initial_mvp_schema.sql`) stays as-is;
+> everything below is a **delta migration**.
+
+## A. Route & auth model (hybrid)
+
+| Route | Access | Notes |
+|---|---|---|
+| `/` | public | authed → redirect `/dashboard`; guest → redirect `/start` (until a landing page exists) |
+| `/start` | public | guest onboarding; harmless for authed users (offer link to `/resumes/master`) |
+| `/jobs`, `/jobs/[id]` | public | render guest variant (starter catalog) vs authed variant (user's saved jobs) from session |
+| `/login` | public | accepts `?next=` and `?reason=` |
+| `/dashboard`, `/applications(/**)`, `/resumes(/**)`, `/calendar`, `/insights`, `/documents`, `/settings` | auth required | enforced in `middleware.ts` |
+
+Implementation rules:
+
+- `middleware.ts` matcher covers **only the private prefixes**. Do not wrap
+  the whole `(app)` group. Public pages read the session (if any) via the
+  server Supabase client and branch guest/authed in the page component.
+- Gated actions on public pages (save / full analysis / tailor) are **UI
+  gates**, not route guards: the API/server-action behind them still requires
+  a session and returns 401 for guests. Never rely on the UI gate alone.
+- `/login?next=` must be validated as a same-origin relative path before
+  redirecting after auth.
+
+## B. Guest draft model (device-only)
+
+- Storage: `localStorage["coopfinder.guest_draft.v1"]`. No server writes in
+  guest mode. No name/email/files in the draft.
+
+```ts
+interface GuestDraftV1 {
+  version: 1;
+  updatedAt: string;              // ISO
+  profile: {
+    school?: "SFU" | "UBC" | "Waterloo" | "Other";
+    program?: string;
+    coopTerm?: string;            // e.g. "Fall 2026 (4mo)"
+    workAuthorization?: string;   // same enum as profiles.work_authorization
+    targetRoles?: string[];
+    preferredLocations?: string[];
+  };
+  skills: string[];
+  entries: Array<{
+    id: string;                   // client uuid
+    section: "experience" | "project" | "education" | "skills";
+    title: string;
+    text: string;
+    skills: string[];
+  }>;
+}
+```
+
+- Guest matching is **client-side and deterministic** against `catalog_jobs`:
+  score = weighted skill overlap (required 2x, nice-to-have 1x) + term
+  compatibility + work-auth filter. No AI call paths are reachable while
+  signed out. Copy rules: DESIGN.md §22.4.
+
+## C. Guest → user migration
+
+Server action `migrateGuestDraft(draft: GuestDraftV1)` invoked once after
+first sign-in when a local draft exists:
+
+1. Validate the draft against a zod schema (shared with the client).
+2. If the user's `master_profile_entries` count is 0 and `profiles` row is
+   empty/new → migrate automatically: upsert `profiles` fields, create
+   `master_profiles` + `master_profile_entries`. Entries insert with
+   `confirmed = true` (human-typed; `confirmed = false` is reserved for
+   machine-extracted entries from future resume parsing).
+3. If the account already has entries → do nothing server-side; the client
+   shows the import prompt (DESIGN.md §22.6) and calls the action with an
+   explicit `mode: "import"` on confirm.
+4. Idempotency: the action stores `md5(draft json)` in
+   `master_profiles.data->>'imported_draft_hash'`; a repeat call with the
+   same hash is a no-op. Client clears localStorage only after a 2xx.
+
+## D. Schema delta (new migration file)
+
+```sql
+-- 1) Curated starter catalog (public read, service-role write)
+create table public.catalog_jobs (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  company_name text not null,
+  location text,
+  work_mode text check (work_mode in ('Remote','Hybrid','On-site')),
+  term text,
+  deadline date,
+  work_authorization text,
+  summary text not null,            -- written in-house, never scraped text
+  required_skills text[] not null default '{}',
+  nice_to_have_skills text[] not null default '{}',
+  keywords text[] not null default '{}',
+  source_url text not null,         -- always link out to the original posting
+  is_active boolean not null default true,
+  last_checked_at date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.catalog_jobs enable row level security;
+
+-- Guests AND users may read active entries; nobody but service role writes.
+create policy "catalog_jobs select active"
+on public.catalog_jobs for select
+to anon, authenticated
+using (is_active = true);
+
+-- 2) Tailoring credit ledger (append-only, server-written)
+create table public.tailoring_credit_ledger (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  delta integer not null check (delta <> 0),
+  reason text not null check (
+    reason in ('signup_grant','tailor_use','purchase','admin_adjust')
+  ),
+  ref text,                         -- e.g. resume_version id for tailor_use
+  created_at timestamptz not null default now()
+);
+
+create index tailoring_credit_ledger_user_idx
+  on public.tailoring_credit_ledger(user_id);
+
+alter table public.tailoring_credit_ledger enable row level security;
+
+create policy "credit ledger select own"
+on public.tailoring_credit_ledger for select
+to authenticated
+using (user_id = auth.uid());
+-- No insert/update/delete policies: writes go through service role only.
+
+-- 3) Signup grant: +2 credits when a profile row is first created
+create or replace function public.grant_signup_credits()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.tailoring_credit_ledger (user_id, delta, reason)
+  values (new.user_id, 2, 'signup_grant');
+  return new;
+end;
+$$;
+
+create trigger profiles_grant_signup_credits
+after insert on public.profiles
+for each row execute function public.grant_signup_credits();
+
+-- 4) Balance helper (server-side reads; also safe for client display)
+create or replace function public.tailoring_credit_balance(uid uuid)
+returns integer
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(sum(delta), 0)::integer
+  from public.tailoring_credit_ledger
+  where user_id = uid;
+$$;
+```
+
+Consumption rule (Phase 7): the tailoring server route checks
+`tailoring_credit_balance(auth.uid()) >= 1` **before** calling the AI, and
+inserts the `-1 tailor_use` row **after** a successful generation, in the
+same transaction as persisting the tailoring result. Failed generations must
+not burn credits. Balance can never go negative because the check + insert
+happen server-side with the service client.
+
+## E. usage_counters vs credits
+
+- `usage_counters` = **abuse guardrails** (e.g. `job_save_count` soft cap
+  ~100/term, not advertised). Not an entitlement system.
+- `tailoring_credit_ledger` = **entitlements** (what the user may consume).
+- Do not add credit logic to `usage_counters`; do not rate-limit via the
+  ledger.
+
+## F. RLS considerations (delta)
+
+- `catalog_jobs` is the only table readable by `anon`. Everything else keeps
+  `to authenticated` + `auth.uid()` ownership from the initial migration.
+- The credit ledger is readable by owners, writable by no client role —
+  grants and consumption go through `security definer` functions or the
+  service-role client inside server routes.
+- The signup-grant trigger is `security definer` because the inserting user
+  has no insert policy on the ledger (by design).
+- Companies policy note (unchanged): `created_by = auth.uid()` for writes;
+  catalog jobs deliberately use a denormalized `company_name` instead of the
+  `companies` table so the public surface joins nothing user-owned.

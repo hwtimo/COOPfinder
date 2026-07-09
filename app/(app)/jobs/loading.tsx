@@ -26,22 +26,24 @@ export default function JobsLoading() {
             ))}
           </div>
         </div>
-        <div className="p-5">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-10 items-center gap-4 border-b py-3 last:border-0"
-            >
-              <Skeleton className="col-span-2 h-4 w-full" />
-              <Skeleton className="col-span-2 h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-5 w-20 rounded-full" />
-              <Skeleton className="h-5 w-24 rounded-full" />
-              <Skeleton className="h-5 w-24 rounded-full" />
-              <Skeleton className="h-7 w-24 rounded-md" />
-            </div>
-          ))}
+        <div className="overflow-x-auto p-4 sm:p-5">
+          <div className="min-w-[980px]">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-10 items-center gap-4 border-b py-3 last:border-0"
+              >
+                <Skeleton className="col-span-2 h-4 w-full" />
+                <Skeleton className="col-span-2 h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-7 w-24 rounded-md" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

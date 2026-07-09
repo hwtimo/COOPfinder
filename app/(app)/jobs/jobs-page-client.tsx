@@ -715,7 +715,7 @@ export function JobsPageClient() {
         </div>
 
         {jobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+          <div className="flex flex-col items-center justify-center px-4 py-12 text-center sm:px-6 sm:py-16">
             <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
               <Briefcase className="size-5 text-muted-foreground" aria-hidden />
             </div>
@@ -736,7 +736,7 @@ export function JobsPageClient() {
             </Button>
           </div>
         ) : filteredJobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+          <div className="flex flex-col items-center justify-center px-4 py-12 text-center sm:px-6 sm:py-16">
             <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
               <Search className="size-5 text-muted-foreground" aria-hidden />
             </div>

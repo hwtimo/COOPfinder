@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowDown,
   ArrowLeft,
+  ArrowRight,
   BadgeCheck,
   BookUser,
   CheckCircle2,
@@ -18,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/app/page-header";
 import { CardSection } from "@/components/app/card-section";
-import { DeadlineBadge } from "@/components/app/status-badge";
+import { DeadlineBadge, StatusBadge } from "@/components/app/status-badge";
 import { DiffText } from "@/components/app/tailor/diff-text";
 import { SuggestionCard } from "@/components/app/tailor/suggestion-card";
 import {
@@ -479,6 +480,15 @@ export function TailoringWorkspace({
               </p>
             </div>
             <div className="space-y-2">
+              <SectionLabel>Application status</SectionLabel>
+              <StatusBadge status={markedReady ? "ready" : job.status} />
+              {markedReady ? (
+                <p className="text-xs text-muted-foreground">
+                  Local mock status updated. Open the tracker to continue.
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
               <SectionLabel>Required skills</SectionLabel>
               <SkillPills items={analysis.requiredSkills} />
             </div>
@@ -548,20 +558,33 @@ export function TailoringWorkspace({
               <Save className="size-4" aria-hidden />
               {versionSaved ? "Version saved" : "Save version"}
             </Button>
-            <Button
-              variant="outline"
-              className="h-9 w-full"
-              disabled={!canMarkReady || markedReady}
-              onClick={() => setMarkedReady(true)}
-              title={
-                canMarkReady
-                  ? undefined
-                  : "Review all suggestions first — unsupported claims must be resolved"
-              }
-            >
-              <BadgeCheck className="size-4" aria-hidden />
-              {markedReady ? "Marked ready to apply" : "Mark as ready to apply"}
-            </Button>
+            {markedReady ? (
+              <Button
+                asChild
+                variant="outline"
+                className="h-9 w-full"
+              >
+                <Link href="/applications">
+                  <ArrowRight className="size-4" aria-hidden />
+                  Open application tracker
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="h-9 w-full"
+                disabled={!canMarkReady}
+                onClick={() => setMarkedReady(true)}
+                title={
+                  canMarkReady
+                    ? undefined
+                    : "Review all suggestions first — unsupported claims must be resolved"
+                }
+              >
+                <BadgeCheck className="size-4" aria-hidden />
+                Mark as ready to apply
+              </Button>
+            )}
             {!canMarkReady ? (
               <p className="text-xs text-muted-foreground">
                 Review every suggestion (and resolve unsupported claims) to

@@ -13,6 +13,8 @@ export default function DocumentsPage() {
         icon={Folder}
         title="No documents yet"
         description="Exported resumes and cover letters will be stored here for quick reuse."
+        actionLabel="View resumes"
+        onActionHref="/resumes"
       />
     </div>
   );

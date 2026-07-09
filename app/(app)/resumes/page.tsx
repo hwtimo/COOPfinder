@@ -18,7 +18,13 @@ export default function ResumesPage() {
                 Master profile
               </Link>
             </Button>
-            <Button size="sm" variant="outline" className="gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              disabled
+              title="File upload is not available in this mock build"
+            >
               <Upload className="size-3.5" aria-hidden />
               Upload resume
             </Button>
@@ -27,9 +33,10 @@ export default function ResumesPage() {
       />
       <EmptyState
         icon={FileText}
-        title="No resume uploaded"
-        description="Upload your master resume so AI can suggest role-specific edits based only on your real experience."
-        actionLabel="Upload resume"
+        title="Resume workspace ready"
+        description="Review your master profile and saved resume versions before tailoring role-specific drafts."
+        actionLabel="Open master profile"
+        onActionHref="/resumes/master"
       />
     </div>
   );

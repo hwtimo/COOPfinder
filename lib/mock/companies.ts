@@ -71,4 +71,12 @@ export const mockCompanies: MockCompany[] = [
     industry: "Telecom infrastructure",
     hiringNotes: "Network software roles value systems, testing, and C/C++ depth.",
   },
+  {
+    id: "c11",
+    name: "Northstar Robotics",
+    location: "Vancouver, BC",
+    industry: "Robotics",
+    hiringNotes:
+      "Software co-op roles value React, API integration, and careful debugging.",
+  },
 ];

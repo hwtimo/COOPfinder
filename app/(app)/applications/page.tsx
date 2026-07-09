@@ -94,8 +94,8 @@ function ApplicationCard({ application, job }: ApplicationCardData) {
 
   return (
     <Link
-      href={`/jobs/${job.id}`}
-      aria-label={`Open details for ${job.company} ${job.role}. Last action: ${application.lastAction}. Next action: ${application.nextAction}.`}
+      href={`/applications/${application.id}`}
+      aria-label={`Open application detail for ${job.company} ${job.role}. Last action: ${application.lastAction}. Next action: ${application.nextAction}.`}
       title={`${application.lastAction} · ${application.nextAction}`}
       className="group block rounded-md border bg-background p-3 transition-colors hover:border-border-strong hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
@@ -185,6 +185,7 @@ export default function ApplicationsPage() {
                 size="sm"
                 className="h-7 rounded-md px-2.5 text-muted-foreground"
                 aria-disabled="true"
+                disabled
                 title="Table view placeholder"
               >
                 <Table2 className="size-3.5" aria-hidden />
@@ -196,6 +197,7 @@ export default function ApplicationsPage() {
                 size="sm"
                 className="h-7 rounded-md px-2.5 text-muted-foreground"
                 aria-disabled="true"
+                disabled
                 title="Calendar view placeholder"
               >
                 <CalendarRange className="size-3.5" aria-hidden />
@@ -207,6 +209,7 @@ export default function ApplicationsPage() {
               size="sm"
               className="h-9 rounded-md"
               aria-disabled="true"
+              disabled
               title="Add application placeholder"
             >
               <Plus className="size-3.5" aria-hidden />
