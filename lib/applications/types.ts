@@ -45,3 +45,34 @@ export type ApplicationTrackerData = {
 export type ApplicationTrackerQueryResult =
   | { status: "ready"; data: ApplicationTrackerData }
   | { status: "error"; data: ApplicationTrackerData };
+
+export type ApplicationDetailJob = ApplicationJobSummary & {
+  term: string | null;
+  sourceUrl: string | null;
+};
+
+export type ApplicationTimelineEvent = {
+  id: string;
+  eventType: string;
+  eventAt: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type ApplicationDetail = {
+  id: string;
+  jobPostingId: string;
+  status: ApplicationTrackerStatus;
+  notes: string | null;
+  deadline: string | null;
+  followUpDue: string | null;
+  appliedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  job: ApplicationDetailJob;
+  timeline: ApplicationTimelineEvent[];
+};
+
+export type ApplicationDetailQueryResult =
+  | { status: "ready"; data: ApplicationDetail | null }
+  | { status: "error"; data: null };

@@ -15,10 +15,7 @@ export default function ApplicationDetailLoading() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <div className="rounded-lg border bg-card p-5">
-            <div className="flex gap-2">
-              <Skeleton className="h-5 w-28 rounded-full" />
-              <Skeleton className="h-5 w-36 rounded-full" />
-            </div>
+            <Skeleton className="h-5 w-28 rounded-full" />
             <Skeleton className="mt-5 h-5 w-56" />
             <Skeleton className="mt-3 h-4 w-full max-w-2xl" />
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -49,7 +46,7 @@ export default function ApplicationDetailLoading() {
         </div>
 
         <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, cardIndex) => (
+          {Array.from({ length: 2 }).map((_, cardIndex) => (
             <div key={cardIndex} className="rounded-lg border bg-card">
               <div className="border-b px-5 py-4">
                 <Skeleton className="h-4 w-28" />

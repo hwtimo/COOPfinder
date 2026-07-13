@@ -912,6 +912,74 @@ only when necessary to explain configuration; never record their values.
   mutations share a persisted client refresh strategy.
 - **Next action:** Persist `/applications/[id]` in a separately scoped task.
 
+### Persisted Application Detail and timeline
+
+- **Date and time:** 2026-07-13 14:40 PDT
+- **Development phase:** Applications CRUD read-only detail integration
+- **Session purpose:** Replace the mock `/applications/[id]` route with one
+  authenticated, RLS-protected application, its linked private-job display
+  fields, and its persisted timeline.
+- **Task or prompt summary:** Add a narrow detail read model, private not-found
+  state, honest missing-value and connection states, deterministic timeline
+  rendering, real private-job navigation, and clearly disabled future mutation
+  controls without implementing any write behavior.
+- **Important constraints given to Codex:** No migration, RPC, RLS, status,
+  notes, date, timeline, resume, AI, notification, calendar, shell, or design
+  changes; no commit.
+- **Files changed:** `app/(app)/applications/[id]/page.tsx`,
+  `app/(app)/applications/[id]/loading.tsx`,
+  `app/(app)/applications/[id]/not-found.tsx`,
+  `lib/applications/queries.ts`, `lib/applications/types.ts`, and
+  `CODEX_SESSION_LOG.md`.
+- **Systems affected:** Authenticated read-only Application Detail route and
+  existing Supabase `applications`, `job_postings`, `companies`, and
+  `application_timeline_events` reads. Disposable test users and rows were
+  removed after verification.
+- **Architectural decisions:** The page remains a dynamic server component.
+  Invalid UUIDs short-circuit to private not-found. The detail helper first
+  resolves the caller-owned application, then loads the caller-owned linked job
+  and timeline with ascending `event_at`, `created_at`, and `id` ordering. Only
+  a whitelist of safe event metadata values can influence rendered copy.
+- **Security or privacy considerations:** The query does not select
+  `job_postings.raw_text`, match, resume, AI, recruiter, or analysis fields.
+  Foreign and nonexistent IDs render the same copy. Raw markers placed in both
+  private job text and ignored metadata were absent from rendered content and
+  inspected browser state. No session material was printed or retained.
+- **Rejected alternatives:** No service-role application read, mock fallback,
+  synthetic timeline, fake resume mapping, direct browser query, all-client
+  route, mutation control, or cross-user existence disclosure was added.
+- **Tests run:** `npm run lint`; `npm run typecheck`; `npm run build`;
+  `git diff --check`; production-browser owner, second-user, foreign,
+  nonexistent, invalid-ID, guest, fallback, link, disabled-control, timeline,
+  and no-configuration checks; before/after database fingerprints; marker-row
+  cleanup.
+- **Lint result:** Passed.
+- **Typecheck result:** Passed after tightening the safe status-label map key
+  type.
+- **Build result:** Passed with Next.js 16.2.10 and webpack. A separate
+  no-Supabase production build also passed for the isolated route-level
+  disabled-state check.
+- **Manual verification performed:** User A saw only persisted company, role,
+  interview status, notes, deadline, follow-up, applied date, source link, and
+  three events in persisted order. The private-job link used the actual linked
+  job UUID. User B saw only its own application and honest missing location,
+  deadline, follow-up, applied-time, and notes fallbacks. Symmetric foreign,
+  nonexistent, and invalid IDs rendered the same private not-found state.
+  Guest access redirected to the exact encoded detail path. Disabled status
+  and notes controls were non-interactive. Application and timeline counts and
+  fingerprints were identical before and after page viewing.
+- **Related commit hash or range:** None; no commit was created.
+- **Real `/feedback` Session ID:** Not available; no ID was produced or
+  recorded.
+- **Known limitations:** Application mutations remain intentionally absent.
+  The generic load-error state was compiled and statically verified but a live
+  transient Supabase failure was not injected.
+- **Remaining risks:** Safe timeline copy intentionally ignores unrecognized
+  metadata; future event-specific UI should extend the whitelist rather than
+  render arbitrary JSON.
+- **Next action:** Implement Application Detail mutations in a separately
+  scoped Applications CRUD task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
