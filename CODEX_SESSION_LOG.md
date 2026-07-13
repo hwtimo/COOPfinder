@@ -683,6 +683,162 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Continue with the next separately scoped verification or
   product phase; do not alter production schema solely to create this test.
 
+### Applications CRUD database foundation and live verification
+
+- **Date and time:** 2026-07-13 13:25 PDT
+- **Development phase:** Applications CRUD database foundation
+- **Session purpose:** Extend the existing application and timeline tables for
+  minimal persisted MVP tracking, apply the forward-only migration, and verify
+  ownership, RLS, uniqueness, timeline, deletion, and cleanup behavior live.
+- **Task or prompt summary:** Preserve existing application objects; enforce
+  one application per user-owned private job; persist canonical status, notes,
+  deadline, follow-up, and applied timestamps; add a structured append-only
+  timeline; apply only migration 007; then test through two normal
+  authenticated sessions and an anonymous client.
+- **Important constraints given to Codex:** Database foundation only; no
+  frontend, routes, server actions, mock replacement, resume-version foreign
+  key, AI, credits, calendar, notifications, or export changes; no edits to
+  applied migrations; no commit; administrative access limited to catalog
+  inspection, temporary fixtures, cleanup, and Auth-user deletion.
+- **Files changed:**
+  `supabase/migrations/202607130007_applications_crud_foundation.sql` and
+  `CODEX_SESSION_LOG.md`. Two ignored helpers under `supabase/.temp/` were
+  created for catalog/behavioral verification and deleted afterward.
+- **Systems affected:** Linked Supabase development database migration history,
+  `job_postings`, `applications`, `application_timeline_events`, temporary
+  Auth users, profiles, and signup-credit rows during isolated verification.
+- **Architectural decisions:** Existing `applications` and
+  `application_timeline_events` were altered in place. Canonical application
+  statuses exclude `oa`; `applied_at` and `follow_up_due` are `timestamptz`;
+  composite owner foreign keys enforce same-user job/application parents;
+  linked private-job deletion is `RESTRICT` to preserve application history;
+  application deletion cascades timeline rows. Timeline events retain legacy
+  label/detail/date fields and add constrained `event_type`, `event_at`, and
+  object `metadata`; normal clients have select/insert policies only.
+- **Security or privacy considerations:** Ownership comes from normal-session
+  `auth.uid()` checks plus composite foreign keys. There are no anon grants or
+  policies. Timeline data contained no raw-JD marker. No credential, password,
+  token, cookie, full user ID, or private fixture text was logged.
+- **Rejected alternatives:** No parallel application tables, CRUD RPC,
+  security-definer function, resume-version relationship, automatic timeline
+  trigger, silent `oa` conversion, board-job relationship, or job-delete
+  cascade was added. The existing Jobs action already protects linked history,
+  so the database foreign key was changed from cascade to restrict.
+- **Tests run:** Live pre-migration catalog inspection; `git diff --check`;
+  applied-migration diff check; forbidden SQL-special qualification search;
+  `npx --yes supabase migration list --linked`; `npx --yes supabase db push
+  --linked --dry-run`; `npx --yes supabase db push --linked --yes`; post-apply
+  catalog/grant/policy inspection; two-user authenticated CRUD/RLS matrix;
+  anonymous isolation; marker-count cleanup.
+- **Lint result:** Not run; no application code changed.
+- **Typecheck result:** Not run; no application code changed.
+- **Build result:** Not run; no application code changed.
+- **Manual verification performed:** Live history records `202607130007`.
+  User A and B each created one own application. User A persisted all seven
+  canonical statuses plus notes, deadline, follow-up/applied timestamps,
+  last/next actions, sort order, and created/updated timestamps; `oa` failed
+  with `23514`. Six structured event types inserted and read in event-time
+  order. A duplicate application failed with `23505` and one row remained.
+  Cross-user job reference, owner spoof, and timeline-parent spoof each failed
+  with `42501`. Symmetric collection and exact-ID reads exposed only own rows;
+  cross-user updates/deletes affected zero rows and administrative inspection
+  proved both targets unchanged. Direct timeline update/delete was blocked.
+  Linked-job deletion failed with `23503`; deleting the application removed
+  all six timeline rows, after which the job could be deleted. Anonymous
+  collection/exact reads exposed no application or timeline rows. Both sessions
+  remained valid. Cleanup returned application, timeline, job, profile, and
+  credit counts to zero and deleted both Auth users.
+- **Related commit hash or range:** None; no commit was created.
+- **Real `/feedback` Session ID:** Not available; no ID was produced or
+  recorded.
+- **Known limitations:** Frontend Applications pages still use mock data. This
+  task did not wire UI CRUD, create automatic timeline events, test concurrent
+  application creation, or generalize RLS results beyond applications and
+  their timeline.
+- **Remaining risks:** Timeline event creation is intentionally explicit; the
+  future frontend phase must write an event in the same user action whenever a
+  tracked field changes. Migration 007 remains uncommitted until a separately
+  requested focused Git task preserves it.
+- **Next action:** Implement Applications CRUD frontend wiring in a separate
+  phase using direct Supabase CRUD under the verified RLS contract.
+
+### Atomic application creation and live verification
+
+- **Date and time:** 2026-07-13 13:38 PDT
+- **Development phase:** Applications CRUD atomic creation operation
+- **Session purpose:** Add and live-verify one authenticated operation that
+  creates an application from a caller-owned private job and appends its initial
+  persisted timeline event in the same database transaction.
+- **Task or prompt summary:** Add migration `202607130008`, a narrow
+  `create_application_from_job(uuid)` RPC, and an Applications server action;
+  verify exact grants, idempotency, two-user ownership, anonymous rejection,
+  timeline privacy, cleanup, and application compilation without wiring UI.
+- **Important constraints given to Codex:** No tracker or detail wiring, mock
+  replacement, modal, AI, credits, resume, calendar, notification, public-board,
+  or unrelated product changes; no edits to applied migrations; no commit.
+- **Files changed:**
+  `supabase/migrations/202607130008_atomic_application_creation.sql`,
+  `lib/applications/create-from-job.ts`,
+  `app/(app)/applications/actions.ts`, and `CODEX_SESSION_LOG.md`. An ignored
+  live-verification helper and a PostgreSQL client installed under `/tmp` were
+  removed after use.
+- **Systems affected:** Linked Supabase development migration history,
+  `applications`, `application_timeline_events`, and temporary Auth, profile,
+  credit, company, and private-job fixtures used only during verification.
+- **Architectural decisions:** The security-definer RPC accepts only a private
+  job UUID, derives ownership from `auth.uid()`, serializes each user/job pair
+  with a transaction-scoped advisory lock, and returns `already_exists` with
+  the original application ID for retries. Only a first creation writes the
+  fixed `application_created` event. The server action validates the UUID,
+  authenticates with the normal server Supabase client, maps the three RPC
+  outcomes to user-safe results, and revalidates only Applications and Jobs
+  paths.
+- **Security or privacy considerations:** The function has an empty search
+  path; `PUBLIC` and `anon` execute are revoked and `authenticated` execute is
+  granted. Foreign and nonexistent jobs share the `unavailable` result. No
+  caller-supplied owner, raw job description, board row, resume data, AI data,
+  or database error message enters the application response or timeline.
+- **Rejected alternatives:** No direct multi-request application/event writes,
+  client-supplied `user_id`, duplicate reset, timeline trigger, service-role
+  application dependency, public-board lookup, or schema weakening was added.
+- **Tests run:** `git diff --check`; migration scope and invalid SQL-special
+  qualification searches; `npx --yes supabase migration list --linked`;
+  `npx --yes supabase db push --linked --dry-run`; migration 008 apply; live
+  `pg_catalog` function/grant inspection; two-user authenticated RPC matrix;
+  anonymous call; marker-specific cleanup; `npm run lint`; `npm run typecheck`;
+  `npm run build`.
+- **Lint result:** Passed.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 using the required webpack
+  production build.
+- **Manual verification performed:** Remote history records `202607130008`.
+  The exact UUID RPC is security definer with an empty search path and only the
+  authenticated role can execute it. User A creation returned `created`, one
+  saved application, and one server-timestamped initial event. After changing
+  the record to `tailoring`, a retry returned the same ID, preserved all
+  selected fields, and left both row counts at one. Symmetric foreign-job calls
+  returned `unavailable` without writes. User B independently created one own
+  application/event, and each normal session saw only its own row. Anonymous
+  execution failed without writes. Timeline output contained the minimal
+  `private_saved_job` source and no raw-JD marker; no board, intake, or resume
+  rows were created. The shared RPC operation used by the server action handled
+  representative authenticated `created` and `already_exists` requests; the
+  action wrapper's argument shape and result mapping passed typecheck/build.
+  Cleanup returned applications, events, jobs, profiles, signup credits,
+  companies, and marker board rows to zero and deleted both Auth users.
+- **Related commit hash or range:** None; no commit was created.
+- **Real `/feedback` Session ID:** Not available; no ID was produced or
+  recorded.
+- **Known limitations:** No safe deterministic caller-controlled path exists to
+  fail the fixed timeline insert after application insertion. PostgreSQL
+  transaction structure was reviewed, but rollback after a post-write failure
+  was not directly injected.
+- **Remaining risks:** The server action is intentionally not connected to the
+  mock Applications UI yet. Direct end-to-end invocation through a rendered
+  Server Action form awaits that separately scoped wiring phase.
+- **Next action:** Wire persisted Applications tracker and detail UI in a
+  separate Applications CRUD phase using this verified creation contract.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

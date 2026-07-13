@@ -637,6 +637,7 @@ happen server-side with the service client.
 | Route | Access | Notes |
 |---|---|---|
 | `/`, `/start`, `/board`, `/board/[id]`, `/login` | public | `/` redirects authed→`/dashboard`, guest→`/start` |
+| `/board/submit` | public page; authenticated mutation | guests render the form plus an honest sign-in-required state; private history is queried only for authenticated users; the server action redirects guest submissions to `/login?next=%2Fboard%2Fsubmit&reason=submit_board_job` with no writes |
 | `/jobs`, `/jobs/[id]` | auth | existing MVP screens unchanged; **proxy special-case: guest → redirect `/board`** (not `/login`) |
 | `/dashboard`, `/applications/**`, `/resumes/**`, `/calendar`, `/insights`, `/documents`, `/settings` | auth | unchanged (already in `proxy.ts` matcher) |
 | `/admin/board` | admin (`profiles.is_admin`) | later phase; MVP moderation happens in Supabase Studio |
@@ -820,9 +821,9 @@ AI may help produce content **before** review; the render path is AI-free.
 
 > Incremental documentation sync — records what is actually implemented.
 > Where the v3 planning section above differs from the shipped SQL, **the
-> migration files win.** The development database is connected and migrations
-> through `202607130005` are applied; §K separates passed live checks from the
-> remaining verification gap.
+> migration files win.** The development database is connected and all ten
+> migrations through `202607130006` are applied; §K records the completed
+> pre-Applications verification gate and its one conditional limit.
 
 ## H. Shipped migrations (chronological)
 
@@ -856,6 +857,12 @@ AI may help produce content **before** review; the render path is AI-free.
    invalid schema qualification of the `nullif` SQL expression.
 9. `202607130005_fix_import_guest_draft_hash_ambiguity.sql` — qualifies the
    ledger hash predicate to resolve `draft_hash` output-column ambiguity.
+10. `202607130006_fix_save_master_profile_coalesce.sql` — replaces only
+    `save_master_profile(jsonb,jsonb,jsonb)`, removing invalid `pg_catalog.`
+    qualification from five `COALESCE` and five `NULLIF` expressions while
+    preserving the signature, table return type, `SECURITY DEFINER`, empty
+    `search_path`, PUBLIC/anon execute revocation, and authenticated execute
+    grant.
 
 ## I. Master Profile persistence (as built)
 
@@ -876,6 +883,15 @@ AI may help produce content **before** review; the render path is AI-free.
   profile is initialized in production paths**. No AI call anywhere in this
   flow. Evidence editing clears `confirmed`; reconfirmation is explicit
   (client behavior; future AI must treat `confirmed` as the trust boundary).
+- Live behavior after migration 006 is verified: initial scalar persistence;
+  normalized skills; replacement and empty-array clearing; evidence
+  delete-and-reinsert with fresh IDs and submitted `sort_order` beginning at
+  zero; persisted confirmed/unconfirmed states; removal of stale skills and
+  evidence; caller ownership from `auth.uid()`; and compatibility with the
+  application-shaped payload. A deterministic invalid second entry after
+  earlier writes returned `P0001 invalid profile entry`; the complete prior
+  profile, Master Profile data, evidence rows, IDs, ordering, and confirmation
+  state remained unchanged, proving transaction rollback with no partial rows.
 
 ## J. Guest-draft import (as built)
 
@@ -923,25 +939,59 @@ AI may help produce content **before** review; the render path is AI-free.
   invalid URL, Supabase unavailability, RPC failure, rollback, or a
   non-matching response, the draft remains on the device.
 
-## K. Live verification status and remaining gap
+## K. Live verification status and remaining limit
 
 Verified against the connected development Supabase project:
 
-- migrations through `202607130005` applied and their expected schema objects
-  were present;
-- two-user RLS isolation for private `job_postings` passed;
-- core authenticated behavior of
-  `submit_board_job_with_private_copy()` passed;
-- `import_guest_draft()` passed one authenticated import smoke after the
-  three forward-only repairs;
-- exact sequential repeat returned `already_imported` without duplicate
-  state, and canonical JSON object-key-order normalization returned the same
-  non-printed hash.
+- all ten migrations through `202607130006` are applied and their expected
+  objects are represented in migration history;
+- `save_master_profile()` passed the persistence, replacement, clearing,
+  ordering, confirmation, ownership, application-payload, and rollback
+  contract recorded in §I;
+- `import_guest_draft()` passed one normal authenticated import, exact
+  sequential repeat idempotency, canonical JSON object-key-order
+  normalization, barrier-synchronized concurrent duplicate calls through
+  independent authenticated clients, advisory-lock and one-ledger-row
+  behavior, existing-account `auto` returning `needs_confirmation` with no
+  writes, and explicit non-destructive `merge` with normalized duplicate
+  evidence/job skipping;
+- raw pasted guest JD remained only in private `job_postings.raw_text`; guest
+  import created no company, public board, or intake row;
+- two-user RLS behavior passed specifically for `job_postings`, `profiles`,
+  `master_profiles`, `master_profile_entries`, and `guest_draft_imports`:
+  own-row reads, collection/exact-ID isolation, cross-user update/delete
+  protection, ownership and evidence-parent spoof rejection, supported own
+  mutations, server-only ledger writes, and anonymous isolation;
+- the real approved-board `saveBoardJobAction()` passed first save, sequential
+  duplicate handling, live partial-unique-index rejection, independent
+  second-user save, per-user RLS, unavailable-board rejection, and privacy
+  boundaries (`intake_source='board_save'`, null private `raw_text` and
+  `description`, no copied board summary, unchanged public row);
+- production-build browser and direct-HTTP route behavior passed: guest `/`
+  → `/start`, authenticated `/` → `/dashboard`, guest `/jobs` and `/jobs/[id]`
+  → `/board`, other private routes → encoded `/login?next=...`, authenticated
+  private access, sign-out restoring protection, and no private content in
+  unauthenticated responses;
+- after the route-contract repair, guest GET `/board/submit` returns 200 and
+  renders the form plus sign-in-required state without private history; its
+  server action remains authoritative and rejects guest submission via
+  `/login?next=%2Fboard%2Fsubmit&reason=submit_board_job` with zero writes,
+  while authenticated atomic private/pending submission still passes.
 
-These checks do **not** verify all database behavior. Still unverified live:
-guest-import concurrency/advisory-lock behavior, injected-failure transaction
-rollback, existing-account merge behavior, broad cross-user isolation for
-profile/evidence/ledger tables, real-session route protection, duplicate
-board-save behavior, and a complete direct inspection of private raw-JD
-boundaries. Keep these as an explicit release gate; do not infer them from the
-passing checks above.
+The pre-Applications release gate is complete. One limitation remains
+**conditionally complete**, not behaviorally passed: guest-import
+mid-transaction rollback. Every caller-controlled constraint-sensitive value
+is validated before the first write, while later ownership, IDs, titles,
+intake source, and ledger values are derived or fixed. No safe deterministic
+caller-controlled post-write failure exists without changing production
+schema/function behavior, and none was manufactured. This limitation does not
+block Applications CRUD.
+
+Applications CRUD remains planned, not implemented. The immediate database
+task should create the next unused migration,
+`202607130007_applications_crud_foundation.sql`, for applications linked to
+user-owned private `job_postings`, one application per user/job for MVP,
+canonical statuses `saved | tailoring | ready | applied | interview | offer |
+rejected`, notes, deadline, follow-up, applied timestamp, persisted timeline,
+and per-user RLS. The first database task must not add a resume-version foreign
+key, AI, credits, calendar integration, or frontend wiring.

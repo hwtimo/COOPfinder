@@ -1191,6 +1191,11 @@ now step 0 of `/start`).
 
 ### 23.2 Submit-to-board & pending states
 
+- `/board/submit` is a public page, not a pre-render redirect. Guests see the
+  real form plus a clear sign-in-required state and never see private
+  submission history. Submitting remains an authenticated action: a guest
+  attempt goes to login with `/board/submit` as the return path and creates no
+  rows. Authenticated users see their own moderation history.
 - Submission is opt-in inside the intake success state: checkbox
   "Suggest this role for the public job board" + helper "A person reviews
   every suggestion before it appears. Your saved copy is yours either way."

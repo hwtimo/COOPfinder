@@ -1,34 +1,70 @@
 # COOPfinder
 
-COOPfinder is a Canadian co-op application command center that converts job
+COOPfinder is a Canadian co-op application command center that turns job
 requirements and confirmed student evidence into reviewable, job-specific
 application materials without fabricating experience.
 
-## AI Development Strategy
+## Current Status
 
-COOPfinder's planned AI architecture uses the GPT-5.6 family because it lets
-the product route structured extraction, evidence analysis, and nuanced
-resume assistance to distinct capabilities while keeping one trust model.
-The integration is **planned, not implemented**:
+Supabase-backed features:
 
-- **GPT-5.6 Luna** (`gpt-5.6-luna`) performs fast, schema-validated JD cleanup,
-  explicit extraction, classification, and duplicate-candidate detection. It
-  never produces final resume content.
-- **GPT-5.6 Terra** (`gpt-5.6-terra`) normalizes requirements, maps them to
-  confirmed Master Profile evidence, produces directional explanations, and
-  performs first-pass claim classification.
-- **GPT-5.6 Sol** (`gpt-5.6-sol`) produces nuanced, evidence-backed resume
-  suggestions and performs difficult or final semantic claim review without
-  expanding beyond confirmed evidence.
+- email/Google auth and hybrid public/private route protection;
+- device-only `/start` guest draft and authenticated guest-draft import;
+- moderated public board, board detail, and public `/board/submit` page with
+  authenticated atomic submission;
+- private saved-jobs CRUD and approved-board-to-private saves;
+- persisted Master Profile, skills, ordered evidence, and confirmation state.
 
-Model IDs will be resolved in one server-only configuration module; feature
-code requests a task category instead of hardcoding a model. Every resume
-suggestion must identify confirmed source evidence and support accept, reject,
-or edit. Human review is mandatory, unsupported claims block readiness, and
-deterministic PDF rendering accepts reviewed content only with no AI call.
+The development database has ten applied migrations through
+`202607130006_fix_save_master_profile_coalesce.sql`. The pre-Applications live
+verification gate is complete. Guest-import post-write rollback is the one
+conditional limitation: the RPC has no safe caller-controlled failure after
+its pre-write validation, so no production test hook was added.
 
-Meaningful Codex-assisted engineering work is recorded in
-[`CODEX_SESSION_LOG.md`](CODEX_SESSION_LOG.md) using observable verification,
-commit traceability, and real `/feedback` Session IDs when available. IDs and
-verification evidence are never fabricated. Detailed routing and safety rules
-live in [`TECHNICAL_DESIGN.md`](TECHNICAL_DESIGN.md) §3.
+Still mock, local, partial, or unimplemented: Dashboard persistence,
+Applications CRUD and timeline, Resume hub persistence, production tailoring,
+AI JD parsing, bounded URL fetching, claim checking, PDF/DOCX export, file
+upload, Calendar, Insights, Documents, notifications, and moderation UI.
+
+The next task is the Applications CRUD database foundation. Its planned next
+unused migration is `202607130007_applications_crud_foundation.sql`; that file
+does not exist yet.
+
+## Local Setup
+
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+Set these application values in ignored `.env.local` without committing them:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+```
+
+The remaining empty placeholders in `.env.example` support local Supabase CLI
+work and must also remain secret when populated. Never commit `.env.local`.
+
+Checks:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
+
+## Product Boundaries
+
+No automatic applying, crawling, or republishing private job-description text.
+Future AI suggestions must cite confirmed evidence, remain accept/reject/edit
+reviewable, and never imply guaranteed eligibility or hiring outcomes. PDF
+rendering is planned to be deterministic with no AI call in the render path.
+
+Strategy Revision 2 remains canonical in
+[`PRODUCT_STRATEGY.md`](PRODUCT_STRATEGY.md). As-built backend details live in
+[`TECHNICAL_DESIGN.md`](TECHNICAL_DESIGN.md), current continuation guidance in
+[`HANDOFF.md`](HANDOFF.md), and factual verification history in
+[`CODEX_SESSION_LOG.md`](CODEX_SESSION_LOG.md).
