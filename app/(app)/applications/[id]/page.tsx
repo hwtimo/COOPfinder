@@ -10,8 +10,6 @@ import {
   ExternalLink,
   History,
   LockKeyhole,
-  NotebookText,
-  PencilLine,
 } from "lucide-react";
 
 import { CardSection } from "@/components/app/card-section";
@@ -20,6 +18,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { DeadlineBadge, StatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import { getApplicationDetail } from "@/lib/applications/queries";
+import { isIsoCalendarDate } from "@/lib/applications/update-deadline";
 import {
   APPLICATION_TRACKER_COLUMNS,
   type ApplicationTimelineEvent,
@@ -28,6 +27,8 @@ import { daysUntilPrivateJobDeadline } from "@/lib/jobs/dates";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getSupabaseUser } from "@/lib/supabase/user";
 
+import { ApplicationDeadlineForm } from "./application-deadline-form";
+import { ApplicationNotesForm } from "./application-notes-form";
 import { ApplicationStatusForm } from "./application-status-form";
 
 export const dynamic = "force-dynamic";
@@ -106,6 +107,17 @@ function metadataStatus(
   return null;
 }
 
+function metadataDeadline(
+  metadata: Record<string, unknown>,
+  key: "previous_deadline" | "new_deadline",
+): string | null | undefined {
+  if (!Object.hasOwn(metadata, key)) return undefined;
+
+  const value = metadata[key];
+  if (value === null) return null;
+  return isIsoCalendarDate(value) ? value : undefined;
+}
+
 function eventDetail(event: ApplicationTimelineEvent): string {
   switch (event.eventType) {
     case "application_created":
@@ -132,8 +144,24 @@ function eventDetail(event: ApplicationTimelineEvent): string {
     }
     case "note_updated":
       return "Application notes were updated.";
-    case "deadline_changed":
+    case "deadline_changed": {
+      const previous = metadataDeadline(event.metadata, "previous_deadline");
+      const next = metadataDeadline(event.metadata, "new_deadline");
+
+      if (previous === undefined || next === undefined) {
+        return "The application deadline was updated.";
+      }
+      if (previous === null && next !== null) {
+        return `Deadline set to ${formatDate(next, "a saved date")}.`;
+      }
+      if (previous !== null && next === null) {
+        return `Deadline cleared; previously ${formatDate(previous, "a saved date")}.`;
+      }
+      if (previous !== null && next !== null) {
+        return `Deadline changed from ${formatDate(previous, "a saved date")} to ${formatDate(next, "a saved date")}.`;
+      }
       return "The application deadline was updated.";
+    }
     case "follow_up_changed":
       return "The follow-up schedule was updated.";
     case "marked_applied":
@@ -215,8 +243,7 @@ export default async function ApplicationDetailPage({
   const location = job.location ?? "Location not added";
   const workMode = job.workMode ?? "Work mode not added";
   const term = job.term ?? "Term not added";
-  const deadline = application.deadline ?? job.deadline;
-  const deadlineDate = dateOnly(deadline);
+  const deadlineDate = dateOnly(application.deadline);
   const deadlineDays = daysUntilPrivateJobDeadline(deadlineDate);
   const sourceUrl = isSafeSourceUrl(job.sourceUrl) ? job.sourceUrl : null;
 
@@ -336,15 +363,10 @@ export default async function ApplicationDetailPage({
           </CardSection>
 
           <CardSection title="Notes" description="Saved application notes">
-            <div className="flex gap-3 rounded-md border bg-background p-4">
-              <NotebookText
-                className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                aria-hidden
-              />
-              <p className="whitespace-pre-wrap text-sm leading-6 text-text-secondary">
-                {application.notes?.trim() || "No notes yet."}
-              </p>
-            </div>
+            <ApplicationNotesForm
+              applicationId={application.id}
+              initialNotes={application.notes}
+            />
           </CardSection>
         </div>
 
@@ -361,6 +383,10 @@ export default async function ApplicationDetailPage({
                 applicationId={application.id}
                 currentStatus={application.status}
               />
+              <ApplicationDeadlineForm
+                applicationId={application.id}
+                initialDeadline={dateOnly(application.deadline)}
+              />
               <Button asChild className="h-9 w-full rounded-md">
                 <Link href={`/jobs/${application.jobPostingId}`}>
                   <Briefcase className="size-4" aria-hidden />
@@ -375,16 +401,6 @@ export default async function ApplicationDetailPage({
                   </a>
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 w-full rounded-md"
-                disabled
-                title="Note editing is not available yet"
-              >
-                <PencilLine className="size-4" aria-hidden />
-                Edit notes unavailable
-              </Button>
               <Button asChild variant="ghost" className="h-9 w-full rounded-md">
                 <Link href="/applications">
                   <ArrowLeft className="size-4" aria-hidden />

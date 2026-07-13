@@ -4,6 +4,14 @@ import { refresh, revalidatePath } from "next/cache";
 
 import { createApplicationFromJob } from "@/lib/applications/create-from-job";
 import {
+  isIsoCalendarDate,
+  updateApplicationDeadline,
+} from "@/lib/applications/update-deadline";
+import {
+  APPLICATION_NOTES_MAX_LENGTH,
+  updateApplicationNotes,
+} from "@/lib/applications/update-notes";
+import {
   isApplicationTrackerStatus,
   type ApplicationTrackerStatus,
 } from "@/lib/applications/types";
@@ -183,5 +191,205 @@ export async function updateApplicationStatusAction(
     message: "Application status updated.",
     applicationId: result.applicationId,
     applicationStatus: result.applicationStatus,
+  };
+}
+
+export type UpdateApplicationNotesActionResult = {
+  status:
+    | "updated"
+    | "unchanged"
+    | "unavailable"
+    | "invalid_input"
+    | "unconfigured"
+    | "unauthenticated"
+    | "error";
+  message: string;
+  applicationId?: string;
+  notes?: string | null;
+};
+
+export async function updateApplicationNotesAction(
+  applicationId: unknown,
+  notes: unknown,
+): Promise<UpdateApplicationNotesActionResult> {
+  if (typeof applicationId !== "string" || !isUuid(applicationId)) {
+    return {
+      status: "invalid_input",
+      message: "Choose a valid application before saving notes.",
+    };
+  }
+
+  if (
+    typeof notes !== "string" ||
+    notes.length > APPLICATION_NOTES_MAX_LENGTH
+  ) {
+    return {
+      status: "invalid_input",
+      message: `Notes must be ${APPLICATION_NOTES_MAX_LENGTH.toLocaleString("en-CA")} characters or fewer.`,
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return {
+      status: "unconfigured",
+      message: "Supabase is not configured. The notes were not changed.",
+    };
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      status: "unauthenticated",
+      message: "Your session has expired. Log in again before continuing.",
+    };
+  }
+
+  const result = await updateApplicationNotes(supabase, applicationId, notes);
+
+  if (result.status === "unavailable") {
+    return {
+      status: "unavailable",
+      message: "This application is unavailable or is not owned by your account.",
+    };
+  }
+
+  if (result.status === "unexpected") {
+    console.error("Application notes RPC failed", {
+      code: result.errorCode ?? "invalid_response",
+    });
+    return {
+      status: "error",
+      message: "The application notes could not be saved. Nothing was changed.",
+    };
+  }
+
+  revalidatePath("/applications");
+  revalidatePath(`/applications/${applicationId}`);
+  refresh();
+
+  if (result.status === "unchanged") {
+    return {
+      status: "unchanged",
+      message: "These application notes are already saved.",
+      applicationId: result.applicationId,
+      notes: result.notes,
+    };
+  }
+
+  return {
+    status: "updated",
+    message: result.notes === null ? "Application notes cleared." : "Application notes saved.",
+    applicationId: result.applicationId,
+    notes: result.notes,
+  };
+}
+
+export type UpdateApplicationDeadlineActionResult = {
+  status:
+    | "updated"
+    | "unchanged"
+    | "unavailable"
+    | "invalid_input"
+    | "unconfigured"
+    | "unauthenticated"
+    | "error";
+  message: string;
+  applicationId?: string;
+  deadline?: string | null;
+};
+
+export async function updateApplicationDeadlineAction(
+  applicationId: unknown,
+  deadline: unknown,
+): Promise<UpdateApplicationDeadlineActionResult> {
+  if (typeof applicationId !== "string" || !isUuid(applicationId)) {
+    return {
+      status: "invalid_input",
+      message: "Choose a valid application before saving a deadline.",
+    };
+  }
+
+  if (
+    typeof deadline !== "string" ||
+    (deadline !== "" && !isIsoCalendarDate(deadline))
+  ) {
+    return {
+      status: "invalid_input",
+      message: "Enter a valid calendar date in YYYY-MM-DD format, or clear the field.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return {
+      status: "unconfigured",
+      message: "Supabase is not configured. The deadline was not changed.",
+    };
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      status: "unauthenticated",
+      message: "Your session has expired. Log in again before continuing.",
+    };
+  }
+
+  const result = await updateApplicationDeadline(
+    supabase,
+    applicationId,
+    deadline === "" ? null : deadline,
+  );
+
+  if (result.status === "unavailable") {
+    return {
+      status: "unavailable",
+      message: "This application is unavailable or is not owned by your account.",
+    };
+  }
+
+  if (result.status === "unexpected") {
+    console.error("Application deadline RPC failed", {
+      code: result.errorCode ?? "invalid_response",
+    });
+    return {
+      status: "error",
+      message: "The application deadline could not be saved. Nothing was changed.",
+    };
+  }
+
+  revalidatePath("/applications");
+  revalidatePath(`/applications/${applicationId}`);
+  refresh();
+
+  if (result.status === "unchanged") {
+    return {
+      status: "unchanged",
+      message:
+        result.deadline === null
+          ? "This application deadline is already clear."
+          : "This application deadline is already saved.",
+      applicationId: result.applicationId,
+      deadline: result.deadline,
+    };
+  }
+
+  return {
+    status: "updated",
+    message:
+      result.deadline === null
+        ? "Application deadline cleared."
+        : "Application deadline saved.",
+    applicationId: result.applicationId,
+    deadline: result.deadline,
   };
 }

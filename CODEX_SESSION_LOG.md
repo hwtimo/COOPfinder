@@ -1064,6 +1064,141 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Implement the next Application Detail mutation in a separate
   narrow task.
 
+### Atomic persisted application notes
+
+- **Date and time:** 2026-07-13 15:26 PDT
+- **Development phase:** Applications CRUD
+- **Session purpose:** Add and live-verify authenticated application notes
+  updates with one atomic timeline event per normalized change.
+- **Task or prompt summary:** Added the private notes RPC, authenticated server
+  action, narrow Supabase helper, and persisted Application Detail notes form.
+  Verified normalization, no-op, clear, length, ownership, concurrency, privacy,
+  browser, and disabled-configuration behavior against the development project.
+- **Important constraints given to Codex:** No deadline, follow-up, applied-time,
+  arbitrary timeline, tracker-board, AI, resume, shell, RLS, or unrelated feature
+  changes; no direct browser table writes; no commit.
+- **Files changed:** `supabase/migrations/202607130010_atomic_application_notes.sql`,
+  `supabase/migrations/202607130011_fix_application_notes_whitespace.sql`,
+  `lib/applications/update-notes.ts`, `app/(app)/applications/actions.ts`,
+  `app/(app)/applications/[id]/application-notes-form.tsx`,
+  `app/(app)/applications/[id]/page.tsx`, and `CODEX_SESSION_LOG.md`.
+- **Systems affected:** Supabase application notes RPC and timeline, Application
+  Detail notes UI, and Applications route revalidation.
+- **Architectural decisions:** The RPC locks one caller-owned application row,
+  compares normalized states, and performs the application update and canonical
+  `note_updated` insert in one transaction. Empty normalized notes store as SQL
+  `NULL`; the 5,000-character boundary is enforced by both action and RPC.
+- **Security or privacy considerations:** The function is security definer with
+  an empty search path, authenticated-only execute, and ownership derived from
+  `auth.uid()`. Foreign and missing IDs share `unavailable`. Timeline metadata
+  contains only `had_notes` and `has_notes` booleans; note content, raw job text,
+  user identity, and joined data are excluded.
+- **Rejected alternatives:** No direct table mutation from the action, client
+  timeline insert, optimistic persisted state, caller-authored metadata, raw-job
+  read, broad deduplication constraint, or service-role application dependency.
+- **Tests run:** Applied-migration fingerprint and diff checks; lint; typecheck;
+  production build; Supabase migration list and dry-runs; migrations 010 and 011
+  apply; live catalog ACL/security query; two-user RPC matrix; normal and
+  oversized server-action browser submissions; concurrency; isolation; privacy;
+  configured and disabled production browser checks; cleanup verification.
+- **Lint result:** Passed.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack. The isolated
+  no-Supabase production build also passed.
+- **Manual verification performed:** Initial save, normalized no-op, edit,
+  clear, repeated clear, 5,001-character rejection, symmetric foreign access,
+  missing ID, anonymous execution, identical concurrency, and different-value
+  concurrency all produced their intended results. The detail form saved and
+  cleared multiline notes through the server action, added exactly two events,
+  retained status and date fields, and exposed no raw-JD marker. The action
+  rejected a programmatic 5,001-character submission without a write. The
+  pending state is wired around the awaited action but completed too quickly to
+  capture in the browser. The disabled build rendered the honest unavailable
+  state with no save control or mock notes.
+- **Related commit hash or range:** None; no commit was created.
+- **Real `/feedback` Session ID:** Not available; no ID was produced or recorded.
+- **Known limitations:** Applied migration 010 used one-argument `btrim`, which
+  live testing showed does not remove surrounding tabs/newlines. Applied
+  migrations were not edited; forward-only migration 011 replaced only the RPC
+  normalization with a POSIX-whitespace trim, after which the full matrix passed.
+- **Remaining risks:** No safe caller-controlled timeline-insert failure exists,
+  so transaction rollback was not artificially injected. Atomicity relies on the
+  single PostgreSQL function transaction and was exercised under row-lock
+  concurrency.
+- **Next action:** Continue Applications CRUD with the next separately scoped
+  mutation.
+
+### Atomic persisted application deadline
+
+- **Date and time:** 2026-07-13 16:00 PDT
+- **Development phase:** Applications CRUD
+- **Session purpose:** Add and live-verify one authenticated atomic application
+  deadline mutation and its canonical timeline event.
+- **Task or prompt summary:** Applied migration `202607130012`, added the
+  deadline RPC helper and server action, connected a persisted native date form
+  to Application Detail, and safely rendered validated deadline event metadata.
+- **Important constraints given to Codex:** No edits to applied migrations,
+  RLS, status, notes, follow-up, applied-time, tracker mutation, resume, AI,
+  calendar, notification, export, shell, or design-system behavior.
+- **Files changed:**
+  `supabase/migrations/202607130012_atomic_application_deadline.sql`,
+  `lib/applications/update-deadline.ts`,
+  `app/(app)/applications/actions.ts`,
+  `app/(app)/applications/[id]/application-deadline-form.tsx`,
+  `app/(app)/applications/[id]/page.tsx`, and `CODEX_SESSION_LOG.md`.
+- **Systems affected:** Linked Supabase migration history,
+  `public.update_application_deadline(uuid,date)`, Application Detail deadline
+  actions and timeline rendering, and tracker/detail path revalidation.
+- **Architectural decisions:** The security-definer RPC derives `auth.uid()`,
+  locks only the caller-owned application row, compares dates with null-safe
+  equality, and updates `deadline` plus `updated_at` with one fixed
+  `deadline_changed` event in the same transaction. The action accepts only an
+  empty clear value or a real strict `YYYY-MM-DD` calendar date. The detail form
+  initializes exclusively from `applications.deadline` and uses the native
+  input event so date-control changes reach React state reliably.
+- **Security or privacy considerations:** The function has an empty search
+  path; `PUBLIC` and `anon` execute are revoked and only `authenticated` is
+  granted. Foreign and nonexistent IDs share `unavailable`. Event metadata has
+  exactly `previous_deadline` and `new_deadline`, each ISO date or JSON null.
+  No owner, job, status, notes, follow-up, raw text, resume, or AI value enters
+  the event or action response.
+- **Rejected alternatives:** No direct table update from the action, client
+  timeline insert, optimistic persisted date, past-date restriction, custom
+  event spelling, constraint expansion, RLS change, service-role application
+  dependency, or broad timeline metadata renderer was added.
+- **Tests run:** Applied-migration fingerprints; local and remote migration
+  histories; live deadline column and event constraint preflight; SQL/diff
+  checks; linked migration dry-run and apply; live function catalog and ACL;
+  two-user RPC matrix; malformed RPC and server-action inputs; identical and
+  different concurrency; real production browser set/no-op/edit/clear;
+  private-not-found; isolated no-Supabase production build; cleanup; lint;
+  typecheck; Webpack build.
+- **Lint result:** Passed.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack. Configured action
+  probe and isolated no-Supabase production builds also passed.
+- **Manual verification performed:** Null to date, equal no-op, date edit,
+  clear, repeated clear, malformed values, symmetric foreign access, missing
+  ID, anonymous execution, two-user reads, identical concurrency, and
+  different-value concurrency produced the intended results. The real detail
+  form saved, repeated, edited, and cleared dates; full reload showed exactly
+  three new canonical events and the persisted empty state. Status, notes,
+  follow-up, applied time, ownership, linked job, and all other application
+  fields remained unchanged. Raw-JD and private markers were absent from
+  deadline events and deadline-rendered copy. Disabled configuration exposed no
+  active deadline control or mock save. All temporary users and marker rows
+  returned to zero.
+- **Related commit hash or range:** TODO — pending verified implementation commit.
+- **Real `/feedback` Session ID:** TODO — pending Codex `/feedback` output.
+- **Known limitations:** The live RPC completed too quickly to capture the
+  transient pending frame visually. The ref guard, pending state, disabled date
+  input, and pending button label wrap the awaited action and were exercised.
+- **Remaining risks:** No safe caller-controlled post-update timeline failure
+  exists, so rollback injection was not manufactured. Atomicity follows the
+  single PostgreSQL transaction and was exercised under row-lock concurrency.
+- **Next action:** Implement follow-up scheduling only in a separately scoped
+  Applications CRUD task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
