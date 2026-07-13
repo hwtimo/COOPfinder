@@ -1247,6 +1247,52 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Implement follow-up scheduling only in a separately scoped
   Applications CRUD task.
 
+### Mandatory Codex traceability documentation policy
+
+- **Date and time:** 2026-07-13 16:22 PDT
+- **Development phase:** Engineering documentation policy
+- **Session purpose:** Make real Git and Codex `/feedback` traceability
+  mandatory for future meaningful core engineering sessions.
+- **Task or prompt summary:** Strengthened the existing policy and workflow
+  sections in `CODEX_SESSION_LOG.md`, `CHATGPT_DIRECTOR_CONTEXT.md`, and
+  `HANDOFF.md` without changing their source-of-truth order or historical
+  session evidence.
+- **Important constraints given to Codex:** Documentation policy only; preserve
+  existing log fields and historical entries; do not change application code,
+  migrations, configuration, dependencies, database objects, tests, or product
+  behavior; do not push.
+- **Files changed:** `CODEX_SESSION_LOG.md`, `CHATGPT_DIRECTOR_CONTEXT.md`, and
+  `HANDOFF.md`.
+- **Systems affected:** Codex session logging, future director prompts, and
+  agent handoff workflow only.
+- **Architectural decisions:** Meaningful core tasks now require verified
+  focused implementation commits, exact implementation hashes or genuine
+  ranges, a real `/feedback` ID, completed existing log fields, and a separate
+  log-only commit. Missing real traceability is `CONDITIONALLY COMPLETE`.
+- **Security or privacy considerations:** Session IDs and Git evidence must be
+  copied from authoritative records only; no identifier, test result, commit,
+  range, or push may be invented.
+- **Rejected alternatives:** No replacement log format, broad documentation
+  rewrite, historical backfill without evidence, application change, or push.
+- **Tests run:** `git diff --check`; focused three-file diff review; policy
+  consistency searches; historical-entry hunk review.
+- **Lint result:** Not run; Markdown-only policy task.
+- **Typecheck result:** Not run; Markdown-only policy task.
+- **Build result:** Not run; Markdown-only policy task.
+- **Manual verification performed:** Confirmed the implementation commit
+  changed only the three intended Markdown files, preserved the existing entry
+  template and traceability fields, and did not rewrite historical values.
+- **Related commit hash or range:** `73a927e31eb15eb4fff9d3a28ac08ce6a4a860da`.
+- **Real `/feedback` Session ID:** `019f43a2-41bc-7e53-8cab-4c33f31e557f`.
+  The same original Codex session covered both the earlier verified
+  notes/deadline work period and this documentation-policy work period, which is
+  why the exact Session ID is shared between their entries.
+- **Known limitations:** None for the documentation-policy scope.
+- **Remaining risks:** Future agents must follow the mandatory workflow rather
+  than leaving placeholders after meaningful work.
+- **Next action:** Continue with one narrowly scoped product task under the new
+  traceability policy.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
