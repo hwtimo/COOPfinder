@@ -19,6 +19,7 @@ import { DeadlineBadge, StatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import { getApplicationDetail } from "@/lib/applications/queries";
 import { isIsoCalendarDate } from "@/lib/applications/update-deadline";
+import { isIsoTimestampWithTimezone } from "@/lib/applications/update-follow-up";
 import {
   APPLICATION_TRACKER_COLUMNS,
   type ApplicationTimelineEvent,
@@ -28,6 +29,7 @@ import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getSupabaseUser } from "@/lib/supabase/user";
 
 import { ApplicationDeadlineForm } from "./application-deadline-form";
+import { ApplicationFollowUpForm } from "./application-follow-up-form";
 import { ApplicationNotesForm } from "./application-notes-form";
 import { ApplicationStatusForm } from "./application-status-form";
 
@@ -96,6 +98,22 @@ function formatEventTime(value: string): string {
   }).format(parsed);
 }
 
+function formatDateTime(value: string | null, fallback: string): string {
+  if (!value) return fallback;
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return fallback;
+
+  return new Intl.DateTimeFormat("en-CA", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(parsed);
+}
+
 function metadataStatus(
   metadata: Record<string, unknown>,
   keys: string[],
@@ -116,6 +134,17 @@ function metadataDeadline(
   const value = metadata[key];
   if (value === null) return null;
   return isIsoCalendarDate(value) ? value : undefined;
+}
+
+function metadataFollowUp(
+  metadata: Record<string, unknown>,
+  key: "previous_follow_up_due" | "new_follow_up_due",
+): string | null | undefined {
+  if (!Object.hasOwn(metadata, key)) return undefined;
+
+  const value = metadata[key];
+  if (value === null) return null;
+  return isIsoTimestampWithTimezone(value) ? value : undefined;
 }
 
 function eventDetail(event: ApplicationTimelineEvent): string {
@@ -162,8 +191,27 @@ function eventDetail(event: ApplicationTimelineEvent): string {
       }
       return "The application deadline was updated.";
     }
-    case "follow_up_changed":
+    case "follow_up_changed": {
+      const previous = metadataFollowUp(
+        event.metadata,
+        "previous_follow_up_due",
+      );
+      const next = metadataFollowUp(event.metadata, "new_follow_up_due");
+
+      if (previous === undefined || next === undefined) {
+        return "The follow-up schedule was updated.";
+      }
+      if (previous === null && next !== null) {
+        return `Follow-up set for ${formatDateTime(next, "a saved time")}.`;
+      }
+      if (previous !== null && next === null) {
+        return `Follow-up cleared; previously ${formatDateTime(previous, "a saved time")}.`;
+      }
+      if (previous !== null && next !== null) {
+        return `Follow-up changed from ${formatDateTime(previous, "a saved time")} to ${formatDateTime(next, "a saved time")}.`;
+      }
       return "The follow-up schedule was updated.";
+    }
     case "marked_applied":
       return "The application was marked as applied.";
     default:
@@ -311,7 +359,10 @@ export default async function ApplicationDetailPage({
                 {formatDate(deadlineDate, "No deadline")}
               </DetailItem>
               <DetailItem label="Follow-up">
-                {formatDate(application.followUpDue, "No follow-up scheduled")}
+                {formatDateTime(
+                  application.followUpDue,
+                  "No follow-up scheduled",
+                )}
               </DetailItem>
               <DetailItem label="Applied">
                 {formatDate(application.appliedAt, "Not marked as applied")}
@@ -387,6 +438,10 @@ export default async function ApplicationDetailPage({
                 applicationId={application.id}
                 initialDeadline={dateOnly(application.deadline)}
               />
+              <ApplicationFollowUpForm
+                applicationId={application.id}
+                initialFollowUpDue={application.followUpDue}
+              />
               <Button asChild className="h-9 w-full rounded-md">
                 <Link href={`/jobs/${application.jobPostingId}`}>
                   <Briefcase className="size-4" aria-hidden />
@@ -419,7 +474,10 @@ export default async function ApplicationDetailPage({
               <div>
                 <p className="text-xs text-muted-foreground">Follow-up</p>
                 <p className="mt-0.5 text-sm font-medium text-foreground">
-                  {formatDate(application.followUpDue, "No follow-up scheduled")}
+                  {formatDateTime(
+                    application.followUpDue,
+                    "No follow-up scheduled",
+                  )}
                 </p>
               </div>
             </div>

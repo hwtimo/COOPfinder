@@ -8,6 +8,10 @@ import {
   updateApplicationDeadline,
 } from "@/lib/applications/update-deadline";
 import {
+  isIsoTimestampWithTimezone,
+  updateApplicationFollowUp,
+} from "@/lib/applications/update-follow-up";
+import {
   APPLICATION_NOTES_MAX_LENGTH,
   updateApplicationNotes,
 } from "@/lib/applications/update-notes";
@@ -391,5 +395,111 @@ export async function updateApplicationDeadlineAction(
         : "Application deadline saved.",
     applicationId: result.applicationId,
     deadline: result.deadline,
+  };
+}
+
+export type UpdateApplicationFollowUpActionResult = {
+  status:
+    | "updated"
+    | "unchanged"
+    | "unavailable"
+    | "invalid_input"
+    | "unconfigured"
+    | "unauthenticated"
+    | "error";
+  message: string;
+  applicationId?: string;
+  followUpDue?: string | null;
+};
+
+export async function updateApplicationFollowUpAction(
+  applicationId: unknown,
+  followUpDue: unknown,
+): Promise<UpdateApplicationFollowUpActionResult> {
+  if (typeof applicationId !== "string" || !isUuid(applicationId)) {
+    return {
+      status: "invalid_input",
+      message: "Choose a valid application before saving a follow-up.",
+    };
+  }
+
+  if (
+    typeof followUpDue !== "string" ||
+    (followUpDue !== "" && !isIsoTimestampWithTimezone(followUpDue))
+  ) {
+    return {
+      status: "invalid_input",
+      message:
+        "Enter a valid ISO timestamp with a timezone, or clear the field.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return {
+      status: "unconfigured",
+      message: "Supabase is not configured. The follow-up was not changed.",
+    };
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      status: "unauthenticated",
+      message: "Your session has expired. Log in again before continuing.",
+    };
+  }
+
+  const result = await updateApplicationFollowUp(
+    supabase,
+    applicationId,
+    followUpDue === "" ? null : followUpDue,
+  );
+
+  if (result.status === "unavailable") {
+    return {
+      status: "unavailable",
+      message: "This application is unavailable or is not owned by your account.",
+    };
+  }
+
+  if (result.status === "unexpected") {
+    console.error("Application follow-up RPC failed", {
+      code: result.errorCode ?? "invalid_response",
+    });
+    return {
+      status: "error",
+      message: "The application follow-up could not be saved. Nothing was changed.",
+    };
+  }
+
+  revalidatePath("/applications");
+  revalidatePath(`/applications/${applicationId}`);
+  refresh();
+
+  if (result.status === "unchanged") {
+    return {
+      status: "unchanged",
+      message:
+        result.followUpDue === null
+          ? "This application follow-up is already clear."
+          : "This application follow-up is already saved.",
+      applicationId: result.applicationId,
+      followUpDue: result.followUpDue,
+    };
+  }
+
+  return {
+    status: "updated",
+    message:
+      result.followUpDue === null
+        ? "Application follow-up cleared."
+        : "Application follow-up saved.",
+    applicationId: result.applicationId,
+    followUpDue: result.followUpDue,
   };
 }
