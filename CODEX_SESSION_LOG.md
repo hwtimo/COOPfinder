@@ -1308,6 +1308,58 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Continue with one narrowly scoped product task under the new
   traceability policy.
 
+### Same-session Codex traceability policy correction
+
+- **Date and time:** 2026-07-13 16:27 PDT
+- **Development phase:** Engineering documentation policy correction
+- **Session purpose:** Distinguish same-session reuse of a verified Codex
+  Session ID from `/feedback` retrieval for a new, unknown, or uncertain
+  session.
+- **Task or prompt summary:** Corrected the traceability instructions in
+  `CODEX_SESSION_LOG.md`, `CHATGPT_DIRECTOR_CONTEXT.md`, and `HANDOFF.md` so
+  task identity comes from verified implementation commit hashes or ranges,
+  while the verified Session ID identifies the actual Codex session.
+- **Important constraints given to Codex:** Markdown policy only; preserve the
+  existing entry template and factual historical entries; reuse the already
+  verified ID for this continuing session; do not rerun `/feedback`; do not
+  change application code, migrations, configuration, tests, product status,
+  or behavior; do not push.
+- **Files changed:** `CODEX_SESSION_LOG.md`,
+  `CHATGPT_DIRECTOR_CONTEXT.md`, and `HANDOFF.md`.
+- **Systems affected:** Codex traceability policy, future director prompts, and
+  handoff guidance only.
+- **Architectural decisions:** Multiple meaningful tasks in one continuing
+  Codex session may share its already verified Session ID and remain distinct
+  through their real implementation hashes or ranges. `/feedback` is required
+  only for a new conversation, an unknown current-session ID, or uncertain
+  session continuity. IDs must never cross session boundaries.
+- **Security or privacy considerations:** Session IDs remain exact,
+  authoritative identifiers and may not be inferred, reconstructed, shortened,
+  fabricated, substituted, or reused for a different session.
+- **Rejected alternatives:** No mandatory `/feedback` rerun for each task in a
+  continuing session, historical identifier rewrite, template replacement,
+  product change, or push.
+- **Tests run:** `git diff --check`; focused three-file diff review; searches
+  for same-session reuse, new/unknown/uncertain-session retrieval, and
+  cross-session prohibition; implementation commit content review.
+- **Lint result:** Not run; Markdown-only policy correction.
+- **Typecheck result:** Not run; Markdown-only policy correction.
+- **Build result:** Not run; Markdown-only policy correction.
+- **Manual verification performed:** Confirmed the policy implementation commit
+  contains exactly the three intended Markdown files, preserves the reusable
+  template, and does not alter any factual historical entry.
+- **Related commit hash or range:**
+  `1b5d45a780ea07e96b2ef6046ba61ba421c86fab`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  original Codex session for which that ID was already verified, so the ID was
+  reused and `/feedback` was not rerun.
+- **Known limitations:** None for this documentation-policy scope.
+- **Remaining risks:** Future agents must establish a new verified Session ID
+  whenever the conversation is new or session continuity is uncertain.
+- **Next action:** Continue with one narrowly scoped product task under the
+  corrected traceability policy.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
