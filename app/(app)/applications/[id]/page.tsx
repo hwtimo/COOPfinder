@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Briefcase,
   CalendarClock,
-  CheckCircle2,
   Clock3,
   ExternalLink,
   History,
@@ -28,6 +27,8 @@ import {
 import { daysUntilPrivateJobDeadline } from "@/lib/jobs/dates";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getSupabaseUser } from "@/lib/supabase/user";
+
+import { ApplicationStatusForm } from "./application-status-form";
 
 export const dynamic = "force-dynamic";
 
@@ -356,6 +357,10 @@ export default async function ApplicationDetailPage({
                   <StatusBadge status={application.status} />
                 </div>
               </div>
+              <ApplicationStatusForm
+                applicationId={application.id}
+                currentStatus={application.status}
+              />
               <Button asChild className="h-9 w-full rounded-md">
                 <Link href={`/jobs/${application.jobPostingId}`}>
                   <Briefcase className="size-4" aria-hidden />
@@ -370,16 +375,6 @@ export default async function ApplicationDetailPage({
                   </a>
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 w-full rounded-md"
-                disabled
-                title="Status updates are not available yet"
-              >
-                <CheckCircle2 className="size-4" aria-hidden />
-                Update status unavailable
-              </Button>
               <Button
                 type="button"
                 variant="outline"

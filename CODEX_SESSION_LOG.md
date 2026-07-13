@@ -980,6 +980,90 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Implement Application Detail mutations in a separately
   scoped Applications CRUD task.
 
+### Atomic application status updates
+
+- **Date and time:** 2026-07-13 15:04 PDT
+- **Development phase:** Applications CRUD status mutation
+- **Session purpose:** Add one authenticated atomic status mutation and connect
+  it to the persisted Application Detail page without enabling any other
+  application edits.
+- **Task or prompt summary:** Create and apply migration `202607130009`, add a
+  narrow status RPC helper and server action, replace the disabled detail
+  control with a canonical status form, and live-verify atomic events,
+  timestamp rules, ownership, privacy, refresh, and cleanup.
+- **Important constraints given to Codex:** No edits to applied migrations or
+  RLS; no tracker-side mutation, notes, deadline, follow-up, arbitrary timeline,
+  resume, AI, credit, calendar, notification, export, shell, or redesign work;
+  no commit.
+- **Files changed:**
+  `supabase/migrations/202607130009_atomic_application_status.sql`,
+  `lib/applications/update-status.ts`, `lib/applications/types.ts`,
+  `app/(app)/applications/actions.ts`,
+  `app/(app)/applications/[id]/application-status-form.tsx`,
+  `app/(app)/applications/[id]/page.tsx`, and `CODEX_SESSION_LOG.md`.
+- **Systems affected:** Linked Supabase development migration history,
+  `public.update_application_status(uuid,text)`, persisted Applications tracker
+  and detail reads, and the detail status control. Disposable Auth users and
+  marker rows were removed after verification.
+- **Architectural decisions:** The security-definer RPC derives `auth.uid()`,
+  validates canonical status, locks the caller-owned row with `FOR UPDATE`,
+  returns `unavailable`, `unchanged`, or `updated`, preserves the first
+  `applied_at`, and writes one fixed minimal timeline event only for an actual
+  transition. The server action re-authenticates, validates both values, calls
+  only the RPC, and revalidates tracker and detail paths.
+- **Security or privacy considerations:** The function has an empty search
+  path; `PUBLIC` and `anon` execute are revoked and only `authenticated` is
+  granted. Event metadata contains exactly `previous_status` and `new_status`.
+  No owner, job, raw text, notes, resume, or AI value enters the event or action
+  response. Foreign and nonexistent IDs share the same unavailable result.
+- **Rejected alternatives:** No direct browser update, multi-request
+  application/event write, optimistic status badge, client timeline insert,
+  broad deduplication constraint, service-role app dependency, transition
+  graph, or unrelated timestamp field was added.
+- **Tests run:** Applied-migration integrity check; SQL signature, security,
+  grants, search-path, and forbidden qualification review; `git diff --check`;
+  `npx --yes supabase migration list --linked`; `npx --yes supabase db push
+  --linked --dry-run`; migration 009 apply; live management-API catalog query;
+  two-user authenticated RPC matrix; concurrent duplicate request; anonymous
+  rejection; production-browser action, no-op, timeline, tracker, isolation,
+  and no-configuration checks; `npm run lint`; `npm run typecheck`; `npm run
+  build`; marker cleanup.
+- **Lint result:** Passed. One pre-apply effect-based state synchronization was
+  rejected by lint and replaced with derived selection state.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack. A separate
+  no-Supabase production build also passed for the isolated disabled-state
+  check.
+- **Manual verification performed:** Remote history records `202607130009`.
+  Catalog inspection confirmed `(uuid,text)`, the intended table result,
+  security definer, empty search path, and authenticated-only execute. All seven
+  canonical statuses updated successfully; three invalid/deprecated values
+  failed without writes. Saved to tailoring produced one event, a repeated
+  tailoring request produced none, and concurrent duplicate tailoring requests
+  serialized to one updated plus one unchanged result. The first applied
+  transition set `applied_at`; leaving and returning preserved it; an applied
+  no-op added no event. Symmetric foreign and nonexistent calls returned
+  unavailable, anonymous execution failed, and cross-user reads remained
+  isolated. The real detail control changed applied to interview, retained its
+  success and unchanged messages after refresh, rendered the new event, and
+  moved the tracker card into Interview. The pending label and disabled state
+  are wired around the awaited action; the live development RPC completed too
+  quickly for the browser helper to capture that transient frame. Notes and
+  other fields remained unchanged, metadata stayed minimal, raw markers never
+  rendered, and no board or intake row changed.
+- **Related commit hash or range:** None; no commit was created.
+- **Real `/feedback` Session ID:** Not available; no ID was produced or
+  recorded.
+- **Known limitations:** No safe caller-controlled post-update timeline failure
+  exists, so rollback injection was not manufactured. Atomicity follows the
+  single PostgreSQL function transaction and was reinforced by live concurrent
+  row-lock behavior.
+- **Remaining risks:** Status transition policy remains intentionally open among
+  canonical statuses. A future product decision may introduce a legal
+  transition graph, but this MVP mutation must not infer one.
+- **Next action:** Implement the next Application Detail mutation in a separate
+  narrow task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

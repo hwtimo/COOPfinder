@@ -11,6 +11,16 @@ export const APPLICATION_TRACKER_COLUMNS = [
 export type ApplicationTrackerStatus =
   (typeof APPLICATION_TRACKER_COLUMNS)[number]["id"];
 
+const applicationTrackerStatuses = new Set<string>(
+  APPLICATION_TRACKER_COLUMNS.map((column) => column.id),
+);
+
+export function isApplicationTrackerStatus(
+  value: unknown,
+): value is ApplicationTrackerStatus {
+  return typeof value === "string" && applicationTrackerStatuses.has(value);
+}
+
 export type ApplicationJobSummary = {
   id: string;
   title: string;
