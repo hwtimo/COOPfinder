@@ -1,260 +1,317 @@
-# PRODUCT_STRATEGY.md — Product-Led Onboarding & Hybrid Auth
+# PRODUCT_STRATEGY.md — Paste-a-Link Core Loop, Job Board + Intake, Product-Led Onboarding
 
-> **Status:** Adopted 2026-07-09. This supersedes the earlier assumption of
-> `visitor -> login -> protected app -> dashboard`.
-> **Read together with:** [DESIGN.md](DESIGN.md) §22 (guest UX rules),
-> [TECHNICAL_DESIGN.md](TECHNICAL_DESIGN.md) "Auth & Guest Model v2" (schema/routes),
-> [HANDOFF.md](HANDOFF.md) and [CHATGPT_DIRECTOR_CONTEXT.md](CHATGPT_DIRECTOR_CONTEXT.md) (implementation order).
+> **Revision 2 — adopted 2026-07-09. Still current; do not create a new revision for implementation progress.**
+> Implementation status last synchronized: **2026-07-13** (see §10, §10a, §12).
+> Supersedes revision 1 (see git history).
+> What changed in r2: the selling point centers on the **paste-a-link intake
+> loop**, the starter catalog grows into a **moderated public job board** with
+> user submissions, `/jobs` stays private ("My jobs") and `/board` becomes the
+> public surface, and centralized GPT-5.6 routing + deterministic-PDF plans
+> are added.
+> Product-led onboarding, hybrid auth, credits, and free tracking carry over
+> from r1 unchanged.
+>
+> **Read together with:** [DESIGN.md](DESIGN.md) §22–23,
+> [TECHNICAL_DESIGN.md](TECHNICAL_DESIGN.md) "Board, Intake & Export v3",
+> [HANDOFF.md](HANDOFF.md),
+> [CHATGPT_DIRECTOR_CONTEXT.md](CHATGPT_DIRECTOR_CONTEXT.md), and
+> [CODEX_SESSION_LOG.md](CODEX_SESSION_LOG.md).
 
 ---
 
-## 1. Strategy Summary
+## 1. The selling point
 
-COOPfinder does not put a login wall in front of an empty app. A first-time
-visitor gets a **guided guest experience** that demonstrates the core value —
-*"I entered my profile and now I know which roles I can pursue and what to do
-next"* — before any account exists. Login is positioned as **saving your
-progress**, not unlocking the door.
+> **Found a role? Paste the link.** COOPfinder extracts the requirements,
+> compares them to your profile, helps you tailor a reviewed resume, exports a
+> clean PDF, and sends you back to the original application site to submit it
+> yourself.
 
-The guest flow:
+COOPfinder remains a **Canadian co-op application command center** — not a job
+board, not an auto-apply bot, not a scraper. The paste-a-link loop is the core
+motion; the tracker is where the work lives; the public board is a discovery
+aid and top-of-funnel surface, never the identity of the product.
 
-1. Visitor lands on `/start` (or browses a limited public jobs preview).
-2. They build a **draft master profile** in the browser: school, program,
-   work term, work authorization, skills, experiences/projects.
-3. As they type, the app computes **deterministic (non-AI) matches** against a
-   small **curated starter catalog** of real Canadian co-op postings and shows
-   live feedback: *"6 roles in the starter catalog match your profile"*,
-   *"Add more experience to improve matching."*
-4. After the value moment, the save prompt appears:
-   *"Your profile matches 6 roles. Create a free account to save your profile,
-   save jobs, track applications, and tailor your resume — 2 free tailoring
-   credits included."*
-5. After signup, the draft migrates into Supabase, and the full app opens:
-   free job saving, free application tracking, master profile persistence,
-   resume upload, and AI tailoring metered by credits.
+Hard constraints (unchanged, non-negotiable):
 
-### What changed vs. the raw idea (strategist adjustments)
+- **No auto-apply.** Applying always happens on the original site.
+- **No scraping product.** A single user-directed fetch of a URL the user
+  pasted is intake; bulk crawling is not. Fetched text is stored privately for
+  that user only and is never republished.
+- **No copied job descriptions on the public board.** Board entries carry
+  in-house summaries + `source_url` link-outs only.
+- **AI is reviewable, never invents experience, and match/eligibility
+  language stays careful** (DESIGN.md §22.4, §23.6).
 
-| Raw idea | Adopted version | Why |
+## 2. Two job surfaces, one distinction
+
+| | **Public job board** (`/board`) | **My saved jobs** (`/jobs`) |
 |---|---|---|
-| "Browse applicable jobs before login" | Small **curated starter catalog** (20–40 hand-entered Canadian co-op roles), clearly labeled as a starter set | COOPfinder has no job inventory — the product is user-fed by design. A tiny curated catalog gives guests something real to match against without turning the product into a job board or requiring scraping. Summaries are written in-house; every entry links out to the original posting. |
-| Show eligibility counts while typing | Deterministic **client-side matching** (skill overlap + term fit + work-auth filter), no AI for guests | Zero marginal cost, instant feedback, no anonymous-abuse surface, and honest — we can explain exactly why something matched. AI stays server-side and auth-gated. |
-| "You may be eligible for N jobs" | **"N roles match your profile"** as primary copy; "appears eligible" only for work-auth/term filters | "Eligible" is a legal/immigration-adjacent claim. Matching is what we actually compute. See DESIGN.md §22.4 language rules. |
-| "2 free tailoring credits" as a counter | One-time signup grant of 2 credits in a **server-side credit ledger** | A ledger is auditable, tamper-proof under RLS, and extends to paid credit purchases without schema churn. Replaces the earlier "3 free tailors/month" idea for MVP — one-time grant is simpler to reason about and to message. Revisit with usage data. |
+| Audience | Everyone (guests + users) | Owner only (auth) |
+| Content | Approved, moderated entries: in-house summary, skills, term, deadline, `source_url` link-out | Full private record: raw pasted/fetched text, extraction, match, notes, status |
+| Source | Founder-curated + **user submissions after admin approval** | Pasted link/JD, or "Save to my jobs" from the board |
+| Statuses | `pending_review → approved / rejected`, then `archived / expired` | `saved → tailoring → ready → applied → oa → interview → offer / rejected` |
+| Feeds | Guest match preview, discovery, SEO later | Matching, tailoring, tracking, export |
 
-### Non-negotiable product principles (unchanged)
+A submitted job can be **both**: it immediately becomes a private saved job
+for the submitter (full value, no waiting), and *optionally* a
+`pending_review` board candidate. Moderation only gates **public visibility**,
+never the submitter's own use.
 
-- Application command center, **not a job board**. The starter catalog is a
-  demo/matching aid; the primary loop is still "paste your own posting."
-- AI is reviewable, never invents experience, never auto-applies.
-- No guaranteed-outcome language. Match scores are directional.
-- Transparent data handling: guests are told their draft lives on this device
-  only; account = saved to their account.
-- No scraping. Catalog entries are hand-entered with in-house summaries.
+## 3. What changed vs. r1 / what stays
 
----
+**Changed**
+1. `/jobs` returns to the protected set (it is the private pipeline). Guests
+   navigating to `/jobs` are redirected to `/board` — discovery, not a wall.
+   (r1's dual-mode guest `/jobs` is dropped: signed-in users need discovery
+   too, so the board must be its own route anyway.)
+2. `catalog_jobs` evolves into **`board_jobs`** with a moderation lifecycle
+   and user submissions (rename + columns; migration spec in
+   TECHNICAL_DESIGN v3 §D).
+3. `/start` gains the **paste-a-link hero** as its centerpiece (guest-stash
+   behavior, §5 below).
+4. New plans added: `job_intake_events`, extraction-confidence fallback,
+   centralized GPT-5.6 routing, deterministic PDF export.
 
-## 2. Key Decisions
+**Stays**
+- Command-center positioning and every completed MVP screen.
+- Product-led onboarding: value before identity; login = "save your progress".
+- Hybrid auth model, `proxy.ts` matcher approach, `/login?next=&reason=`.
+- Guest draft in `localStorage` (`coopfinder.guest_draft.v1`) + migration
+  rules; deterministic (non-AI) guest matching.
+- `tailoring_credit_ledger` (2 free credits at signup) and free, unmetered
+  application tracking.
+- All AI-safety and language rules.
 
-### D1. What is public (no account)?
+## 4. Route model (decision)
 
-| Surface | Guest gets | Notes |
+| Route | Access | Purpose |
 |---|---|---|
-| `/` | Redirect: authed → `/dashboard`; guest → `/start` | Marketing landing page comes later; until then `/start` is the front door. |
-| `/start` | Guided draft-profile builder + live match feedback | The first-run experience. |
-| `/jobs` (guest view) | Starter catalog list: title, company, location, term, work mode, deadline | Limited filters (role type, location, term). Labeled "Starter catalog". |
-| `/jobs/[id]` (guest view, catalog only) | Summary, required/nice-to-have skills, deadline, link to original posting, match vs. draft profile | The **full AI analysis panel, save, and tailor are gated** with inline signup prompts. |
+| `/` | public | authed → `/dashboard`; guest → `/start` |
+| `/start` | public | paste-link hero + guest profile builder + match preview (§5) |
+| `/board` | public | moderated job board (approved entries only) |
+| `/board/[id]` | public | board detail: summary, skills, link-out; gated Save/Analyze |
+| `/board/submit` | public page; submitting requires auth | suggest a role for the board (atomic private + pending-review creation, as built) |
+| `/login` | public | plain login, `?next=&reason=` |
+| `/jobs`, `/jobs/[id]` | **auth** | My saved jobs (existing MVP screens, unchanged); guest → redirect `/board` |
+| `/dashboard`, `/applications(/**)`, `/resumes(/**)`, `/calendar`, `/insights`, `/documents`, `/settings` | auth | unchanged |
+| `/admin/board` | admin only (later phase) | moderation queue; MVP moderation happens in Supabase Studio |
 
-### D2. What requires an account (free)?
+Sidebar adds **Job board** as a top-level item (visible to guests and users);
+"Jobs" is relabeled **My jobs** for authed users.
 
-- Save a job (catalog or pasted own posting) → user's `job_postings`.
-- Add own job posting (paste text).
-- Full job analysis (AI JD extraction) — costs us money, needs identity.
-- Application tracker (create/update/timeline) — **free**, it is the retention
-  engine and costs ~nothing (Postgres rows).
-- Master profile persistence + editing.
-- Resume upload (PDF/DOCX) — file storage liability stays behind auth.
-- Dashboard, calendar, insights, documents, settings.
+## 5. `/start` after the redirect
 
-### D3. What consumes credits (later, paid)?
+Order of the page (single 720–960px column, DESIGN.md §22.2 + §23.3):
 
-- **AI resume tailoring**: 1 credit per tailoring session generation.
-  Signup grants 2 free credits. When credits run out → upgrade prompt
-  (student premium, CAD $6–12/mo per TECHNICAL_DESIGN.md).
-- Export PDF/DOCX: free while in beta, candidate for premium later.
-- Application tracking: **never metered** in MVP. Advertised as free.
-- Rate-limit guardrails (not user-facing pricing): job saves capped
-  generously (e.g., 100/term) via `usage_counters` purely as abuse protection;
-  not advertised.
+1. **Hero: paste input.** "Found a role? Paste the link or the job
+   description." For guests, submitting does **not** run AI: the link/JD is
+   stored in the device draft with the message *"We'll extract the
+   requirements when you create your free account — this link is saved on
+   this device."* The gate fires here with the concrete value line. For
+   authed users, the same input goes straight to real intake in `/jobs`.
+2. **Draft profile builder** (unchanged from r1): school/program/term, work
+   auth, target roles, skills, experiences — all optional, device-only chip.
+3. **Live match preview** against approved board jobs (deterministic skill
+   overlap; zero AI): "6 roles on the board match your profile so far."
+4. **Board CTA:** "Browse the job board" (public, no gate).
+5. **Signup prompt** after the first value moment (non-zero matches or a
+   stashed link): "Create a free account to save your profile and extract
+   that posting — 2 free tailoring credits included."
 
-### D4. Guest draft storage
+Guest capabilities (complete list): browse `/board` and board details, build
+the device draft, see deterministic match counts, stash pasted links/JDs in
+the draft. Zero AI calls, zero server writes.
 
-`localStorage` (not `sessionStorage` — surviving a tab close is the whole
-point of a draft). Single versioned JSON document, key
-`coopfinder.guest_draft.v1`. Contains only what the guest typed: school,
-program, term, work auth, target roles, skills, experience/project entries.
-**No resume files, no email, no name required in guest mode.** UI labels it
-"Saved on this device only — create an account to keep it."
+Login required for: intake extraction (URL fetch/AI), saving jobs (board or
+pasted), submitting to the board, tracker, master profile persistence, resume
+upload, tailoring (credits), export.
 
-### D5. Guest → user migration
+## 6. Job intake (paste link / JD)
 
-On first login/signup, if a local draft exists:
+One shared intake flow (component reused everywhere it appears):
 
-- **New account (empty profile):** migrate automatically in one server action —
-  create `profiles` row, `master_profiles` + `master_profile_entries`.
-  Guest-typed entries arrive `confirmed = true` (the user authored them
-  directly; `confirmed = false` is reserved for machine-extracted entries from
-  future resume parsing). Clear localStorage on success.
-- **Existing account with data:** never silently merge. Show an import prompt
-  ("Import the draft profile from this device? N entries") with
-  import / discard choices.
-- Migration is idempotent (guarded by a draft hash) so a refresh mid-flow
-  cannot duplicate entries.
+- **Entry points:** `/jobs` "Add job" (primary), global topbar "Add job",
+  `/start` hero (guest-stash variant), dashboard quick-action card.
+- **Input:** URL *or* pasted description. If a URL is given, the server makes
+  **one** fetch of that exact URL at the user's request. If the fetch is
+  blocked, fails, or extraction confidence is low, the UI falls back to
+  "Paste the job description instead" (DESIGN.md §23.4). Never retry-crawl.
+- **Extraction:** GPT-5.6 Luna produces structured fields + per-field and
+  overall confidence (TECHNICAL_DESIGN v3 §E). The user always reviews the
+  extracted fields in an editable form before saving — extraction is a draft,
+  not a fact.
+- **Output:** a private `job_postings` row (`intake_source`:
+  `pasted_url | pasted_text | board_save | manual`), which feeds matching,
+  tailoring, and the tracker. Applying happens on `source_url`.
+- **Board submission:** an opt-in checkbox in the intake success state
+  ("Suggest this role for the public job board") and an action on the saved
+  job detail. Creates a `pending_review` board row (§7).
 
-### D6. Route protection model (hybrid)
+## 7. Board moderation
 
-Do **not** blanket-protect `(app)/`. Middleware protects private prefixes
-only: `/dashboard`, `/applications`, `/resumes`, `/settings`, `/documents`,
-`/insights`, `/calendar`. `/jobs`, `/jobs/[id]`, and `/start` are public and
-render guest or authed variants from session state. Gated **actions** inside
-public pages (Save, Tailor, Full analysis) show inline value-first signup
-prompts — never a bare redirect.
+- Submissions land as `board_jobs` rows with `status = 'pending_review'`,
+  carrying `submitted_by`, `submitted_url`, and an optional note — **not**
+  the user's raw pasted text.
+- **MVP review = founder in Supabase Studio:** verify the link, write the
+  in-house summary and skills, set term/deadline, flip to `approved` (or
+  `rejected` with a note). A minimal `/admin/board` queue UI is a later
+  phase (admin gate via `profiles.is_admin`).
+- Public read policy exposes only `approved` rows with unexpired deadlines.
+  Submitters can see their own rows' status ("Pending review" chip in their
+  saved job detail). `archived` (manual) and `expired` (deadline-derived)
+  remove entries from the board without deleting history.
+- Duplicate control: GPT-5.6 Luna duplicate-candidate detection at submission time
+  (same `source_url` host+path, or high title+company similarity) marks
+  likely dupes for the reviewer.
 
-### D7. First-run route
+## 8. Planned GPT-5.6 routing strategy
 
-`/start`. `/` redirects there for guests (until a marketing landing page
-exists, at which point `/` becomes the landing and keeps `/start` as its CTA
-target).
+This is the permanent **planned architecture**, not an implemented
+integration. No production AI call exists yet. Model selection will live in
+one server-only configuration module; feature code will request a task
+category or capability tier and will never hardcode a model identifier.
 
-### D8. Login page shape
+| Model | Planned responsibility | Hard boundary |
+|---|---|---|
+| **GPT-5.6 Luna** (`gpt-5.6-luna`) | Fast, schema-constrained JD cleanup, explicit field extraction, basic classification, lightweight normalization, and duplicate-candidate detection | Validated structured output only; never final resume content |
+| **GPT-5.6 Terra** (`gpt-5.6-terra`) | Requirement normalization, hiring-signal analysis, confirmed-evidence mapping, directional match explanations, next actions, first-pass claim classification, and escalation judgment | Experience-backed conclusions use confirmed evidence only; never eligibility or outcome probability |
+| **GPT-5.6 Sol** (`gpt-5.6-sol`) | Nuanced evidence selection, reviewable resume suggestions, supported rewriting, difficult claim disputes, and final semantic review | May reorganize or rephrase confirmed evidence, but never expand beyond it or invent a claim |
 
-Separate, boring `/login` (email + Google per TECHNICAL_DESIGN.md) that
-accepts `?next=` and `?reason=` params so gate prompts can say *why* the user
-is here ("Log in to save this job"). Signup value messaging lives in the
-**gate prompts and `/start`**, not on the login form. Returning users get a
-fast, plain login.
+Default routing: Luna extracts and passes schema validation; invalid,
+low-confidence, contradictory, or unclear output escalates to Terra. Terra
+normalizes and maps requirements to confirmed Master Profile evidence.
+Ambiguous evidence, high-impact wording, difficult claim disputes, and final
+resume language escalate to Sol. Retries and escalations are bounded; failure
+returns an honest review/manual state, never fabricated fallback content, and
+never consumes a tailoring credit.
 
-### D9. Application tracking positioning
+Every experience-backed suggestion retains source-evidence references and
+supports accept, reject, or edit. AI cannot confirm evidence. Unsupported
+claims block readiness and export. Final PDF rendering accepts reviewed
+content only and prohibits AI calls. The canonical task routing table and
+operational controls are in TECHNICAL_DESIGN.md §3 and v3 §F.
 
-"Tracking is free." It appears in gate copy and future pricing pages as the
-permanently free tier anchor. Rationale: retention + habit formation; the
-paid surface is AI work (tailoring, later cover letters/interview prep),
-not organization.
+## 9. Deterministic PDF export
 
-### D10. Credits representation
+AI helps **create** reviewed content; it never touches the **render**.
 
-- Schema: `tailoring_credit_ledger` (append-only; `delta` +/-, `reason` in
-  `signup_grant | tailor_use | purchase | admin_adjust`). Balance =
-  `sum(delta)`. Writes are **server-only** (service role / definer function);
-  users can only `select` their own rows. `usage_counters` stays for
-  rate-limit metering, not entitlements.
-- UX: credit count visible in the tailoring workspace Actions card
-  ("2 credits left · tailoring uses 1"). Generation button disabled at 0 with
-  an upgrade prompt. No dark patterns: show the count before the user starts.
+- Export is available only when readiness passes: all suggestions reviewed,
+  no unsupported claims outstanding, claim check passed.
+- The accepted content (exact accepted/edited text, nothing else) is
+  snapshotted with a content hash; the PDF renders server-side from a
+  **versioned template** with **no AI call in the render path** and no new
+  claims possible by construction.
+- Same content + same template version ⇒ the same document. Export records
+  store `template_version` + `content_hash` for auditability.
+- Full pipeline: TECHNICAL_DESIGN v3 §G.
 
----
+## 10. Implementation phases & status (synchronized 2026-07-13)
 
-## 3. Implementation Phases
+**Completed** (details and exact object names in TECHNICAL_DESIGN.md as-built
+sections and HANDOFF.md):
 
-Phases are sequential; each has acceptance criteria a coding agent can verify.
-Frontend guest experience (Phase 3) deliberately lands *with* auth so the
-gates have somewhere to send people.
+| Phase | Status |
+|---|---|
+| 1. Docs redirect (strategy r2) | ✅ Done |
+| 2. Schema delta v3 (`board_jobs` moderation, `job_intake_events`, intake columns, `profiles.is_admin`) — `202607090003_board_intake_export_v3.sql` | ✅ Done and applied to the development database |
+| 3. `/start` v2 (paste hero with guest-stash, draft builder, deterministic match preview, gate after value; no AI, no fetching, no guest server writes) | ✅ Done |
+| 4. Public board `/board` + `/board/[id]` (approved/active/unexpired reads, filters, guest match notes, link-outs, guest `/jobs` → `/board` redirect) | ✅ Done |
+| 5. Authenticated `/board/submit` with **atomic** private+pending creation (`submit_board_job_with_private_copy`, `202607120001_atomic_board_submission.sql`); submitter status labels (Pending review / On the board / Not added / Archived) | ✅ Done; core authenticated RPC behavior verified live |
+| 6. Private saved-jobs CRUD on `/jobs` + `/jobs/[id]` (create/list/read/edit/delete, search/filters over persisted rows, board→private saves with duplicate prevention via `202607130001_unique_private_board_saves.sql`) | ✅ Done; two-user private-job RLS isolation verified live |
+| 7. Master Profile Supabase persistence + authenticated guest-draft import (`save_master_profile`, `import_guest_draft`, `guest_draft_imports` ledger, `202607130002_master_profile_guest_import.sql` + forward-only repairs through `202607130005`) | ✅ Done; authenticated import smoke, sequential idempotency, and canonical object-key normalization verified live |
 
-### Phase 1 — Strategy in docs (this change)
-Docs only. Decisions D1–D10 recorded; no code.
-**Done when:** PRODUCT_STRATEGY.md exists; DESIGN.md §22, TECHNICAL_DESIGN.md
-v2 section, HANDOFF.md, CHATGPT_DIRECTOR_CONTEXT.md updated consistently.
+**Remaining product phases**, in order:
 
-### Phase 2 — Schema completion (delta migration)
-The initial migration (`202607090001_initial_mvp_schema.sql`) already covers
-profiles/companies/job_postings/applications/timeline/master profile/resume
-versions/usage_counters with RLS. Add a **delta migration**:
-- `catalog_jobs` table, readable by `anon` + `authenticated` (only
-  `is_active = true`), written only by service role. Seed 20–40 entries.
-- `tailoring_credit_ledger` + signup grant mechanism (+2 on profile creation).
-- Balance helper (view or definer function `tailoring_credit_balance()`).
-**Done when:** migration applies cleanly; anon key can select active catalog
-jobs and nothing else; ledger rows cannot be written with the anon/user key.
+1. **Applications CRUD** (free tracking, persisted timeline) — the next phase.
+2. **AI job parser for pasted JD text.**
+3. **Bounded, user-directed URL intake** with manual paste fallback.
+4. **AI resume tailoring** with reviewable source evidence and the existing
+   credit boundaries.
+5. **Mechanical claim checker.**
+6. **Deterministic PDF export.**
+7. **Final MVP integration and end-to-end QA.**
 
-### Phase 3 — Auth + hybrid routing + guest experience
-- Supabase auth (email + Google), `/login` with `next`/`reason` params.
-- Middleware protecting only private prefixes (D6).
-- `/start` guest onboarding (localStorage draft, client-side matching against
-  catalog), guest variants of `/jobs` + catalog `/jobs/[id]`, inline gate
-  prompts, guest topbar/sidebar states per DESIGN.md §22.
-- Keep every existing mock screen working for authed users (mock data remains
-  until Phases 4–6 swap it out).
-**Done when:** a signed-out visitor can complete `/start`, see live match
-counts, hit a gate on Save/Tailor, sign up, and land in the app; a signed-in
-user never sees guest gates; private routes redirect guests to
-`/login?next=...`.
+Not done (do not document as complete anywhere): Applications CRUD, persisted
+timeline, AI parsing, URL fetching, extraction-confidence pipeline, tailoring,
+production credit consumption, claim checker, PDF/DOCX export, file upload,
+moderation dashboard, notifications, Calendar/Insights functionality.
 
-### Phase 4 — Jobs CRUD + guest-to-user migration
-- Jobs CRUD per CHATGPT_DIRECTOR_CONTEXT.md §12 (pasted postings, no scraping).
-- "Save" on a catalog job copies it into the user's `job_postings`
-  (`source_url` preserved, `extracted` prefilled from catalog fields).
-- Guest draft migration server action (D5) wired into the post-signup flow.
-**Done when:** draft entered as guest is visible in `/resumes/master` after
-signup; catalog saves appear in `/jobs`; migration is idempotent and the
-existing-account import prompt works.
+## 10a. Remaining live-verification gate
 
-### Phase 5 — Applications CRUD (free tracking)
-Tracker + timeline persistence. No metering. Tracker counts derive from real
-rows.
-**Done when:** create-from-saved-job, status changes, notes/follow-ups
-persist; free-tracking copy present.
+The development Supabase project is connected and migrations through
+`202607130005` are applied. Live checks have covered private-job two-user RLS
+isolation, core authenticated board-submission RPC behavior, one successful
+guest import, exact-repeat idempotency, and canonical JSON object-key-order
+normalization.
 
-### Phase 6 — Master profile & resume persistence
-Master profile/entries CRUD (confirmed flag rules from D5), resume version
-records, resume upload to private storage.
-**Done when:** profile edits persist; entries carry confirmed state; uploads
-land in private bucket with signed-URL access.
+Do not generalize those results. Still unverified live: guest-import
+concurrency/advisory-lock behavior, injected-failure transaction rollback,
+existing-account merge behavior, broader cross-user isolation for profile and
+evidence tables, real-session route protection, duplicate board-save behavior,
+and a complete direct inspection of private raw-JD boundaries. These remain a
+release gate, not a product phase.
 
-### Phase 7 — AI parser + tailoring with credits
-Server-side JD extraction and tailoring per TECHNICAL_DESIGN.md pipeline
-(structured outputs, source-ID citation, claim checking). Tailoring generation
-decrements the ledger atomically **after** a successful generation; UI shows
-balance; 0-balance state shows upgrade prompt.
-**Done when:** tailoring consumes exactly 1 credit per generation, balance
-can't go negative, failed generations don't burn credits, and the workspace
-shows credit state per DESIGN.md §22.5.
-
----
-
-## 4. Risks & Tradeoffs
+## 11. Risks & mitigations
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| **Job-board drift.** A public jobs page invites "why so few jobs?" and repositions us against Indeed. | High | Label it "Starter catalog" everywhere; cap size; primary CTA on the page is "Add your own posting" (gated); never promise comprehensiveness. |
-| **Catalog staleness.** Hand-curated postings expire; dead deadlines destroy trust fast. | High | `is_active` + deadline-based auto-hide (`deadline < today` filtered out); keep the set small enough to maintain weekly; show "Last checked" date. |
-| **Guest data loss.** localStorage is wiped by browser cleanup / private mode / device switch. | Medium | "Saved on this device only" labeling; surface the save prompt right after the first value moment, not at the end. |
-| **Migration conflicts.** Draft on device + existing account data. | Medium | Explicit import prompt, never silent merge (D5). |
-| **Weaker guest matching quality.** Deterministic skill overlap is cruder than AI matching. | Low | It only needs to be honest and directionally useful; copy says "based on skill overlap". AI analysis is the paid-side upgrade, which is also a monetization story. |
-| **One-time 2 credits may under-convert vs. recurring free credits.** | Low | Cheap to change (one ledger insert policy); revisit with real funnel data. |
-| **Anon abuse of public pages.** | Low | Guests trigger zero AI/server-mutation paths; catalog reads are cacheable; nothing to farm. |
-| **Curation legal posture.** | Low | In-house summaries, always link out, honor takedown requests, no scraping. |
+| **Job-board identity drift** — a real board with submissions pulls the product toward "small Indeed" | High | Board stays summary+link-out only; primary CTA everywhere is the intake loop; sidebar/board copy frames it as discovery for the command center |
+| **Moderation bottleneck** — founder review doesn't scale; stale pending queue frustrates submitters | Med | Submitter gets full private value instantly (moderation gates publicity only); dedupe assist; expiry auto-hides stale entries; admin UI deferred until volume justifies it |
+| **URL fetch legal/ToS exposure** — sites block or forbid fetching | Med | One user-directed fetch, honor blocks, immediate paste-fallback, fetched text private to owner, never republished; no crawling, ever |
+| **Extraction quality erodes trust** | Med | Confidence thresholds + always-editable review form; low confidence routes to paste/manual; `job_intake_events` measures real-world accuracy |
+| **Guest-stash disappointment** — user pastes as guest, expects instant magic | Low | Copy sets expectation at the input ("we'll extract when you create your account"); post-signup auto-processing makes good on it immediately |
+| **Board content liability** — bad/spam submissions | Low | Nothing user-written goes public; admin authors all public text; rejected state + notes |
+| **Model routing leaks** — model names hardcoded across features | Low | One server-only task router + env-backed Luna/Terra/Sol mapping; feature code requests capabilities, never model IDs |
 
-Tradeoffs accepted: more upfront frontend work before "real" features
-(guest mode + gates), a small permanent curation chore, and two sources of
-jobs (catalog vs. user-pasted) that the Jobs UI must distinguish.
+## 12. One-week MVP scope (execution priority, not a strategy change)
 
----
+The MVP core loop: **sign in → save a private job → enter trusted experience →
+parse pasted JD → review evidence-backed resume suggestions → export a
+deterministic PDF → return to the original site and apply manually.**
 
-## 5. Product Acceptance Criteria (end state)
+Already-implemented foundations: authentication, public/private job
+separation, private Jobs CRUD, persisted Master Profile, evidence-confirmation
+state, guest-to-account import.
 
-1. A first-time visitor reaches a useful screen in one click and is never
-   shown a bare login wall.
-2. A guest can build a draft profile and see match feedback within ~2 minutes,
-   with zero AI calls made.
-3. Every gate prompt states the concrete value of the account ("save this
-   job", "keep this profile", "tailor with 2 free credits") — no generic
-   "Sign up to continue".
-4. Nothing a guest typed is lost on signup (draft migrates), and nothing is
-   uploaded to a server before signup (verifiable: no network writes in guest
-   mode beyond static fetches).
-5. Eligibility/match language follows DESIGN.md §22.4 (no "eligible" as a
-   flat claim, no outcome promises).
-6. Application tracking works end-to-end with no meter and is described
-   as free.
-7. Tailoring credits: visible balance, 1 credit per generation, server-side
-   enforcement, graceful 0-credit state.
+Highest-priority remaining work, in order:
+
+1. Finish the remaining live Supabase verification in §10a.
+2. Applications CRUD.
+3. Pasted-text JD parsing.
+4. A small number of evidence-linked resume suggestions.
+5. Unsupported-claim blocking.
+6. One deterministic PDF template.
+7. End-to-end testing of the core loop.
+
+Explicitly deprioritized for the one-week MVP (long-term direction unchanged):
+moderation dashboard, broad URL intake, file upload, DOCX, Calendar/Insights
+completion, drag-and-drop, advanced filters, notifications, model controls
+exposed in the UI, extensive mobile redesign, automatic applying (never).
+
+## 12a. Engineering traceability
+
+Implementation continues through one narrow Codex prompt at a time; future
+phase prompts are written when that phase begins, not stockpiled. Meaningful
+core sessions are recorded in `CODEX_SESSION_LOG.md` with a sanitized task
+summary, observable verification, and related commit range. A real
+`/feedback` Session ID is copied exactly when available and is never invented,
+inferred from Git history, or reconstructed later.
+
+## 13. Product acceptance criteria (end state)
+
+1. A guest can paste a link on `/start`, build a draft, see match counts, and
+   understand exactly what an account unlocks — with zero AI calls and zero
+   server writes until signup.
+2. The paste→extract→review→tailor→export→"apply on the original site" loop
+   works end-to-end for a signed-in user, with the user reviewing extraction
+   fields and every resume suggestion.
+3. The public board never shows unapproved content or copied job-description
+   text; every entry links out; expired deadlines disappear automatically.
+4. A submitter always keeps full private use of their job regardless of
+   moderation outcome, and can see their submission status.
+5. Match/seniority language follows DESIGN.md §22.4 + §23.6; no eligibility
+   or outcome promises anywhere.
+6. Tailoring consumes ledger credits exactly as specified; tracking stays
+   free and unmetered.
+7. Exported PDFs contain exactly the accepted content, render without AI, and
+   are reproducible from their stored hash + template version.

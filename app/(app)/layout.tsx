@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppTopbar } from "@/components/app/app-topbar";
+import { GuestDraftImportHandoff } from "@/components/app/guest-draft-import-handoff";
 import { currentUser } from "@/lib/mock";
 import { getSupabaseUser } from "@/lib/supabase/user";
 
@@ -46,6 +47,7 @@ export default async function AppLayout({
       <div className="md:pl-60">
         <AppTopbar user={shellUser} />
         <main className="mx-auto max-w-[1400px] px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+          {user ? <GuestDraftImportHandoff userId={user.id} /> : null}
           {children}
         </main>
       </div>

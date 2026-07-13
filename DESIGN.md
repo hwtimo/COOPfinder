@@ -985,7 +985,7 @@ Use:
 
 ---
 
-## 20. Claude / Fable Implementation Prompt
+## 20. Fable Implementation Prompt
 
 Use this prompt when generating UI:
 
@@ -1161,3 +1161,161 @@ Follow §10 patterns, with guest-specific copy:
 - Is "on this device only" visible wherever draft data is edited?
 - Is the starter catalog labeled as curated and small?
 - Does eligibility/matching copy pass §22.4?
+
+---
+
+## 23. Job Board, Intake & Export UX
+
+Added 2026-07-09 with strategy revision 2 (PRODUCT_STRATEGY.md). This section
+extends §22; where it touches `/start`, it amends §22.2 (the paste hero is
+now step 0 of `/start`).
+
+### 23.1 Public job board (`/board`)
+
+- Same shell and tokens as the rest of the app. Card or compact-row list:
+  role, company, location, term, work mode, deadline badge, skill pills.
+- Header framing keeps the command-center identity:
+  title "Job board", description "Co-op roles curated and community-submitted,
+  reviewed before posting. Save one to analyze it against your profile."
+- Every entry shows a **"View original posting"** link-out (external-link
+  icon). Board detail shows: in-house summary (labeled "Summary by
+  COOPfinder"), required / nice-to-have skills, term/deadline/work-auth
+  facts, and for guests with a draft: the deterministic match note.
+- Gated actions on board detail (guest): **Save to my jobs**, **Analyze
+  against my profile** — inline gates per §22.3. Authed: Save works
+  instantly; saved state shows "In your jobs → open".
+- Board never displays job-description body text. If a user wants the full
+  text, the link-out is the path.
+- "Last reviewed" date on each entry; expired deadlines drop off
+  automatically (no manual cleanup UI needed).
+
+### 23.2 Submit-to-board & pending states
+
+- Submission is opt-in inside the intake success state: checkbox
+  "Suggest this role for the public job board" + helper "A person reviews
+  every suggestion before it appears. Your saved copy is yours either way."
+- On the submitter's saved job detail, a quiet status chip:
+  - `Pending review` (info tone) — "Suggested for the job board · pending
+    review"
+  - `On the board` (success tone) — links to the board entry
+  - `Not added` (muted) — "The board editors didn't add this one. Your saved
+    copy is unaffected."
+- Never imply a timeline for review. Never block any private feature on
+  moderation state.
+
+### 23.3 Paste-link intake UX (amends §22.2)
+
+- **The intake input is one component** reused at: `/jobs` "Add job" modal
+  (primary), topbar "Add job", `/start` hero, dashboard quick action.
+- Input accepts a URL **or** pasted description text. Single field with
+  auto-detection; helper text: "Paste a job link from Indeed, LinkedIn, a
+  company careers page, or your school portal — or paste the description
+  itself."
+- **Guest variant (`/start` hero):** submitting stores the link/JD in the
+  device draft. Confirmation card: "Saved on this device. Create a free
+  account and we'll extract the requirements and compare them to your
+  profile." → primary "Create free account", secondary "Add another".
+  No spinner, no fake processing.
+- **Authed flow:** URL → extraction progress (§11 step-style loading: e.g.
+  "Fetching posting → Extracting requirements → Checking against your
+  profile"), then an **editable review form** of extracted fields. Extraction
+  is always presented as a draft: "Check these fields — extraction can make
+  mistakes." Save requires user confirmation of the form.
+
+### 23.4 Extraction fallback states
+
+| State | UI |
+|---|---|
+| Fetch blocked / failed | "We couldn't read that page. Paste the job description instead." → textarea appears inline; URL is kept as `source_url`. |
+| Low confidence | Review form opens with a warning banner "Low-confidence extraction — please check every field" and per-field flags on uncertain values. |
+| Partial fields | Missing fields are empty inputs labeled "Not found — add manually", never guessed silently. |
+| Duplicate suspected | Info note "This looks similar to a job you already saved: <link>. Save anyway?" |
+
+Error copy follows §12: specific, recoverable, no dead ends.
+
+### 23.5 Export readiness UX
+
+- Export buttons stay disabled until readiness passes (all suggestions
+  reviewed, no unsupported claims outstanding, claim check passed). Disabled
+  state explains itself: "Review all suggestions to enable export."
+- Above export actions, a static trust line: **"Exports contain exactly the
+  content you accepted — nothing is added or rewritten during export."**
+- Post-export: quiet success state with "Open PDF" + "Back to the original
+  posting" (the `source_url` link-out) — closing the loop of the core pitch:
+  tailor here, apply there.
+- Never label export as AI-generated; the AI work happened before review.
+
+### 23.6 Seniority-mismatch & match language (extends §22.4)
+
+| Say | Never say |
+|---|---|
+| "This posting appears aimed at candidates with 3+ years of experience — it may be a stretch based on your profile." | "You are not qualified" / "Don't apply" |
+| "Requirements suggest a senior role." | Any hard verdict on the user's chances |
+| "Worth applying if the co-op designation is flexible — check the original posting." | Discouraging language without a next action |
+
+Mismatch notes are informational (info tone, not danger), always paired with
+a next action, and never block saving, tailoring, or tracking a job.
+
+### 23.7 Quality checklist additions
+
+- Does the board read as curated discovery, not a search engine?
+- Is every public entry summary-only with a working link-out?
+- Can a submitter always use their job privately regardless of moderation?
+- Does every extraction result pass through an editable review form?
+- Do fallback states appear for blocked fetches and low confidence?
+- Is export visibly gated on review, with the exact-content trust line?
+
+---
+
+## 24. Master Profile & Guest-Draft Import (as built, 2026-07-13)
+
+This section documents **implemented** behavior on `/resumes/master` and the
+authenticated guest-draft import. It changes no design direction. Future AI
+behavior (tailoring, parsing, claim checking) is NOT implemented and remains
+specified separately in §9.4, §17, and §23.
+
+### 24.1 Master Profile states (implemented)
+
+- **Configuration-disabled:** when Supabase env vars are absent, the page
+  shows an honest empty state ("Supabase is not configured for this build.
+  No mock profile is shown and profile saving is disabled."). **No mock
+  student data is ever rendered as the current user's profile.**
+- **Load error:** a distinct empty state states that no mock or cross-user
+  data was substituted.
+- **Empty account:** a genuinely new profile opens directly into the editable
+  profile form (no fake sample content).
+- **Persisted save:** profile fields, skills, and evidence entries save
+  together through one transactional server action; the UI disables inputs
+  while saving and reflects the persisted result.
+
+### 24.2 Evidence confirmation (trust boundary)
+
+- Evidence entries carry chips: `Confirmed evidence` (success tone) or
+  `Needs confirmation` (warning tone).
+- User-authored evidence can be confirmed with "Confirm accuracy".
+- **Editing a confirmed entry resets it to unconfirmed**; the user must
+  explicitly reconfirm the edited text.
+- Future AI features must treat `confirmed` as a trust boundary: only
+  confirmed evidence is quotable support for suggestions. Never render
+  AI-generated or inferred content as confirmed.
+
+### 24.3 Guest-draft import UX (implemented)
+
+- On entering the authenticated app with a device draft present, a quiet
+  inline notice (not a modal) appears above the content:
+  - **Empty account:** the draft imports automatically; the notice reports
+    "Device draft imported" with counts.
+  - **Existing account:** a **non-destructive merge prompt** appears —
+    explicit confirm required. Merge copy states that existing data is kept:
+    populated fields are preserved, safe empty fields are filled, and
+    duplicate skills/roles/entries/jobs are skipped.
+  - **Malformed draft:** "Device draft needs review — no server writes were
+    made and the local data was not cleared." No fake success is ever shown.
+- Imported stashed jobs that lack a title appear in My jobs with the explicit
+  review placeholder **`Imported job - add title`** and a note telling the
+  user to add the title/company before using the record. This is an honest
+  placeholder required by the schema — never present it as extracted or
+  analyzed job information.
+- The device draft is cleared **only after** the server confirms `imported`
+  or `already_imported` for that exact draft; on any failure it stays on the
+  device.

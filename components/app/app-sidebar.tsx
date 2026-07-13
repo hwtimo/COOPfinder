@@ -16,6 +16,7 @@ import {
   Layers,
   Lock,
   UserRoundPlus,
+  ListFilter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLoginHref } from "@/lib/auth/paths";
@@ -29,7 +30,8 @@ type ShellUser = {
 
 const mainNav = [
   { label: "Home", href: "/dashboard", icon: Home, private: true },
-  { label: "Jobs", href: "/jobs", icon: Briefcase, private: false },
+  { label: "Job board", href: "/board", icon: ListFilter, private: false },
+  { label: "My jobs", href: "/jobs", icon: Briefcase, private: true },
   {
     label: "Applications",
     href: "/applications",
@@ -43,14 +45,13 @@ const mainNav = [
 ];
 
 const savedViews = [
-  { label: "Fall 2026 term", href: "/jobs", icon: GraduationCap, private: false },
-  { label: "Favorite companies", href: "/jobs", icon: Star, private: false },
+  { label: "Fall 2026 term", href: "/jobs", icon: GraduationCap, private: true },
+  { label: "Favorite companies", href: "/jobs", icon: Star, private: true },
   { label: "Resume versions", href: "/resumes", icon: Layers, private: true },
 ];
 
 const guestViews = [
   { label: "Start your profile", href: "/start", icon: UserRoundPlus },
-  { label: "Starter catalog", href: "/jobs", icon: Briefcase },
 ];
 
 export function AppSidebar({ user }: { user: ShellUser | null }) {
@@ -103,7 +104,7 @@ export function AppSidebar({ user }: { user: ShellUser | null }) {
         {/* Saved views */}
         <div className="mt-6">
           <p className="px-2.5 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-sidebar-muted/80">
-            Saved views
+            {isAuthenticated ? "Saved views" : "Get started"}
           </p>
           <ul className="space-y-0.5">
             {secondaryViews.map((item) => {

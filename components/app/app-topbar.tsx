@@ -24,7 +24,8 @@ type ShellUser = {
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Home",
-  "/jobs": "Jobs",
+  "/board": "Job board",
+  "/jobs": "My jobs",
   "/applications": "Applications",
   "/resumes": "Resumes",
   "/calendar": "Calendar",
@@ -60,12 +61,18 @@ export function AppTopbar({ user }: { user: ShellUser | null }) {
       <div className="ml-auto flex items-center gap-2">
         {/* Global search entry point */}
         <Link
-          href="/jobs"
-          aria-label="Search jobs and companies"
+          href={isAuthenticated ? "/jobs" : "/board"}
+          aria-label={
+            isAuthenticated
+              ? "Search saved jobs and companies"
+              : "Browse the public job board"
+          }
           className="hidden h-9 w-64 items-center gap-2 rounded-md border bg-background px-2.5 text-sm text-muted-foreground transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex"
         >
           <Search className="size-3.5" aria-hidden />
-          <span className="flex-1 text-left">Search jobs, companies…</span>
+          <span className="flex-1 text-left">
+            {isAuthenticated ? "Search My jobs…" : "Browse job board…"}
+          </span>
           <kbd className="rounded border bg-card px-1 font-mono text-[10px] text-muted-foreground">
             ⌘K
           </kbd>

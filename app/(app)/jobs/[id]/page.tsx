@@ -1,89 +1,44 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
-  ArrowRight,
-  CalendarPlus,
-  CheckCircle2,
+  ExternalLink,
+  FileQuestion,
   FileText,
-  PencilLine,
+  LockKeyhole,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/app/page-header";
+
 import { CardSection } from "@/components/app/card-section";
-import { StatusBadge, DeadlineBadge } from "@/components/app/status-badge";
-import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/app/empty-state";
+import { PageHeader } from "@/components/app/page-header";
+import { DeadlineBadge, StatusBadge } from "@/components/app/status-badge";
+import { PrivateJobControls } from "@/components/jobs/private-job-controls";
+import { Button } from "@/components/ui/button";
 import {
-  daysUntil,
-  formatDeadline,
-  mockJobAnalyses,
-  mockJobs,
-  type MockJob,
-  type MockJobAnalysis,
-} from "@/lib/mock";
+  daysUntilPrivateJobDeadline,
+  formatPrivateJobDate,
+  formatPrivateJobDeadline,
+} from "@/lib/jobs/dates";
+import { isValidHttpUrl } from "@/lib/jobs/forms";
+import { getPrivateJob } from "@/lib/jobs/queries";
+import type { PrivateJobIntakeSource } from "@/lib/jobs/types";
+import { getSupabaseEnv } from "@/lib/supabase/env";
+import { getSupabaseUser } from "@/lib/supabase/user";
+
+export const dynamic = "force-dynamic";
 
 type JobDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export function generateStaticParams() {
-  return mockJobs.map((job) => ({ id: job.id }));
-}
-
-function fallbackAnalysis(job: MockJob): MockJobAnalysis {
-  return {
-    aiSummary:
-      `${job.company} is looking for a student to contribute to ${job.role.toLowerCase()} work in ${job.location}. The posting should be reviewed against the student's existing projects before tailoring a resume.`,
-    responsibilities: [
-      `Contribute to ${job.role.toLowerCase()} tasks with the team.`,
-      "Communicate progress clearly during the co-op term.",
-      "Document implementation notes and application follow-up items.",
-    ],
-    requirements: [
-      "Active enrollment in a Canadian co-op or internship program.",
-      `Interest or experience in ${job.roleType.toLowerCase()} work.`,
-      "Ability to work within the listed schedule and location expectations.",
-    ],
-    keywords: [job.roleType, job.workMode, job.term, job.location],
-    requiredSkills: [job.roleType, "Communication", "Git"],
-    niceToHaveSkills: ["Testing", "Documentation", "Team collaboration"],
-    missingKeywords: ["Role-specific tooling", "Measured impact"],
-    workAuthorizationNotes:
-      `${job.workAuthorization}. Confirm the original posting before applying.`,
-    coopTermFit: `${job.term} is listed on the posting. Check that it fits SFU co-op approval requirements.`,
-    resumeSuggestions: [
-      "Review the job description before exporting any tailored resume.",
-      "Use only experience already present in the master resume.",
-      "Add missing keywords only when they are supported by real projects or coursework.",
-    ],
-    suggestedResumeVersion: job.resumeVersion ?? `${job.roleType} draft`,
-  };
-}
-
-function matchTone(match: number | null) {
-  if (match === null) return "text-text-secondary";
-  if (match >= 80) return "text-success";
-  if (match >= 70) return "text-info";
-  if (match >= 50) return "text-warning";
-  return "text-text-secondary";
-}
-
-function TrustLabel({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-brand-soft px-2.5 py-0.5 text-[11px] font-medium text-brand">
-      {children}
-    </span>
-  );
-}
-
-function MutedPill({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-text-secondary">
-      {children}
-    </span>
-  );
-}
+const intakeLabels: Record<PrivateJobIntakeSource, string> = {
+  manual: "Manual entry",
+  pasted_url: "Pasted URL",
+  pasted_text: "Pasted description",
+  board_save: "Saved from job board",
+};
 
 function DetailItem({
   label,
@@ -100,75 +55,68 @@ function DetailItem({
   );
 }
 
-function BulletList({ items }: { items: string[] }) {
+function MutedPill({ children }: { children: ReactNode }) {
   return (
-    <ul className="space-y-2">
-      {items.map((item) => (
-        <li key={item} className="flex gap-2 text-sm text-text-secondary">
-          <span
-            className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground"
-            aria-hidden
-          />
-          <span>{item}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function KeywordList({
-  items,
-  tone = "neutral",
-}: {
-  items: string[];
-  tone?: "neutral" | "warning";
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((item) => (
-        <span
-          key={item}
-          className={cn(
-            "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-            tone === "warning"
-              ? "bg-warning-soft text-warning"
-              : "bg-muted text-text-secondary",
-          )}
-        >
-          {item}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function AnalysisBlock({
-  title,
-  items,
-}: {
-  title: string;
-  items: string[];
-}) {
-  return (
-    <div className="rounded-md border bg-background p-4">
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      <div className="mt-3">
-        <BulletList items={items} />
-      </div>
-    </div>
+    <span className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-text-secondary">
+      {children}
+    </span>
   );
 }
 
 export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const { id } = await params;
-  const job = mockJobs.find((item) => item.id === id);
+  const configured = Boolean(getSupabaseEnv());
 
-  if (!job) {
-    notFound();
+  if (!configured) {
+    return (
+      <div className="space-y-5">
+        <Link
+          href="/jobs"
+          className="inline-flex items-center gap-1 text-sm font-medium text-text-secondary hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Back to jobs
+        </Link>
+        <EmptyState
+          icon={LockKeyhole}
+          title="Private job unavailable"
+          description="Supabase is not configured for this build. No mock private job or persisted details were shown."
+        />
+      </div>
+    );
   }
 
-  const analysis = mockJobAnalyses[job.id] ?? fallbackAnalysis(job);
-  const matchLabel = job.match === null ? "Not analyzed" : `${job.match}%`;
+  const user = await getSupabaseUser();
+  if (!user) redirect("/board");
+
+  const result = await getPrivateJob(user.id, id);
+
+  if (result.status === "error") {
+    return (
+      <div className="space-y-5">
+        <Link
+          href="/jobs"
+          className="inline-flex items-center gap-1 text-sm font-medium text-text-secondary hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Back to jobs
+        </Link>
+        <EmptyState
+          icon={AlertTriangle}
+          title="This private job could not load"
+          description="The private jobs connection is unavailable. No mock or cross-user record was shown."
+          actionLabel="Return to jobs"
+          onActionHref="/jobs"
+        />
+      </div>
+    );
+  }
+
+  const job = result.data;
+  if (!job) notFound();
+
+  const deadlineDays = daysUntilPrivateJobDeadline(job.deadline);
+  const validSourceUrl = job.sourceUrl && isValidHttpUrl(job.sourceUrl);
 
   return (
     <div className="space-y-6">
@@ -181,8 +129,8 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       </Link>
 
       <PageHeader
-        title={job.role}
-        description={`${job.company} · ${job.location}`}
+        title={job.title}
+        description={`${job.companyName ?? "Company not listed"}${job.location ? ` · ${job.location}` : ""}`}
         actions={<StatusBadge status={job.status} />}
       />
 
@@ -191,217 +139,164 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
           <section className="rounded-lg border bg-card p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="flex flex-wrap gap-2">
-                  <TrustLabel>AI analysis from job description</TrustLabel>
-                  <TrustLabel>Review before applying</TrustLabel>
-                </div>
-                <h2 className="mt-4 text-lg font-semibold text-foreground">
-                  {job.company}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-2.5 py-0.5 text-[11px] font-medium text-brand">
+                  <LockKeyhole className="size-3" aria-hidden />
+                  Private saved job
+                </span>
+                <h2 className="mt-4 text-lg font-semibold">
+                  {job.companyName ?? "Company not listed"}
                 </h2>
-                <p className="mt-1 max-w-2xl text-sm text-text-secondary">
-                  {job.description}
+                <p className="mt-1 text-sm text-text-secondary">
+                  Saved {formatPrivateJobDate(job.createdAt)} · Updated {formatPrivateJobDate(job.updatedAt)}
                 </p>
               </div>
-              <DeadlineBadge
-                daysLeft={daysUntil(job.deadline)}
-                label={formatDeadline(job.deadline)}
-              />
+              {deadlineDays === null ? (
+                <MutedPill>No deadline listed</MutedPill>
+              ) : (
+                <DeadlineBadge
+                  daysLeft={deadlineDays}
+                  label={formatPrivateJobDeadline(job.deadline)}
+                />
+              )}
             </div>
 
             <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <DetailItem label="Location">{job.location}</DetailItem>
-              <DetailItem label="Term">{job.term}</DetailItem>
-              <DetailItem label="Work mode">{job.workMode}</DetailItem>
-              <DetailItem label="Deadline">
-                {formatDeadline(job.deadline)}
-              </DetailItem>
+              <DetailItem label="Location">{job.location ?? "Not listed"}</DetailItem>
+              <DetailItem label="Term">{job.term ?? "Not listed"}</DetailItem>
+              <DetailItem label="Work mode">{job.workMode ?? "Not listed"}</DetailItem>
+              <DetailItem label="Deadline">{formatPrivateJobDate(job.deadline)}</DetailItem>
             </dl>
           </section>
 
           <CardSection
-            title="Job description summary"
-            description="A concise read of what the posting is asking for"
-            action={<TrustLabel>AI analysis from job description</TrustLabel>}
+            title="Private job description"
+            description="Visible only in your saved job record"
+            action={
+              <span className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-text-secondary">
+                Never published to the board
+              </span>
+            }
           >
-            <p className="text-sm leading-6 text-text-secondary">
-              {analysis.aiSummary}
-            </p>
-          </CardSection>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <CardSection title="Responsibilities">
-              <BulletList items={analysis.responsibilities} />
-            </CardSection>
-
-            <CardSection title="Requirements">
-              <BulletList items={analysis.requirements} />
-            </CardSection>
-          </div>
-
-          <CardSection
-            title="Keywords"
-            description="Use only when supported by your real experience"
-            action={<TrustLabel>Based on your existing resume</TrustLabel>}
-          >
-            <KeywordList items={analysis.keywords} />
+            {job.rawText ? (
+              <div className="whitespace-pre-wrap text-sm leading-7 text-text-secondary">
+                {job.rawText}
+              </div>
+            ) : (
+              <div className="rounded-md border border-dashed bg-muted/20 px-4 py-8 text-center">
+                <FileText className="mx-auto size-5 text-muted-foreground" aria-hidden />
+                <p className="mt-2 text-sm font-medium">No description pasted</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Edit this job to add the original posting text to your private record.
+                </p>
+              </div>
+            )}
           </CardSection>
 
           <CardSection
-            title="AI analysis"
-            description="Reviewable guidance, not an application decision"
-            action={<TrustLabel>Review before applying</TrustLabel>}
+            title="Job analysis"
+            description="Summary, requirements, keywords, and resume guidance"
           >
-            <div className="grid gap-4 lg:grid-cols-2">
-              <AnalysisBlock
-                title="Required skills"
-                items={analysis.requiredSkills}
-              />
-              <AnalysisBlock
-                title="Nice-to-have skills"
-                items={analysis.niceToHaveSkills}
-              />
-              <div className="rounded-md border bg-background p-4">
-                <h3 className="text-sm font-semibold text-foreground">
-                  Work authorization notes
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-text-secondary">
-                  {analysis.workAuthorizationNotes}
-                </p>
-              </div>
-              <div className="rounded-md border bg-background p-4">
-                <h3 className="text-sm font-semibold text-foreground">
-                  Co-op term fit
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-text-secondary">
-                  {analysis.coopTermFit}
-                </p>
-              </div>
+            <div className="rounded-md border border-dashed bg-muted/20 px-4 py-10 text-center">
+              <FileQuestion className="mx-auto size-6 text-muted-foreground" aria-hidden />
+              <h3 className="mt-3 text-sm font-semibold">Analysis not generated yet</h3>
+              <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">
+                This phase stores private job data only. No AI summary, skills,
+                missing keywords, match score, or resume suggestions were fabricated.
+              </p>
             </div>
-          </CardSection>
-
-          <CardSection
-            title="Resume suggestions"
-            description="Based on your existing resume"
-            action={<TrustLabel>Based on your existing resume</TrustLabel>}
-          >
-            <BulletList items={analysis.resumeSuggestions} />
           </CardSection>
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-20 xl:self-start">
-          <CardSection title="Decision panel" description="Next best action">
+          <CardSection title="Decision panel" description="Saved-job readiness">
             <div className="space-y-5">
               <div>
                 <p className="text-xs font-medium text-muted-foreground">
                   Estimated match
                 </p>
-                <p
-                  className={cn(
-                    "mt-2 text-4xl font-medium leading-none tabular-nums",
-                    matchTone(job.match),
-                  )}
-                >
-                  {matchLabel}
+                <p className="mt-2 text-2xl font-medium text-text-secondary tabular-nums">
+                  {job.matchScore === null ? "Not analyzed" : `${job.matchScore}%`}
                 </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Directional signal only. Review before applying.
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  {job.matchScore === null
+                    ? "No analysis has been generated for this record."
+                    : "This is a previously stored estimate; no new analysis was run."}
                 </p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Missing keywords
-                </p>
-                <KeywordList items={analysis.missingKeywords} tone="warning" />
               </div>
 
               <dl className="space-y-3">
                 <div className="rounded-md border bg-background p-3">
-                  <dt className="text-xs text-muted-foreground">
-                    Suggested resume version
-                  </dt>
-                  <dd className="mt-1 text-sm font-medium text-foreground">
-                    {analysis.suggestedResumeVersion}
-                  </dd>
+                  <dt className="text-xs text-muted-foreground">Missing keywords</dt>
+                  <dd className="mt-1 text-sm font-medium">Not generated</dd>
                 </div>
                 <div className="rounded-md border bg-background p-3">
                   <dt className="text-xs text-muted-foreground">
-                    Application status
+                    Suggested resume version
                   </dt>
+                  <dd className="mt-1 text-sm font-medium">Not available</dd>
+                </div>
+                <div className="rounded-md border bg-background p-3">
+                  <dt className="text-xs text-muted-foreground">Application status</dt>
                   <dd className="mt-2">
                     <StatusBadge status={job.status} />
                   </dd>
                 </div>
               </dl>
 
-              <Button asChild className="h-9 w-full rounded-md">
-                <Link href={`/resumes/tailor/${job.id}`}>
-                  <FileText className="size-4" aria-hidden />
-                  Tailor resume
-                </Link>
+              <Button
+                type="button"
+                className="h-9 w-full rounded-md"
+                disabled
+                title="Resume tailoring is not available for persisted jobs yet"
+              >
+                <FileText className="size-4" aria-hidden />
+                Tailor resume unavailable
               </Button>
-
-              <div className="grid gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9 justify-start rounded-md"
-                  disabled
-                  title="Status updates are not available in this mock build"
-                >
-                  <CheckCircle2 className="size-4" aria-hidden />
-                  Mark as ready
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9 justify-start rounded-md"
-                  disabled
-                  title="Deadline editing is not available in this mock build"
-                >
-                  <CalendarPlus className="size-4" aria-hidden />
-                  Add deadline
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9 justify-start rounded-md"
-                  disabled
-                  title="Notes editing is not available in this mock build"
-                >
-                  <PencilLine className="size-4" aria-hidden />
-                  Save notes
-                </Button>
-              </div>
             </div>
+          </CardSection>
+
+          <CardSection title="Manage private job">
+            <PrivateJobControls job={job} />
           </CardSection>
 
           <CardSection title="Posting details" contentClassName="space-y-3">
             <div>
               <p className="text-xs text-muted-foreground">Source</p>
-              <a
-                href={job.sourceUrl}
-                className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-brand hover:text-brand/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                Original posting
-                <ArrowRight className="size-3" aria-hidden />
-              </a>
+              {validSourceUrl ? (
+                <a
+                  href={job.sourceUrl ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-brand hover:text-brand/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  View original posting
+                  <ExternalLink className="size-3" aria-hidden />
+                </a>
+              ) : (
+                <p className="mt-1 text-sm text-text-secondary">Not provided</p>
+              )}
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Work authorization</p>
               <p className="mt-1 text-sm text-text-secondary">
-                {job.workAuthorization}
+                {job.workAuthorization ?? "Not listed"}
               </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Saved note</p>
-              <p className="mt-1 text-sm leading-5 text-text-secondary">
-                {job.notes}
+              <p className="mt-1 whitespace-pre-wrap text-sm leading-5 text-text-secondary">
+                {job.notes ?? "No note saved"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Intake source</p>
+              <p className="mt-1 text-sm text-text-secondary">
+                {intakeLabels[job.intakeSource]}
               </p>
             </div>
             <div className="flex flex-wrap gap-2 pt-1">
-              <MutedPill>{job.roleType}</MutedPill>
-              <MutedPill>{job.workMode}</MutedPill>
+              <MutedPill>{job.roleType ?? "Not classified"}</MutedPill>
+              <MutedPill>{job.workMode ?? "Work mode not listed"}</MutedPill>
               <MutedPill>
                 {job.coopEligible ? "Co-op eligible" : "Check co-op"}
               </MutedPill>

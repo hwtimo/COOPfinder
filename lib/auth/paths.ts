@@ -1,4 +1,5 @@
 export const PRIVATE_ROUTE_PREFIXES = [
+  "/jobs",
   "/dashboard",
   "/applications",
   "/resumes",
@@ -70,12 +71,18 @@ export function getLoginReasonCopy(reason?: string): string {
   switch (reason) {
     case "save_job":
       return "Log in to save this job to your list and keep tracking it.";
+    case "submit_board_job":
+      return "Log in to suggest a role for the public board and keep the original posting in your private workspace.";
     case "tailor_resume":
       return "Log in to tailor this resume. New accounts include 2 free tailoring credits.";
     case "add_job":
       return "Log in to add your own postings and track every next action.";
     case "full_analysis":
       return "Log in to run the full AI analysis for this posting.";
+    case "extract_job":
+      return "Log in to keep this posting private and extract its requirements for your review.";
+    case "save_progress":
+      return "Log in to save your draft profile and continue in your co-op workspace.";
     default:
       return "Log in to save your progress and continue in your co-op workspace.";
   }
