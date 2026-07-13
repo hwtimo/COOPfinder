@@ -1360,6 +1360,86 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Continue with one narrowly scoped product task under the
   corrected traceability policy.
 
+### Atomic persisted application follow-up
+
+- **Date and time:** 2026-07-13 16:56 PDT
+- **Development phase:** Applications CRUD
+- **Session purpose:** Add and live-verify one authenticated atomic operation
+  for setting, editing, and clearing an application follow-up timestamp.
+- **Task or prompt summary:** Added migration `013`, the
+  `update_application_follow_up(uuid,timestamptz)` RPC, a typed mutation helper
+  and server action, safe follow-up timeline rendering, and the persisted
+  Application Detail follow-up form.
+- **Important constraints given to Codex:** Preserve the existing
+  `timestamptz` column and canonical `follow_up_changed` event; change no other
+  mutation, RLS policy, application field, route, app shell, AI, parser, resume,
+  notification, calendar, export, or dashboard behavior; use no production
+  service-role client; apply only migration `013`; do not push.
+- **Files changed:**
+  `supabase/migrations/202607130013_atomic_application_follow_up.sql`,
+  `lib/applications/update-follow-up.ts`,
+  `app/(app)/applications/actions.ts`,
+  `app/(app)/applications/[id]/application-follow-up-form.tsx`, and
+  `app/(app)/applications/[id]/page.tsx`.
+- **Systems affected:** Linked Supabase migration history,
+  `public.update_application_follow_up(uuid,timestamptz)`, Application Detail
+  follow-up actions and timeline rendering, and tracker/detail path
+  revalidation.
+- **Architectural decisions:** The security-definer RPC derives `auth.uid()`,
+  locks only the caller-owned application row, compares normalized PostgreSQL
+  instants with null-safe equality, and writes `follow_up_due`, `updated_at`,
+  and one `follow_up_changed` event in one transaction. The browser converts a
+  valid local wall time to an explicit UTC ISO value, rejects nonexistent or
+  DST-ambiguous local times, and preserves the original persisted timestamp for
+  untouched no-op submissions.
+- **Security or privacy considerations:** The function has an empty search
+  path; `PUBLIC` and `anon` execute are revoked and the authenticated client
+  role is granted. Foreign and nonexistent IDs share `unavailable`. Event
+  metadata has exactly `previous_follow_up_due` and `new_follow_up_due`, each a
+  canonical UTC string or JSON null. No notes, deadline, status, owner, job,
+  raw JD, resume, AI, or client metadata enters the event. A temporary implicit
+  test session incompatible with the app's PKCE callback was globally revoked
+  immediately; every temporary credential and test artifact was removed.
+- **Rejected alternatives:** No direct table mutation from the action, client
+  timeline insert, locale or timezone-less timestamp, optimistic persisted
+  state, silent DST shift, past-time restriction, event-type expansion, RLS
+  change, production service-role dependency, or arbitrary metadata renderer.
+- **Tests run:** Local and remote migration histories; live column/event/RPC
+  preflight; linked dry-run and migration apply; live function catalog and ACL;
+  malformed server-action inputs; two-user sequential, equivalent-offset,
+  anonymous, isolation, and synchronized concurrency matrices; metadata and
+  unrelated-field audits; real production browser set/no-op/edit/clear;
+  private-not-found; isolated no-Supabase Webpack build and HTML probe; cleanup;
+  lint; typecheck; configured Webpack build; `git diff --check`.
+- **Lint result:** Passed.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack. The isolated
+  no-Supabase production build also passed and exposed no active follow-up form
+  or mock-save behavior.
+- **Manual verification performed:** Live sequential operations produced
+  `updated`, `unchanged`, equivalent-instant `unchanged`, `updated`, `updated`,
+  and repeated-clear `unchanged` with three events. Identical concurrency
+  produced one update, one no-op, and one event; different concurrency produced
+  two coherent transitions and two events. Browser-local PDT values mapped to
+  the inspected UTC instants, pending/disabled state appeared, timeline data
+  refreshed, follow-up event rendering excluded unrelated markers, foreign
+  detail remained private-not-found, and the browser console was clean. All
+  temporary users and scoped rows returned to zero.
+- **Related commit hash or range:**
+  `58991d9a8a7dc21d5a3243b18d8c464821428cda`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  original Codex session for which that ID was already verified, so the ID was
+  reused and `/feedback` was not rerun.
+- **Known limitations:** Browser automation edited at minute precision because
+  the automation surface accepts that native-input form; the UI also rendered
+  and round-tripped an existing value containing seconds and milliseconds.
+- **Remaining risks:** No permanent browser or database integration-test suite
+  was added in this narrow phase; verification used isolated disposable live
+  fixtures that were fully removed.
+- **Next action:** Continue Applications CRUD with one separately scoped
+  mutation or tracker workflow task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
