@@ -31,8 +31,10 @@ have a separate Codex session.
 Every meaningful core task listed above must follow the mandatory workflow in
 section 4. It is not fully complete until the exact verified implementation
 commit hash or inclusive commit range and the exact real `/feedback` Session ID
-are recorded in its existing session entry. Missing real traceability makes the
-task `CONDITIONALLY COMPLETE`, not `PASS`.
+for the Codex session in which the work was performed are recorded in its
+existing session entry. Missing real traceability makes the task `CONDITIONALLY
+COMPLETE`, not `PASS`; a known, verified Session ID may be reused for multiple
+tasks completed in the same continuing Codex session.
 
 ## 2. Primary Session
 
@@ -47,8 +49,9 @@ task `CONDITIONALLY COMPLETE`, not `PASS`.
 - **Unresolved risks:**
 
 The Session ID must be copied exactly from Codex. It must never be fabricated,
-inferred, shortened, reconstructed, or replaced with a nearby session's ID.
-Leave the placeholder intact until a real ID exists.
+inferred, shortened, reconstructed, or replaced with an ID from a different
+session. Leave the placeholder intact until a real ID exists for the actual
+session.
 
 ## 3. Reusable Session Entry Template
 
@@ -87,8 +90,12 @@ Every future meaningful core Codex task must use this sequence:
 4. Create a focused local implementation commit containing the verified work.
 5. Record its exact commit hash, or the exact inclusive commit range when
    multiple verified implementation commits were genuinely necessary.
-6. Run Codex `/feedback`.
-7. Copy the real `/feedback` Session ID exactly as produced.
+6. Record the verified real `/feedback` Session ID for the actual Codex
+   session. When the work continues in the same session and that ID is already
+   verified, reuse it without running `/feedback` again.
+7. Run Codex `/feedback` and copy its Session ID exactly only when the
+   conversation is new, the current session's real ID is unknown, or it is
+   uncertain whether the work belongs to the previously recorded session.
 8. Update the existing session entry with the actual implementation commit
    hash or range and the actual Session ID.
 9. Create a separate small local documentation commit containing that
@@ -100,7 +107,10 @@ cannot contain its own final hash before that commit exists. `Related commit
 hash or range` identifies the verified implementation commit or inclusive
 implementation range; it does not need to include the later log-only commit.
 A coherent session may span a genuine implementation commit range, and not
-every commit requires a separate session entry.
+every commit requires a separate session entry. Multiple task entries may
+share one Session ID only when they were performed in the same continuing
+Codex session; their actual implementation commit hashes or ranges distinguish
+the tasks. Never reuse a Session ID across different Codex sessions.
 
 ### Mandatory completion rules
 
@@ -108,9 +118,14 @@ every commit requires a separate session entry.
   verification has failed.
 - If unrelated worktree changes prevent a safe focused commit, stop and report
   the blocker instead of including unrelated files.
-- If `/feedback` does not produce a real Session ID, do not fabricate, infer,
-  shorten, reconstruct, or substitute one. Report the task as `CONDITIONALLY
-  COMPLETE` until the exact ID is obtained and recorded.
+- If the session is new, unknown, or uncertain and `/feedback` does not produce
+  a real Session ID, do not fabricate, infer, shorten, reconstruct, or
+  substitute one. Report the task as `CONDITIONALLY COMPLETE` until the exact
+  ID is obtained and recorded.
+- If the same continuing session's verified Session ID is already known, the
+  task is not `CONDITIONALLY COMPLETE` merely because `/feedback` was not run
+  again. The task remains incomplete if its verified implementation hash or
+  range is missing.
 - Do not claim a commit or push unless it actually occurred. Do not invent any
   test result, verification result, Session ID, commit hash, or commit range.
 - The final report must include the exact implementation commit hash or range,

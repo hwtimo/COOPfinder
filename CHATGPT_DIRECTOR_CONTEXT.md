@@ -662,19 +662,27 @@ For every meaningful core task, the director must require this completion
 sequence: implement one narrow task; finish all automated and manual
 verification; review the diff and exclude unrelated files; create a focused
 local implementation commit; record its exact hash or genuine inclusive
-implementation range; run Codex `/feedback`; copy the real Session ID exactly;
-complete both existing traceability fields in `CODEX_SESSION_LOG.md`; then
-create a separate small log-only documentation commit. The separate commit is
-necessary because an implementation commit cannot contain its own final hash.
-Neither commit is pushed without explicit user permission.
+implementation range; record the verified real Session ID for the actual Codex
+session; complete both existing traceability fields in
+`CODEX_SESSION_LOG.md`; then create a separate small log-only documentation
+commit. When tasks continue in the same Codex session, reuse its already
+verified Session ID and distinguish the tasks by their implementation hashes
+or ranges. Run `/feedback` only for a new conversation, when the current
+session's ID is unknown, or when session continuity is uncertain. The separate
+commit is necessary because an implementation commit cannot contain its own
+final hash. Neither commit is pushed without explicit user permission.
 
-Prompts must classify missing real traceability as `CONDITIONALLY COMPLETE`,
-not `PASS`. If verification fails, no partial implementation commit is created
-just to obtain a hash. If unrelated worktree changes prevent a focused commit,
-the agent stops and reports the blocker. Never infer, fabricate, shorten,
-reconstruct, or substitute a Session ID; never invent verification or Git
-evidence. Final reports must state the exact implementation hash or range, the
-exact log-only commit hash, and the exact real `/feedback` Session ID.
+Prompts must classify a task as `CONDITIONALLY COMPLETE`, not `PASS`, when its
+implementation hash or range is missing or no verified Session ID is available
+for the actual session. A task in the same continuing session is not
+conditional merely because `/feedback` was not rerun when its verified ID was
+already known. If verification fails, no partial implementation commit is
+created just to obtain a hash. If unrelated worktree changes prevent a focused
+commit, the agent stops and reports the blocker. Never reuse an ID across
+different sessions or infer, fabricate, shorten, reconstruct, or substitute a
+Session ID; never invent verification or Git evidence. Final reports must state
+the exact implementation hash or range, the exact log-only commit hash, and the
+exact real `/feedback` Session ID.
 
 ---
 
@@ -696,9 +704,12 @@ exact log-only commit hash, and the exact real `/feedback` Session ID.
   router in TECHNICAL_DESIGN.md §3. Feature modules never hardcode model IDs.
 - Final PDF rendering must be deterministic — no AI call in the render path.
 - Preserve meaningful Codex session evidence in `CODEX_SESSION_LOG.md` using
-  the mandatory verified implementation commit → real `/feedback` → completed
-  log fields → separate log-only commit sequence. Missing real traceability is
-  `CONDITIONALLY COMPLETE`; never invent IDs, verification, commits, or pushes.
+  the mandatory verified implementation commit → verified Session ID for the
+  actual session → completed log fields → separate log-only commit sequence.
+  Reuse a known verified ID only within the same continuing session; run
+  `/feedback` for a new, unknown, or uncertain session. Missing real
+  traceability is `CONDITIONALLY COMPLETE`; never invent IDs, verification,
+  commits, or pushes.
 - Do not push implementation or session-log commits unless the user explicitly
   requests it.
 - Do not replace `lib/mock/` abruptly; swap screens to Supabase per phase.

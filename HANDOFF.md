@@ -202,19 +202,26 @@ See TECHNICAL_DESIGN.md §3 and v3 §F for the canonical policy.
 Continue with one narrow Codex prompt at a time. Every meaningful core task
 must finish verification, exclude unrelated diff content, and create a focused
 local implementation commit. Record its exact hash or genuine inclusive
-implementation range before running `/feedback`. Copy the real Session ID
-exactly, complete both existing traceability fields in
-`CODEX_SESSION_LOG.md`, and then create a separate small log-only documentation
-commit because the implementation commit cannot contain its own final hash.
-Do not push either commit without explicit user permission.
+implementation range, then record the verified real Session ID for the actual
+Codex session. Reuse an already verified ID when multiple tasks occur in the
+same continuing session, distinguishing those tasks by their implementation
+hashes or ranges. Run `/feedback` only for a new conversation, when the current
+session's real ID is unknown, or when session continuity is uncertain. Complete
+both existing traceability fields in `CODEX_SESSION_LOG.md`, and then create a
+separate small log-only documentation commit because the implementation commit
+cannot contain its own final hash. Do not push either commit without explicit
+user permission.
 
-A meaningful task with missing real traceability is `CONDITIONALLY COMPLETE`,
-not `PASS`. Failed verification does not justify a partial commit, and unsafe
-unrelated worktree changes are a blocker rather than commit content. Never
-invent or infer a Session ID, verification result, commit, push, or historical
-entry. Historical values are backfilled only from authoritative session
-records or confidently matched Git history; unrecoverable values remain
-honestly documented.
+A meaningful task with a missing implementation hash or range, or without a
+verified Session ID for its actual session, is `CONDITIONALLY COMPLETE`, not
+`PASS`. A same-session task is not conditional merely because `/feedback` was
+not rerun when the verified ID is already known. Failed verification does not
+justify a partial commit, and unsafe unrelated worktree changes are a blocker
+rather than commit content. Never reuse an ID across different sessions or
+invent, infer, reconstruct, shorten, or substitute a Session ID, verification
+result, commit, push, or historical entry. Historical values are backfilled
+only from authoritative session records or confidently matched Git history;
+unrecoverable values remain honestly documented.
 
 ## 6. Verification status
 
@@ -312,8 +319,10 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   Luna/Terra/Sol task policy in TECHNICAL_DESIGN.md §3; only confirmed
   evidence may support suggestions, and feature code never hardcodes models.
 - **Log meaningful Codex work** with the mandatory verified implementation
-  commit → exact `/feedback` ID → completed existing log fields → separate
-  log-only commit sequence. Treat missing real traceability as `CONDITIONALLY
+  commit → verified Session ID for the actual session → completed existing
+  log fields → separate log-only commit sequence. Reuse a known verified ID
+  only within the same continuing session; use `/feedback` for a new, unknown,
+  or uncertain session. Treat missing real traceability as `CONDITIONALLY
   COMPLETE`, never fabricate or backfill unsupported evidence, and never push
   without explicit user permission.
 - Next.js is `16.2.10` (promise-based `params`; read
