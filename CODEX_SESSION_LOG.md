@@ -1188,9 +1188,11 @@ only when necessary to explain configuration; never record their values.
   deadline events and deadline-rendered copy. Disabled configuration exposed no
   active deadline control or mock save. All temporary users and marker rows
   returned to zero.
-- **Related commit hash or range:** `3b89345fcc17d48747927ace9a59d8e0111a3ec5`.
-- **Real `/feedback` Session ID:** TODO — Codex `/feedback` did not produce a
-  Session ID in this execution environment; awaiting real output.
+- **Related commit hash or range:** `3b89345fcc17d48747927ace9a59d8e0111a3ec5`;
+  this implementation commit contains both the verified application-notes work,
+  including migrations `010` and `011`, and the verified application-deadline
+  work, including migration `012`.
+- **Real `/feedback` Session ID:** `019f43a2-41bc-7e53-8cab-4c33f31e557f`.
 - **Known limitations:** The live RPC completed too quickly to capture the
   transient pending frame visually. The ref guard, pending state, disabled date
   input, and pending button label wrap the awaited action and were exercised.
