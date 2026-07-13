@@ -5,7 +5,7 @@
 This permanent log preserves observable evidence about meaningful
 Codex-assisted work on COOPfinder: implementation history, major engineering
 decisions, prompts and constraints, verification performed, source-control
-traceability, and real Codex `/feedback` Session IDs when available. It gives
+traceability, and real Codex `/feedback` Session IDs. It gives
 future developers and coding agents enough context to understand how core
 functionality was produced.
 
@@ -28,6 +28,12 @@ Codex task narrow: one phase or one coherent feature at a time. Do not
 stockpile broad prompts for future phases, and do not require every commit to
 have a separate Codex session.
 
+Every meaningful core task listed above must follow the mandatory workflow in
+section 4. It is not fully complete until the exact verified implementation
+commit hash or inclusive commit range and the exact real `/feedback` Session ID
+are recorded in its existing session entry. Missing real traceability makes the
+task `CONDITIONALLY COMPLETE`, not `PASS`.
+
 ## 2. Primary Session
 
 - **Phase name:**
@@ -40,9 +46,9 @@ have a separate Codex session.
 - **Tests and verification:**
 - **Unresolved risks:**
 
-The Session ID must be copied exactly from Codex. It must never be invented,
-inferred from a commit, or reconstructed later. Leave the placeholder intact
-until a real ID exists.
+The Session ID must be copied exactly from Codex. It must never be fabricated,
+inferred, shortened, reconstructed, or replaced with a nearby session's ID.
+Leave the placeholder intact until a real ID exists.
 
 ## 3. Reusable Session Entry Template
 
@@ -73,18 +79,57 @@ until a real ID exists.
 
 ## 4. Session-to-Commit Traceability
 
-1. Begin one narrow Codex task.
-2. Record the session purpose before or immediately after implementation.
-3. Keep the task scoped to one phase or coherent feature.
-4. Run the relevant automated and manual verification.
-5. Commit the verified changes without unrelated worktree changes.
-6. Record the commit hash or range.
-7. Run `/feedback` when the session represents meaningful core work.
-8. Copy the real Session ID into the log exactly as provided.
-9. Record failures, skipped checks, and incomplete verification honestly.
+Every future meaningful core Codex task must use this sequence:
 
-A session may span a coherent commit range, and a commit does not require a
-separate session entry. Never infer a Session ID from Git history.
+1. Implement one narrowly scoped task.
+2. Complete all required automated and manual verification.
+3. Review the full diff and exclude unrelated files.
+4. Create a focused local implementation commit containing the verified work.
+5. Record its exact commit hash, or the exact inclusive commit range when
+   multiple verified implementation commits were genuinely necessary.
+6. Run Codex `/feedback`.
+7. Copy the real `/feedback` Session ID exactly as produced.
+8. Update the existing session entry with the actual implementation commit
+   hash or range and the actual Session ID.
+9. Create a separate small local documentation commit containing that
+   session-log update.
+10. Do not push either commit unless the user explicitly requests it.
+
+The separate log-only commit is required because an implementation commit
+cannot contain its own final hash before that commit exists. `Related commit
+hash or range` identifies the verified implementation commit or inclusive
+implementation range; it does not need to include the later log-only commit.
+A coherent session may span a genuine implementation commit range, and not
+every commit requires a separate session entry.
+
+### Mandatory completion rules
+
+- Do not create a partial implementation commit merely to obtain a hash when
+  verification has failed.
+- If unrelated worktree changes prevent a safe focused commit, stop and report
+  the blocker instead of including unrelated files.
+- If `/feedback` does not produce a real Session ID, do not fabricate, infer,
+  shorten, reconstruct, or substitute one. Report the task as `CONDITIONALLY
+  COMPLETE` until the exact ID is obtained and recorded.
+- Do not claim a commit or push unless it actually occurred. Do not invent any
+  test result, verification result, Session ID, commit hash, or commit range.
+- The final report must include the exact implementation commit hash or range,
+  the exact session-log documentation commit hash, and the exact real
+  `/feedback` Session ID. Neither commit is pushed without explicit permission.
+
+### Historical-entry policy
+
+- Backfill an old implementation hash or range only when actual Git history
+  verifies it and it can be confidently matched to that implementation.
+- Backfill an old `/feedback` Session ID only from the original Codex session or
+  another authoritative record containing the exact real ID. Never infer one
+  from Git history, dates, filenames, or nearby sessions.
+- Never present a new archival or documentation commit as the original
+  historical implementation commit.
+- When an old value is not recoverable, preserve honest wording such as `Not
+  recorded at the time; not recoverable` or `None; the work was not committed
+  in that session`.
+- Do not rewrite historical entries to imply stronger evidence than exists.
 
 ## 5. Privacy and Security Rules
 

@@ -199,10 +199,22 @@ See TECHNICAL_DESIGN.md §3 and v3 §F for the canonical policy.
 
 ## 5b. Codex working record
 
-Continue with one narrow Codex prompt at a time. Meaningful core sessions must
-be summarized in `CODEX_SESSION_LOG.md`, linked to their verified commit range,
-and include the real `/feedback` Session ID when available. Never invent or
-infer a Session ID, verification result, or historical entry.
+Continue with one narrow Codex prompt at a time. Every meaningful core task
+must finish verification, exclude unrelated diff content, and create a focused
+local implementation commit. Record its exact hash or genuine inclusive
+implementation range before running `/feedback`. Copy the real Session ID
+exactly, complete both existing traceability fields in
+`CODEX_SESSION_LOG.md`, and then create a separate small log-only documentation
+commit because the implementation commit cannot contain its own final hash.
+Do not push either commit without explicit user permission.
+
+A meaningful task with missing real traceability is `CONDITIONALLY COMPLETE`,
+not `PASS`. Failed verification does not justify a partial commit, and unsafe
+unrelated worktree changes are a blocker rather than commit content. Never
+invent or infer a Session ID, verification result, commit, push, or historical
+entry. Historical values are backfilled only from authoritative session
+records or confidently matched Git history; unrecoverable values remain
+honestly documented.
 
 ## 6. Verification status
 
@@ -299,9 +311,11 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
 - **AI routing is planned, not implemented.** Use the centralized
   Luna/Terra/Sol task policy in TECHNICAL_DESIGN.md §3; only confirmed
   evidence may support suggestions, and feature code never hardcodes models.
-- **Log meaningful Codex work** in `CODEX_SESSION_LOG.md` with observable
-  verification and a real `/feedback` Session ID when available. Never
-  fabricate an ID or backfill unsupported history.
+- **Log meaningful Codex work** with the mandatory verified implementation
+  commit → exact `/feedback` ID → completed existing log fields → separate
+  log-only commit sequence. Treat missing real traceability as `CONDITIONALLY
+  COMPLETE`, never fabricate or backfill unsupported evidence, and never push
+  without explicit user permission.
 - Next.js is `16.2.10` (promise-based `params`; read
   `node_modules/next/dist/docs/` per AGENTS.md). Build uses
   `next build --webpack`. Icons: keep `lucide-react` despite

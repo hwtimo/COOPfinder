@@ -658,11 +658,23 @@ HANDOFF.md §8–9, and the warnings in section 13 below. Completed phases (boar
 submission, private Jobs CRUD, Master Profile persistence, guest-draft import)
 must not be redone.
 
-For meaningful core work, update `CODEX_SESSION_LOG.md` with the sanitized
-task summary, observable verification, and related commit range. Run
-`/feedback` when appropriate and copy its real Session ID exactly. Never infer
-an ID from Git history, fabricate verification, or backfill unsupported
-session details.
+For every meaningful core task, the director must require this completion
+sequence: implement one narrow task; finish all automated and manual
+verification; review the diff and exclude unrelated files; create a focused
+local implementation commit; record its exact hash or genuine inclusive
+implementation range; run Codex `/feedback`; copy the real Session ID exactly;
+complete both existing traceability fields in `CODEX_SESSION_LOG.md`; then
+create a separate small log-only documentation commit. The separate commit is
+necessary because an implementation commit cannot contain its own final hash.
+Neither commit is pushed without explicit user permission.
+
+Prompts must classify missing real traceability as `CONDITIONALLY COMPLETE`,
+not `PASS`. If verification fails, no partial implementation commit is created
+just to obtain a hash. If unrelated worktree changes prevent a focused commit,
+the agent stops and reports the blocker. Never infer, fabricate, shorten,
+reconstruct, or substitute a Session ID; never invent verification or Git
+evidence. Final reports must state the exact implementation hash or range, the
+exact log-only commit hash, and the exact real `/feedback` Session ID.
 
 ---
 
@@ -683,8 +695,12 @@ session details.
 - Planned AI work must follow the centralized GPT-5.6 Luna/Terra/Sol task
   router in TECHNICAL_DESIGN.md §3. Feature modules never hardcode model IDs.
 - Final PDF rendering must be deterministic — no AI call in the render path.
-- Preserve meaningful Codex session evidence in `CODEX_SESSION_LOG.md`; never
-  invent `/feedback` Session IDs or verification results.
+- Preserve meaningful Codex session evidence in `CODEX_SESSION_LOG.md` using
+  the mandatory verified implementation commit → real `/feedback` → completed
+  log fields → separate log-only commit sequence. Missing real traceability is
+  `CONDITIONALLY COMPLETE`; never invent IDs, verification, commits, or pushes.
+- Do not push implementation or session-log commits unless the user explicitly
+  requests it.
 - Do not replace `lib/mock/` abruptly; swap screens to Supabase per phase.
 - Do not ignore `AGENTS.md`; read Next.js docs from `node_modules/next/dist/docs/` before code changes.
 
