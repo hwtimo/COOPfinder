@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 
 import { createApplicationFromJob } from "@/lib/applications/create-from-job";
 import { isUuid } from "@/lib/jobs/queries";
@@ -71,6 +71,7 @@ export async function createApplicationFromJobAction(
   revalidatePath("/applications");
   revalidatePath("/jobs");
   revalidatePath(`/jobs/${jobPostingId}`);
+  refresh();
 
   if (result.status === "already_exists") {
     return {

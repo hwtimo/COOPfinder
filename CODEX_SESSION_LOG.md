@@ -839,6 +839,79 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Wire persisted Applications tracker and detail UI in a
   separate Applications CRUD phase using this verified creation contract.
 
+### Persisted Applications tracker and Add Application flow
+
+- **Date and time:** 2026-07-13 14:21 PDT
+- **Development phase:** Applications CRUD frontend integration
+- **Session purpose:** Replace the production mock Applications board with the
+  authenticated user's persisted tracker data and connect Add Application to
+  the existing atomic creation action.
+- **Task or prompt summary:** Add a minimal server-side read model for
+  applications and eligible private saved jobs, preserve the existing Kanban
+  UI, and verify creation, duplicate handling, privacy, isolation, honest
+  states, and configuration-disabled behavior without persisting Application
+  Detail.
+- **Important constraints given to Codex:** No migrations, RPC or RLS changes;
+  no Application Detail persistence, status mutation, drag-and-drop, AI,
+  resume, calendar, notification, shell redesign, or mock-fixture deletion; no
+  commit.
+- **Files changed:** `app/(app)/applications/page.tsx`,
+  `app/(app)/applications/loading.tsx`,
+  `app/(app)/applications/actions.ts`,
+  `app/(app)/applications/add-application-dialog.tsx`,
+  `lib/applications/queries.ts`, `lib/applications/types.ts`, and
+  `CODEX_SESSION_LOG.md`.
+- **Systems affected:** Authenticated Applications tracker reads and the
+  existing `create_application_from_job(uuid)` server-action flow. Disposable
+  development Auth users and marker-specific rows were created and removed for
+  browser verification.
+- **Architectural decisions:** The route remains a server component and queries
+  a narrow RLS-protected read model. It groups canonical persisted statuses in
+  deterministic order. Eligible jobs are caller-visible saved jobs without an
+  application. The client dialog submits only the selected job UUID. Scoped
+  revalidation plus server refresh is retained; a short full-page reload after
+  a successful or idempotent action is the reliable fallback for replacing the
+  rendered server tree in this imperative dialog flow.
+- **Security or privacy considerations:** Queries exclude raw job text, match,
+  resume, and AI fields; options contain only identifying job metadata. The
+  browser never inserts directly. A disposable magic-link fragment appeared in
+  internal test-tool output during initial fixture setup; those first users
+  were immediately deleted, invalidating the fragment, before fresh fixtures
+  were created. No repository credential or project secret was exposed or
+  written.
+- **Rejected alternatives:** No all-client tracker, direct browser insert,
+  second mutation path, mock fallback, fake compatibility IDs, invented
+  metadata, global state library, or persisted detail behavior was added.
+- **Tests run:** `npm run lint`; `npm run typecheck`; `npm run build`;
+  `git diff --check`; production-browser authenticated, second-user, guest, and
+  configuration-disabled checks; live marker-count verification and cleanup.
+- **Lint result:** Passed.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 using the webpack production
+  build. A separate no-Supabase production build also passed for the isolated
+  route-level disabled-state check.
+- **Manual verification performed:** Real applications grouped and counted by
+  saved, applied, and interview statuses with honest missing-value fallbacks.
+  The dialog listed only the one eligible saved job; creation produced exactly
+  one application and one `application_created` event, refreshed the board, and
+  removed the job from eligibility. A stale retry returned the intentional
+  already-tracked message without extra rows or events. Empty, all-tracked,
+  load-disabled, second-user isolation, and private-route guest redirect states
+  passed. No mock company or raw-JD marker appeared in visible text, HTML,
+  options, or inspected browser state. A same-tick double-submit race and an
+  unreliable transition-pending indicator found during testing were fixed with
+  a synchronous submission guard and explicit pending state.
+- **Related commit hash or range:** None; no commit was created.
+- **Real `/feedback` Session ID:** Not available; no ID was produced or
+  recorded.
+- **Known limitations:** `/applications/[id]` remains the existing mock detail
+  route. Tracker cards use real application UUIDs and may therefore reach its
+  honest unsupported/not-found boundary.
+- **Remaining risks:** The post-action full reload is intentionally pragmatic;
+  it can be revisited when Application Detail and the remaining application
+  mutations share a persisted client refresh strategy.
+- **Next action:** Persist `/applications/[id]` in a separately scoped task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
