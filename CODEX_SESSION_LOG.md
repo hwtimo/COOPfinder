@@ -1522,6 +1522,60 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Continue Applications CRUD with one separately scoped
   tracker workflow or remaining mutation task.
 
+### Applications CRUD documentation synchronization
+
+- **Date and time:** 2026-07-13 17:46 PDT
+- **Development phase:** Post-Applications current-state documentation
+- **Session purpose:** Synchronize current-state Markdown after completion and
+  live verification of persisted Applications CRUD through migration `014`.
+- **Task or prompt summary:** Updated the director context, handoff, product
+  strategy, technical design, and README so Applications foundation, creation,
+  tracker/detail/timeline, status, notes, deadline, follow-up, deletion, and
+  recreation are recorded as complete and Supabase-backed. Set the next phase
+  to the AI job parser for privately pasted JD text without beginning it.
+- **Important constraints given to Codex:** Documentation only; preserve product
+  strategy and safety boundaries; do not modify code, migrations, Supabase,
+  configuration, dependencies, tests, routes, or product behavior; do not
+  create migration `015`, implement AI, stockpile future prompts, or push.
+- **Files changed:** `CHATGPT_DIRECTOR_CONTEXT.md`, `HANDOFF.md`,
+  `PRODUCT_STRATEGY.md`, `TECHNICAL_DESIGN.md`, and `README.md`.
+- **Systems affected:** Current-state product and engineering documentation
+  only.
+- **Architectural decisions:** Repository code, migrations, linked remote
+  history, and recent verified session entries remained the source of truth.
+  Applications CRUD is complete through `202607130014`; migration `015` does
+  not exist; the next phase is the pasted-text AI job parser.
+- **Security or privacy considerations:** Preserved no auto-apply, no crawling
+  or blanket scraping, no access-control bypass, private raw JD boundaries, no
+  full JD publication through `board_jobs`, confirmed-evidence trust, no
+  invented claims, directional match language, and deterministic AI-free PDF
+  rendering.
+- **Rejected alternatives:** No broad documentation rewrite, strategy revision,
+  deletion of retained mock fixtures, application or migration changes, live
+  data mutation, AI implementation, migration `015`, or prompt stockpiling.
+- **Tests run:** Linked read-only migration-history inspection; focused stale-
+  status, roadmap, unimplemented-feature, and safety-boundary searches;
+  complete diff review; `git diff --check`.
+- **Lint result:** Not run; documentation-only change.
+- **Typecheck result:** Not run; documentation-only change.
+- **Build result:** Not run; documentation-only change.
+- **Manual verification performed:** Confirmed all eighteen local and remote
+  migration versions through `202607130014`, no local or remote `015`, real
+  Applications routes and mutation helpers without production mock imports,
+  and a final diff limited to the five intended current-state documents.
+- **Related commit hash or range:**
+  `2d316cc9868b3167ff56a9d091b6948850f188bb`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This documentation sync continued
+  in the same original Codex session for which that ID was already verified,
+  so the ID was reused and `/feedback` was not rerun.
+- **Known limitations:** The documents retain clearly labeled planning and
+  historical fixture context; they do not claim the next AI phase exists.
+- **Remaining risks:** No permanent Applications browser/database integration-
+  test suite exists; this documentation task did not change that product risk.
+- **Next action:** Scope the first narrow AI job parser task for privately
+  pasted job-description text in a separate implementation phase.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
