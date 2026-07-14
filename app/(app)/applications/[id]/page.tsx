@@ -29,6 +29,7 @@ import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getSupabaseUser } from "@/lib/supabase/user";
 
 import { ApplicationDeadlineForm } from "./application-deadline-form";
+import { ApplicationDeleteControl } from "./application-delete-control";
 import { ApplicationFollowUpForm } from "./application-follow-up-form";
 import { ApplicationNotesForm } from "./application-notes-form";
 import { ApplicationStatusForm } from "./application-status-form";
@@ -493,6 +494,13 @@ export default async function ApplicationDetailPage({
                 </p>
               </div>
             </div>
+          </CardSection>
+
+          <CardSection
+            title="Delete application"
+            description="Remove this tracking record and its timeline"
+          >
+            <ApplicationDeleteControl applicationId={application.id} />
           </CardSection>
         </aside>
       </div>

@@ -1,8 +1,10 @@
 "use server";
 
 import { refresh, revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { createApplicationFromJob } from "@/lib/applications/create-from-job";
+import { deleteApplication } from "@/lib/applications/delete-application";
 import {
   isIsoCalendarDate,
   updateApplicationDeadline,
@@ -502,4 +504,70 @@ export async function updateApplicationFollowUpAction(
     applicationId: result.applicationId,
     followUpDue: result.followUpDue,
   };
+}
+
+export type DeleteApplicationActionResult = {
+  status:
+    | "deleted"
+    | "unavailable"
+    | "invalid_input"
+    | "unconfigured"
+    | "unauthenticated"
+    | "error";
+  message: string;
+  applicationId?: string;
+};
+
+export async function deleteApplicationAction(
+  applicationId: unknown,
+): Promise<DeleteApplicationActionResult> {
+  if (typeof applicationId !== "string" || !isUuid(applicationId)) {
+    return {
+      status: "invalid_input",
+      message: "Choose a valid application before deleting it.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return {
+      status: "unconfigured",
+      message: "Supabase is not configured. The application was not deleted.",
+    };
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      status: "unauthenticated",
+      message: "Your session has expired. Log in again before continuing.",
+    };
+  }
+
+  const result = await deleteApplication(supabase, applicationId);
+
+  if (result.status === "unavailable") {
+    return {
+      status: "unavailable",
+      message: "This application is unavailable or is not owned by your account.",
+    };
+  }
+
+  if (result.status === "unexpected") {
+    console.error("Application deletion RPC failed", {
+      code: result.errorCode ?? "invalid_response",
+    });
+    return {
+      status: "error",
+      message: "The application could not be deleted. Nothing was removed.",
+    };
+  }
+
+  revalidatePath("/applications");
+  revalidatePath(`/applications/${applicationId}`);
+  redirect("/applications");
 }
