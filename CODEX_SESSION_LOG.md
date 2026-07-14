@@ -1440,6 +1440,88 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Continue Applications CRUD with one separately scoped
   mutation or tracker workflow task.
 
+### Atomic authenticated application deletion
+
+- **Date and time:** 2026-07-13 17:31 PDT
+- **Development phase:** Applications CRUD
+- **Session purpose:** Add and live-verify deletion of one caller-owned
+  application while preserving its linked private saved job and all unrelated
+  data.
+- **Task or prompt summary:** Added migration `014`, the
+  `delete_application(uuid)` RPC, a typed deletion helper and server action,
+  and an explicit destructive confirmation control on Application Detail.
+- **Important constraints given to Codex:** Delete only the caller-owned
+  application and its cascaded timeline; preserve jobs, companies, unrelated
+  applications, profiles, credits, board/intake rows, and resume data; add no
+  deletion event, soft deletion, tracker-side action, RLS change, service-role
+  production client, AI, parser, export, or app-shell change; apply only
+  migration `014`; do not push.
+- **Files changed:**
+  `supabase/migrations/202607130014_atomic_application_deletion.sql`,
+  `lib/applications/delete-application.ts`,
+  `app/(app)/applications/actions.ts`,
+  `app/(app)/applications/[id]/application-delete-control.tsx`, and
+  `app/(app)/applications/[id]/page.tsx`.
+- **Systems affected:** Linked Supabase migration history,
+  `public.delete_application(uuid)`, Application Detail deletion, tracker/detail
+  path revalidation, and the post-delete redirect to `/applications`.
+- **Architectural decisions:** The security-definer RPC derives ownership from
+  `auth.uid()`, locks only the caller-owned application row with `FOR UPDATE`,
+  returns `deleted` or the shared foreign/nonexistent result `unavailable`, and
+  deletes the parent application in one transaction. Existing foreign keys
+  cascade its timeline and restrict deletion through the private job boundary,
+  so no schema relationship or RLS policy changed.
+- **Security or privacy considerations:** The function has an empty search
+  path; `PUBLIC` and `anon` execute are revoked and `authenticated` is granted.
+  The RPC returns only status and application ID. Confirmation state receives
+  only the application ID and generic copy; it contains no raw job description,
+  notes, job, owner, resume, AI, or arbitrary metadata. Temporary credentials
+  were permissioned outside the repository and removed with all test fixtures.
+- **Rejected alternatives:** No direct table deletion from the action, client
+  timeline deletion, deletion event, job/company cascade, soft delete, restore,
+  batch or tracker-side delete, RLS change, service-role production dependency,
+  or optimistic UI removal.
+- **Tests run:** Local/remote migration history and live FK/RLS preflight;
+  linked dry run and migration apply; live function catalog and ACL inspection;
+  two-user sequential, anonymous, isolation, identical-concurrency,
+  preservation, cascade, no-event, and recreation matrices; real browser
+  cancel/delete/redirect/tracker/re-eligibility/recreation/private-not-found/job
+  access checks; isolated no-Supabase Webpack build and route probe; configured
+  lint, typecheck, Webpack build; `git diff --check`; cleanup audits.
+- **Lint result:** Passed.
+- **Typecheck result:** Passed after removing the stale `.next/dev` validator
+  generated for the temporary test-only route.
+- **Build result:** Passed with Next.js 16.2.10 and webpack. The isolated
+  no-Supabase production build also passed; its private Application Detail
+  request redirected to login with no active or mock deletion behavior.
+- **Manual verification performed:** Sequential deletion returned `deleted`
+  then `unavailable`; foreign and nonexistent IDs returned the identical
+  `unavailable` shape; anonymous execution failed. Identical concurrent deletes
+  returned exactly one `deleted` and one `unavailable`. Five target events
+  cascaded, no deletion event appeared, and the linked job, linked company,
+  unrelated application, and unrelated timeline remained unchanged. Browser
+  cancel made no write; confirmation redirected to the tracker; the card
+  disappeared; the saved job became eligible again; UI recreation produced
+  exactly one application and one initial event; the private job remained
+  accessible; foreign detail remained private-not-found; the console was clean.
+  All temporary scoped database counts returned to zero.
+- **Related commit hash or range:**
+  `3def3d94a062e6ec092243ab12e817c9abacb86c`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  original Codex session for which that ID was already verified, so the ID was
+  reused and `/feedback` was not rerun.
+- **Known limitations:** The browser-control surface waits through a
+  redirecting Server Action, so it did not capture the sub-second pending frame.
+  The synchronous duplicate-submission ref, pending state, disabled controls,
+  and `Deleting...` label wrap the awaited action; the real server trace showed
+  one deletion action and all database concurrency checks passed.
+- **Remaining risks:** No permanent browser or database integration-test suite
+  was added in this narrow phase; verification used isolated disposable live
+  fixtures that were fully removed.
+- **Next action:** Continue Applications CRUD with one separately scoped
+  tracker workflow or remaining mutation task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
