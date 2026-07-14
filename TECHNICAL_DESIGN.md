@@ -314,7 +314,9 @@ quality claim is accepted without measured production data.
 | DELETE | `/api/resumes/:id` | 원본 파일 + Storage 객체 삭제 | |
 | DELETE | `/api/account` | 계정 + 전체 데이터 + Storage 삭제 | 확인 절차 필수 |
 
-Tracker(applications) CRUD는 route handler 없이 Supabase client + RLS로 직접 — 서버 로직이 필요 없는 단순 CRUD라서.
+As built, Applications reads use the RLS-scoped Supabase client while
+mutations use authenticated server actions backed by the atomic RPCs in §L.
+No Applications route handler is required.
 
 **Free tier enforcement:** the tailoring endpoint checks the server-written
 credit ledger before generation and records usage only after a complete,
@@ -821,9 +823,10 @@ AI may help produce content **before** review; the render path is AI-free.
 
 > Incremental documentation sync — records what is actually implemented.
 > Where the v3 planning section above differs from the shipped SQL, **the
-> migration files win.** The development database is connected and all ten
-> migrations through `202607130006` are applied; §K records the completed
-> pre-Applications verification gate and its one conditional limit.
+> migration files win.** The development database is connected and all
+> eighteen migrations through `202607130014` are applied; migration `015` has
+> not been created. §K records live verification and §L records Applications
+> CRUD as built.
 
 ## H. Shipped migrations (chronological)
 
@@ -863,6 +866,31 @@ AI may help produce content **before** review; the render path is AI-free.
     preserving the signature, table return type, `SECURITY DEFINER`, empty
     `search_path`, PUBLIC/anon execute revocation, and authenticated execute
     grant.
+11. `202607130007_applications_crud_foundation.sql` — hardens applications and
+    timeline ownership, canonical statuses, timestamps, event types/metadata,
+    composite owner foreign keys, indexes, per-user RLS, and client grants.
+12. `202607130008_atomic_application_creation.sql` —
+    `create_application_from_job(uuid)` with caller-owned job validation,
+    advisory serialization, one application per user/job, and one initial
+    `application_created` event.
+13. `202607130009_atomic_application_status.sql` —
+    `update_application_status(uuid,text)` with row locking, canonical
+    transitions, no-op detection, and one minimal status event per real change.
+14. `202607130010_atomic_application_notes.sql` —
+    `update_application_notes(uuid,text)` with private note persistence and a
+    content-free `note_updated` event.
+15. `202607130011_fix_application_notes_whitespace.sql` — forward-only notes
+    normalization repair preserving the RPC security and result contract.
+16. `202607130012_atomic_application_deadline.sql` —
+    `update_application_deadline(uuid,date)` with set/change/clear support,
+    no-op detection, and canonical deadline event metadata.
+17. `202607130013_atomic_application_follow_up.sql` —
+    `update_application_follow_up(uuid,timestamptz)` with instant-aware
+    set/change/clear behavior and minimal follow-up event metadata.
+18. `202607130014_atomic_application_deletion.sql` —
+    `delete_application(uuid)` with caller-owned row locking and deterministic
+    `deleted | unavailable` results; timeline rows cascade while the linked
+    private job remains.
 
 ## I. Master Profile persistence (as built)
 
@@ -943,8 +971,9 @@ AI may help produce content **before** review; the render path is AI-free.
 
 Verified against the connected development Supabase project:
 
-- all ten migrations through `202607130006` are applied and their expected
-  objects are represented in migration history;
+- all eighteen migrations through `202607130014` are applied and their
+  expected objects are represented in linked migration history; migration
+  `015` has not been created;
 - `save_master_profile()` passed the persistence, replacement, clearing,
   ordering, confirmation, ownership, application-payload, and rollback
   contract recorded in §I;
@@ -977,6 +1006,14 @@ Verified against the connected development Supabase project:
   server action remains authoritative and rejects guest submission via
   `/login?next=%2Fboard%2Fsubmit&reason=submit_board_job` with zero writes,
   while authenticated atomic private/pending submission still passes.
+- Applications migrations `007`–`014` and production routes passed atomic
+  creation/idempotency, seven canonical statuses, persisted private tracker/
+  detail/timeline reads, status/notes/deadline/follow-up real-change and no-op
+  contracts, minimal metadata privacy, anonymous/two-user isolation,
+  synchronized concurrency, deletion cascade, saved-job/company and unrelated
+  data preservation, tracker removal, Add Application re-eligibility,
+  recreation with one initial event, foreign private-not-found behavior,
+  honest no-Supabase states, and complete disposable-fixture cleanup.
 
 The pre-Applications release gate is complete. One limitation remains
 **conditionally complete**, not behaviorally passed: guest-import
@@ -984,14 +1021,48 @@ mid-transaction rollback. Every caller-controlled constraint-sensitive value
 is validated before the first write, while later ownership, IDs, titles,
 intake source, and ledger values are derived or fixed. No safe deterministic
 caller-controlled post-write failure exists without changing production
-schema/function behavior, and none was manufactured. This limitation does not
-block Applications CRUD.
+schema/function behavior, and none was manufactured. This limitation did not
+block the completed Applications CRUD phase.
 
-Applications CRUD remains planned, not implemented. The immediate database
-task should create the next unused migration,
-`202607130007_applications_crud_foundation.sql`, for applications linked to
-user-owned private `job_postings`, one application per user/job for MVP,
-canonical statuses `saved | tailoring | ready | applied | interview | offer |
-rejected`, notes, deadline, follow-up, applied timestamp, persisted timeline,
-and per-user RLS. The first database task must not add a resume-version foreign
-key, AI, credits, calendar integration, or frontend wiring.
+## L. Applications CRUD (as built)
+
+- **Data model:** one `applications` row per `(user_id, job_posting_id)` for a
+  caller-owned private saved job. Canonical statuses are `saved`, `tailoring`,
+  `ready`, `applied`, `interview`, `offer`, and `rejected`. Persisted fields
+  include notes, deadline, follow-up timestamp, applied timestamp, ordering,
+  and audit timestamps.
+- **Timeline:** `application_timeline_events` belongs to the same user and
+  application through a composite owner FK with `ON DELETE CASCADE`. Event
+  rendering uses an event-specific whitelist; arbitrary JSON is never
+  rendered. Application deletion creates no event because the parent and its
+  history are removed together.
+- **Job boundary:** the composite application→job FK preserves ownership and
+  uses restrictive deletion behavior. Deleting an application never deletes
+  or modifies the private `job_postings` row or linked company; deleting the
+  application makes that job eligible for tracking again.
+- **Atomic RPCs:** `create_application_from_job(uuid)`,
+  `update_application_status(uuid,text)`,
+  `update_application_notes(uuid,text)`,
+  `update_application_deadline(uuid,date)`,
+  `update_application_follow_up(uuid,timestamptz)`, and
+  `delete_application(uuid)`. Mutations derive identity from `auth.uid()`, use
+  transaction-level serialization/row locks, distinguish no-ops where
+  relevant, and return foreign/nonexistent records through the same
+  unavailable result.
+- **Security:** each mutation RPC is `SECURITY DEFINER` with empty
+  `search_path`; execute is revoked from `PUBLIC` and `anon` and granted only
+  to `authenticated`. User-owned tables retain RLS. Production server actions
+  use the normal authenticated Supabase client, never service-role credentials.
+- **Routes:** `/applications` is the persisted board and atomic Add Application
+  flow. `/applications/[id]` is the persisted private detail/timeline with real
+  status, notes, deadline, follow-up, and delete controls. Foreign and
+  nonexistent IDs share private not-found behavior. Missing Supabase
+  configuration produces honest unavailable states, never mock persistence.
+- **Privacy:** timeline metadata contains only canonical transition fields;
+  private note text and raw JD text are excluded. Raw JD remains solely in the
+  owner-scoped `job_postings.raw_text` boundary.
+- **Not implemented:** drag-and-drop, tracker Table/Calendar modes, resume
+  attachment, arbitrary user timeline entries, recruiter contacts,
+  notification automation, Calendar integration, AI parsing, or tailoring.
+- **Next phase:** AI job parser for privately pasted JD text. The parser is not
+  implemented, and no migration `015` exists.

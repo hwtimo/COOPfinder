@@ -13,22 +13,27 @@ Supabase-backed features:
 - moderated public board, board detail, and public `/board/submit` page with
   authenticated atomic submission;
 - private saved-jobs CRUD and approved-board-to-private saves;
-- persisted Master Profile, skills, ordered evidence, and confirmation state.
+- persisted Master Profile, skills, ordered evidence, and confirmation state;
+- persisted Applications tracker/detail/timeline with atomic create, status,
+  notes, deadline, follow-up, delete, and recreate flows.
 
-The development database has ten applied migrations through
-`202607130006_fix_save_master_profile_coalesce.sql`. The pre-Applications live
-verification gate is complete. Guest-import post-write rollback is the one
-conditional limitation: the RPC has no safe caller-controlled failure after
-its pre-write validation, so no production test hook was added.
+The development database has eighteen applied migrations through
+`202607130014_atomic_application_deletion.sql`; migration `015` has not been
+created. Applications CRUD has been live-verified for authenticated isolation,
+concurrency, event contracts, saved-job preservation, and honest disabled
+states. Guest-import post-write rollback remains the earlier conditional
+limitation because its RPC has no safe caller-controlled later failure.
 
 Still mock, local, partial, or unimplemented: Dashboard persistence,
-Applications CRUD and timeline, Resume hub persistence, production tailoring,
-AI JD parsing, bounded URL fetching, claim checking, PDF/DOCX export, file
-upload, Calendar, Insights, Documents, notifications, and moderation UI.
+Resume hub persistence, production tailoring, AI JD parsing, bounded URL
+fetching, claim checking, PDF/DOCX export, file upload, Calendar, Insights,
+Documents, notifications, and moderation UI. Tracker drag-and-drop, Table/
+Calendar modes, resume attachment, and arbitrary timeline entries are also not
+implemented.
 
-The next task is the Applications CRUD database foundation. Its planned next
-unused migration is `202607130007_applications_crud_foundation.sql`; that file
-does not exist yet.
+The next product phase is the **AI job parser for privately pasted JD text**.
+Its first narrow implementation task will be scoped separately; no AI parser
+or migration `015` exists yet.
 
 ## Local Setup
 
@@ -58,10 +63,12 @@ npm run build
 
 ## Product Boundaries
 
-No automatic applying, crawling, or republishing private job-description text.
-Future AI suggestions must cite confirmed evidence, remain accept/reject/edit
-reviewable, and never imply guaranteed eligibility or hiring outcomes. PDF
-rendering is planned to be deterministic with no AI call in the render path.
+No automatic applying, crawling, blanket scraping, access-control bypass, or
+publication of full private job-description text through `board_jobs`. Raw JD
+stays private. Future AI suggestions must cite confirmed evidence, never invent
+claims, remain accept/reject/edit reviewable, and use directional match
+language without guaranteed eligibility or hiring outcomes. PDF rendering is
+planned to be deterministic with no AI call in the render path.
 
 Strategy Revision 2 remains canonical in
 [`PRODUCT_STRATEGY.md`](PRODUCT_STRATEGY.md). As-built backend details live in

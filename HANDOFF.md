@@ -16,10 +16,10 @@
 > resume, exports a clean PDF, and sends you back to the original site to
 > apply yourself."
 >
-> **Repository snapshot:** `main` at `05fc6b4` (`live tests complete. start
-> application CRUD`); `origin/main` contains the same commit. The worktree was
-> clean before this documentation-only synchronization, which leaves only the
-> six current-state Markdown documents modified and uncommitted.
+> **Repository evidence reviewed through:** atomic Application deletion
+> implementation commit `3def3d94a062e6ec092243ab12e817c9abacb86c` and its
+> session-log commit. The worktree was clean before this documentation-only
+> synchronization.
 
 ---
 
@@ -64,6 +64,14 @@
    TECHNICAL_DESIGN.md §I–J), three guest-import repairs through
    `202607130005`, and the `save_master_profile()` repair
    `202607130006_fix_save_master_profile_coalesce.sql`.
+8. **Persisted Applications CRUD** — migrations `007`–`014`, authenticated
+   `/applications` and `/applications/[id]`, one application per caller-owned
+   private saved job, seven canonical statuses, atomic creation with one
+   initial event, persisted private timeline, atomic status/notes/deadline/
+   follow-up mutations, and authenticated deletion. Deletion cascades only the
+   application timeline, preserves the linked job/company, makes that job
+   eligible for recreation, and creates no deletion event. Do not redo this
+   phase.
 
 Also in place since earlier phases: Supabase auth (`/login`,
 `/auth/callback`, `/auth/sign-out`), `proxy.ts` hybrid route protection,
@@ -81,11 +89,11 @@ Private (via `proxy.ts`): `/dashboard`, `/jobs`, `/jobs/[id]`,
 `/resumes/tailor/[jobId]`, `/calendar`, `/insights`, `/documents`,
 `/settings`. Guests hitting `/jobs` are redirected to `/board`.
 
-Persistence status by screen: `/board*`, `/jobs*`, `/resumes/master` read and
-write **real Supabase data** (with honest disabled states when Supabase env
-is absent). Dashboard, Applications (tracker + detail), Resumes hub,
-Tailoring Workspace, Calendar, Insights, Documents, Settings still render
-**mock/local data** — they are UI-complete but not persisted.
+Persistence status by screen: `/board*`, `/jobs*`, `/applications*`, and
+`/resumes/master` read and write **real Supabase data** (with honest disabled
+states when Supabase env is absent). Dashboard, Resumes hub, Tailoring
+Workspace, Calendar, Insights, Documents, and Settings still render
+**mock/local data**.
 
 ## 3. Master Profile persistence (as built)
 
@@ -158,7 +166,37 @@ Tailoring Workspace, Calendar, Insights, Documents, Settings still render
   validated before the first write; subsequent ownership, IDs, title, intake
   source, and ledger values are derived or fixed. No safe deterministic
   caller-controlled post-write failure exists, and production behavior was not
-  changed merely to manufacture one. This does not block Applications CRUD.
+  changed merely to manufacture one. It did not block the completed
+  Applications CRUD phase.
+
+## 4a. Applications CRUD (as built)
+
+- `/applications` reads only the authenticated user's persisted applications
+  and caller-owned saved jobs. The board view is real; Table and Calendar modes
+  remain disabled placeholders and drag-and-drop is not implemented.
+- Add Application lists only untracked eligible saved jobs and calls
+  `create_application_from_job(uuid)`. The RPC owns identity through
+  `auth.uid()`, serializes retries, enforces one application per user/job, and
+  creates exactly one `application_created` event.
+- `/applications/[id]` reads the owned application, linked private job, and
+  persisted timeline. Foreign and nonexistent IDs share the private not-found
+  state; Supabase-disabled builds show honest unavailable states without mock
+  substitution.
+- `update_application_status`, `update_application_notes`,
+  `update_application_deadline`, and `update_application_follow_up` lock the
+  owned row, distinguish real changes from no-ops, and append one canonical
+  minimal event for each real change. Note text never enters timeline metadata.
+- `delete_application(uuid)` deletes one caller-owned application and relies on
+  the existing timeline `ON DELETE CASCADE`; the private job FK boundary
+  preserves the job and company. The deleted job becomes eligible for atomic
+  application creation again. No deletion event is written.
+- All mutation RPCs are `SECURITY DEFINER` with empty `search_path`, derive
+  ownership from `auth.uid()`, revoke execute from `PUBLIC`/`anon`, and grant
+  execute only to `authenticated`. Production actions use the normal server
+  Supabase client, never a service-role client.
+- Not implemented: tracker drag-and-drop, tracker Table/Calendar modes, resume
+  attachment, arbitrary user-created timeline events, recruiter contacts,
+  notification automation, or Calendar integration.
 
 ## 5. Migrations (chronological)
 
@@ -172,11 +210,21 @@ Tailoring Workspace, Calendar, Insights, Documents, Settings still render
 8. `202607130004_fix_import_guest_draft_nullif.sql`
 9. `202607130005_fix_import_guest_draft_hash_ambiguity.sql`
 10. `202607130006_fix_save_master_profile_coalesce.sql`
+11. `202607130007_applications_crud_foundation.sql`
+12. `202607130008_atomic_application_creation.sql`
+13. `202607130009_atomic_application_status.sql`
+14. `202607130010_atomic_application_notes.sql`
+15. `202607130011_fix_application_notes_whitespace.sql`
+16. `202607130012_atomic_application_deadline.sql`
+17. `202607130013_atomic_application_follow_up.sql`
+18. `202607130014_atomic_application_deletion.sql`
 
-All ten are committed and applied to the connected development Supabase
-project. Migrations 003–005 are forward-only repairs to
-`import_guest_draft()`; migration 006 repairs only `save_master_profile()`.
-Do not edit or squash applied migration history.
+All eighteen are committed and applied to the connected development Supabase
+project. Migration `015` has not been created. Migrations 003–005 are
+forward-only repairs to `import_guest_draft()`; migration 006 repairs only
+`save_master_profile()`; `007`–`014` are the Applications foundation and
+atomic creation/status/notes/deadline/follow-up/deletion sequence. Do not edit
+or squash applied migration history.
 
 ## 5a. Planned AI routing (not implemented)
 
@@ -232,7 +280,8 @@ no browser console warnings/errors observed.
 
 Live checks completed against the development Supabase project:
 
-- all ten migrations through `202607130006` applied and expected objects found;
+- all eighteen migrations through `202607130014` applied and expected objects
+  found; migration `015` has not been created;
 - `save_master_profile()` persistence, replacement/clearing, confirmation,
   ownership, application payload, and later-failure rollback passed;
 - normal, sequential-idempotent, canonicalized, concurrent, and
@@ -249,12 +298,20 @@ Live checks completed against the development Supabase project:
   unavailable-row rejection, and no copied board summary/raw JD;
 - production-build browser and direct-HTTP route protection, root redirects,
   authenticated access, sign-out, and no private guest response content passed.
+- Applications `007`–`014` passed authenticated creation/idempotency, seven
+  status persistence, private tracker/detail/timeline reads, status/notes/
+  deadline/follow-up real-change and no-op behavior, minimal event metadata,
+  anonymous/two-user isolation, synchronized concurrency, deletion cascade,
+  linked-job/company and unrelated-data preservation, tracker removal,
+  Add Application re-eligibility, recreation with one initial event, foreign
+  private-not-found behavior, honest no-Supabase states, and complete fixture
+  cleanup.
 
 The pre-Applications release gate is complete. The only conditional limit is
 guest-import post-write rollback: it was not behaviorally exercised because
 the current RPC has no safe caller-controlled later failure after its complete
 pre-write validation. Do not relabel that limitation as a passed rollback test,
-but do not treat it as blocking Applications CRUD.
+and it did not block Applications CRUD.
 
 ## 7. Known risks (current, narrow)
 
@@ -268,33 +325,38 @@ but do not treat it as blocking Applications CRUD.
    (MVP cleanup debt, not a blocker).
 4. If duplicate board saves already exist, the unique-index migration fails
    intentionally rather than silently preserving invalid duplicates.
-5. Applications and downstream workflow remain mock/unpersisted until the
-   next phase.
-6. AI features and deterministic export are not implemented.
+5. No permanent browser/database integration-test suite exists for the
+   Applications flows; live coverage used disposable fixtures.
+6. Tracker drag-and-drop, Table/Calendar modes, resume attachment, arbitrary
+   timeline entries, recruiter contacts, notifications, and Calendar
+   integration are not implemented.
+7. AI parsing, URL intake, production tailoring, claim checking, and
+   deterministic export are not implemented.
 
 ## 8. Next work (in order)
 
-**Next product phase: Applications CRUD database foundation.** Create the next
-unused migration, `202607130007_applications_crud_foundation.sql`, for
-applications attached to user-owned private `job_postings`, one application
-per user/job for MVP, canonical statuses (`saved`, `tailoring`, `ready`,
-`applied`, `interview`, `offer`, `rejected`), notes, deadline, follow-up,
-applied timestamp, persisted timeline, and per-user RLS. Do not add a
-resume-version foreign key, AI, credits, calendar integration, or frontend
-wiring in this first database task. Migration 007 does not exist yet.
+**Next product phase: AI job parser for privately pasted JD text.** Applications
+CRUD is complete through migration `014`; do not redo it. Scope the first AI
+parser task separately when that phase begins. Do not claim parsing exists or
+create migration `015` during documentation work.
 
-Then: Applications CRUD frontend wiring → AI job parser for pasted JD text → bounded user-directed URL
-intake with paste fallback → AI tailoring with reviewable source evidence and
-existing credit boundaries → mechanical claim checker → deterministic PDF
-export → final MVP integration and end-to-end QA.
+Remaining roadmap order:
+
+1. AI parser for pasted JD text.
+2. Bounded user-directed URL intake with manual paste fallback.
+3. Evidence-backed reviewable resume tailoring.
+4. Mechanical claim checker.
+5. Deterministic PDF export.
+6. Final MVP integration and end-to-end QA.
 
 One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
 
 ## 9. Warnings for future agents
 
 - **Do not redo completed work:** board submission (`/board/submit` + atomic
-  RPC), private Jobs CRUD, Master Profile persistence, and guest-draft import
-  are done — extend, don't rewrite.
+  RPC), private Jobs CRUD, Master Profile persistence, guest-draft import, and
+  Applications CRUD through deletion/recreation (`007`–`014`) are done —
+  extend, don't rewrite.
 - **Do not rewrite the app shell or redesign completed screens.**
 - **No blanket scraping or crawling, ever.** Future URL intake is ONE
   user-directed fetch with paste fallback. No CAPTCHA/login-wall/bot-
@@ -329,7 +391,8 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   `node_modules/next/dist/docs/` per AGENTS.md). Build uses
   `next build --webpack`. Icons: keep `lucide-react` despite
   `components.json` saying Phosphor.
-- Residual mock data (`lib/mock/`) still powers Dashboard, Applications,
-  Resumes hub, and the Tailoring Workspace; the app shell uses mock
-  `currentUser` only as cosmetic fallback strings. Replace these per phase —
-  do not delete `lib/mock/` wholesale.
+- Residual mock data (`lib/mock/`) still powers Dashboard, Resumes hub, and the
+  Tailoring Workspace; `lib/mock/applications.ts` remains as a compatibility
+  fixture but production Applications routes do not import it. The app shell
+  uses mock `currentUser` only as cosmetic fallback strings. Replace these per
+  phase — do not delete `lib/mock/` wholesale.

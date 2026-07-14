@@ -219,42 +219,44 @@ sections and HANDOFF.md):
 | 5. Public `/board/submit` page with an honest guest sign-in state and **authenticated atomic** private+pending creation (`submit_board_job_with_private_copy`, `202607120001_atomic_board_submission.sql`); submitter status labels (Pending review / On the board / Not added / Archived) | ✅ Done; guest zero-write gate and authenticated RPC behavior verified live |
 | 6. Private saved-jobs CRUD on `/jobs` + `/jobs/[id]` (create/list/read/edit/delete, search/filters over persisted rows, board→private saves with duplicate prevention via `202607130001_unique_private_board_saves.sql`) | ✅ Done; two-user private-job RLS isolation verified live |
 | 7. Master Profile Supabase persistence + authenticated guest-draft import (`save_master_profile`, `import_guest_draft`, `guest_draft_imports` ledger, `202607130002_master_profile_guest_import.sql` + forward-only repairs through `202607130006`) | ✅ Done; Master Profile persistence/rollback and guest-import normal, idempotent, canonical, concurrent, and existing-account merge behavior verified live |
+| 8. Persisted Applications CRUD (`202607130007_applications_crud_foundation.sql` through `202607130014_atomic_application_deletion.sql`): atomic create, tracker/detail/timeline, status, notes, deadline, follow-up, delete, and recreate | ✅ Done and applied; authenticated isolation, concurrency, event contracts, saved-job preservation, browser flow, and no-Supabase states verified |
 
 **Remaining product phases**, in order:
 
-1. **Applications CRUD** (free tracking, persisted timeline) — next, beginning
-   with database-only migration
-   `202607130007_applications_crud_foundation.sql` (not created yet).
-2. **AI job parser for pasted JD text.**
-3. **Bounded, user-directed URL intake** with manual paste fallback.
-4. **AI resume tailoring** with reviewable source evidence and the existing
+1. **AI job parser for pasted JD text.**
+2. **Bounded, user-directed URL intake** with manual paste fallback.
+3. **AI resume tailoring** with reviewable source evidence and the existing
    credit boundaries.
-5. **Mechanical claim checker.**
-6. **Deterministic PDF export.**
-7. **Final MVP integration and end-to-end QA.**
+4. **Mechanical claim checker.**
+5. **Deterministic PDF export.**
+6. **Final MVP integration and end-to-end QA.**
 
-Not done (do not document as complete anywhere): Applications CRUD, persisted
-timeline, AI parsing, URL fetching, extraction-confidence pipeline, tailoring,
-production credit consumption, claim checker, PDF/DOCX export, file upload,
-moderation dashboard, notifications, Calendar/Insights functionality.
+Not done (do not document as complete anywhere): AI parsing, URL fetching,
+extraction-confidence pipeline, production tailoring/credit consumption,
+claim checker, PDF/DOCX export, file upload, moderation dashboard,
+notifications, Calendar/Insights functionality.
 
-## 10a. Pre-Applications live-verification gate — complete
+## 10a. Live-verification status — current through Applications CRUD
 
 The development Supabase project is connected and migrations through
-`202607130006` are applied. Narrow live checks have covered Master Profile
+`202607130014` are applied; migration `015` has not been created. Narrow live
+checks have covered Master Profile
 persistence and rollback; guest-import normal, sequential-idempotent,
 canonicalized, concurrent, and existing-account `auto`/`merge` behavior;
 two-user RLS for `job_postings`, `profiles`, `master_profiles`,
 `master_profile_entries`, and `guest_draft_imports`; authenticated atomic board
 submission; approved-board save/duplicate/privacy behavior; and production
-route, sign-out, direct-HTTP, and public `/board/submit` behavior.
+route, sign-out, direct-HTTP, and public `/board/submit` behavior. Applications
+checks cover atomic creation, persisted tracker/detail/timeline, status, notes,
+deadline, follow-up, deletion/recreation, two-user and anonymous isolation,
+concurrency, event contracts, and saved-job/unrelated-data preservation.
 
 Do not generalize beyond those tables and flows. Guest-import post-write
 rollback is conditionally complete rather than behaviorally passed: all
 caller-controlled constraint-sensitive values are rejected before writes, and
 later values are derived or fixed, so no safe deterministic post-write failure
 exists without modifying production behavior. No such test hook was added.
-This limitation is documented and does not block Applications CRUD.
+This limitation is documented and did not block Applications CRUD.
 
 ## 11. Risks & mitigations
 
@@ -276,16 +278,15 @@ deterministic PDF → return to the original site and apply manually.**
 
 Already-implemented foundations: authentication, public/private job
 separation, private Jobs CRUD, persisted Master Profile, evidence-confirmation
-state, guest-to-account import.
+state, guest-to-account import, and persisted Applications CRUD.
 
 Highest-priority remaining work, in order:
 
-1. Applications CRUD database foundation and then frontend persistence.
-2. Pasted-text JD parsing.
-3. A small number of evidence-linked resume suggestions.
-4. Unsupported-claim blocking.
-5. One deterministic PDF template.
-6. End-to-end testing of the core loop.
+1. Pasted-text JD parsing.
+2. A small number of evidence-linked resume suggestions.
+3. Unsupported-claim blocking.
+4. One deterministic PDF template.
+5. End-to-end testing of the core loop.
 
 Explicitly deprioritized for the one-week MVP (long-term direction unchanged):
 moderation dashboard, broad URL intake, file upload, DOCX, Calendar/Insights

@@ -2,9 +2,9 @@
 
 Use this file as context for a future temporary ChatGPT chat where ChatGPT should act as a product and engineering director. Its job should be to tell the user exactly what to do next and provide precise prompts to give coding agents such as Codex or Fable.
 
-Last reviewed: 2026-07-13 (migration 006, completed live-verification gate,
-route-contract repair, and Applications CRUD next phase synchronized;
-Strategy Revision 2 remains current and no AI integration was implemented).
+Last reviewed: 2026-07-13 (migrations through `202607130014`, persisted
+Applications CRUD, and its live verification synchronized; Strategy Revision
+2 remains current and no AI integration was implemented).
 
 Working method: drive implementation with **one narrow Codex prompt at a time**, drafted when a phase actually starts. Do not stockpile prompts for future phases in the docs. Record meaningful core sessions in `CODEX_SESSION_LOG.md`, including their verified commit range and real `/feedback` Session ID when available; never fabricate either verification or an ID.
 
@@ -58,9 +58,18 @@ Completed migrations, chronological:
 `202607130003_fix_import_guest_draft_coalesce.sql` ·
 `202607130004_fix_import_guest_draft_nullif.sql` ·
 `202607130005_fix_import_guest_draft_hash_ambiguity.sql` ·
-`202607130006_fix_save_master_profile_coalesce.sql`
-(All ten are committed and applied to the connected development database;
-see section 8 for the exact behavioral coverage and one conditional limit.)
+`202607130006_fix_save_master_profile_coalesce.sql` ·
+`202607130007_applications_crud_foundation.sql` ·
+`202607130008_atomic_application_creation.sql` ·
+`202607130009_atomic_application_status.sql` ·
+`202607130010_atomic_application_notes.sql` ·
+`202607130011_fix_application_notes_whitespace.sql` ·
+`202607130012_atomic_application_deadline.sql` ·
+`202607130013_atomic_application_follow_up.sql` ·
+`202607130014_atomic_application_deletion.sql`
+(All eighteen are committed and applied to the connected development
+database; migration `015` has not been created. See section 8 for the exact
+behavioral coverage and remaining limits.)
 
 **Completed:**
 1. Strategy Revision 2 documentation.
@@ -95,9 +104,20 @@ see section 8 for the exact behavioral coverage and one conditional limit.)
     application-shaped payload compatibility, replacement/clearing behavior,
     fresh evidence IDs, zero-based order, and no partial state after a later
     invalid-entry failure.
+16. Applications database foundation and atomic creation (`007`–`008`): one
+    application per caller-owned private saved job, seven canonical statuses,
+    persisted private timeline, per-user RLS, and exactly one initial event.
+17. Persisted `/applications` tracker, Add Application flow, and private
+    `/applications/[id]` detail with real timeline reads and the shared private
+    not-found state for foreign/nonexistent IDs.
+18. Atomic status, notes, deadline, and follow-up mutations (`009`–`013`): row
+    locking, no-op detection, one minimal event per real change, private note
+    text excluded from timeline metadata, and authenticated-only execution.
+19. Authenticated application deletion (`014`): deletes the caller-owned
+    application and cascaded timeline only, preserves its private job/company,
+    makes the job eligible for creation again, and creates no deletion event.
 
 **Not completed** (do not claim these exist):
-- Applications CRUD and persisted application timeline.
 - AI JD parser; bounded user-directed URL intake; real extraction-confidence pipeline.
 - AI resume tailoring; production tailoring-credit consumption.
 - Mechanical claim checker.
@@ -106,7 +126,11 @@ see section 8 for the exact behavioral coverage and one conditional limit.)
 - Calendar and Insights functionality; production document-management workflow.
 - Final product-level end-to-end MVP QA after the remaining product phases.
 
-Screens still rendering mock/local data: Dashboard, Application Tracker + Application Detail, Resumes hub, Resume Tailoring Workspace (full mock session for `j11` only), Calendar/Insights/Documents/Settings. A mock screen existing does not make its feature complete.
+Screens still rendering mock/local data: Dashboard, Resumes hub, Resume
+Tailoring Workspace (full mock session for `j11` only), Calendar/Insights/
+Documents/Settings. Applications tracker and detail are now Supabase-backed;
+the old fixture file still exists but is not imported by production routes.
+A mock screen existing does not make its feature complete.
 
 Evidence-confirmation trust boundary (implemented): user-authored evidence can be confirmed; editing confirmed evidence makes it unconfirmed; the user must explicitly reconfirm; future AI must treat `confirmed` as the boundary and never mark AI output confirmed.
 
@@ -135,7 +159,8 @@ Private routes (enforced by `proxy.ts`): `/dashboard`, `/jobs`, `/jobs/[id]`,
 | `/jobs/[id]` | Private saved-job detail: edit/delete, raw JD, submission status labels, "Analysis not generated yet" | Complete (Supabase-backed) |
 | `/resumes/master` | Master Profile: persisted profile, skills, ordered evidence with confirmation state | Complete (Supabase-backed) |
 | `/dashboard` | Overview (metrics, pipeline, deadlines, next actions) | UI complete, **mock data** |
-| `/applications`, `/applications/[id]` | Tracker + detail | UI complete, **mock data** — next phase persists it |
+| `/applications` | Persisted private tracker and atomic Add Application flow | Complete (Supabase-backed) |
+| `/applications/[id]` | Persisted private detail, timeline, status/notes/deadline/follow-up/delete controls | Complete (Supabase-backed) |
 | `/resumes` | Resume hub; upload disabled | Partial, mock |
 | `/resumes/tailor/[jobId]` | Tailoring Workspace (full mock session for `j11` only) | UI complete, **mock data** |
 | `/calendar`, `/insights`, `/documents` | Placeholders | Placeholder |
@@ -168,11 +193,18 @@ Main route flows and buttons:
   unavailable" until analysis/tailoring is implemented; the mock tailoring
   route remains reachable only from mock flows.
 - Job Detail secondary buttons "Mark as ready", "Add deadline", and "Save notes" are disabled placeholders.
-- Application Tracker cards open `/applications/[id]`.
-- Application Tracker Board button is active; Table, Calendar, and Add application are disabled placeholders.
-- Application Detail back link returns to `/applications`.
-- Application Detail "View job detail" opens `/jobs/[id]`.
-- Application Detail resume button links to `/resumes` for existing resume versions, or `/resumes/tailor/[jobId]` when no resume is attached.
+- Application Tracker cards open the caller-owned `/applications/[id]`.
+- Application Tracker Board button is active; Table and Calendar remain
+  disabled placeholders. Add Application uses the atomic creation RPC and
+  lists only eligible caller-owned saved jobs.
+- Application Detail back link returns to `/applications`; "View job detail"
+  opens the preserved private `/jobs/[id]` record.
+- Application Detail status, notes, deadline, follow-up, and delete controls
+  persist through authenticated atomic RPCs. Delete requires confirmation,
+  removes the application/timeline, preserves the saved job, then redirects to
+  `/applications`.
+- Foreign and nonexistent Application Detail IDs render the same private
+  not-found state; Supabase-disabled builds never substitute mock data.
 - Resume hub "Master profile" opens `/resumes/master`.
 - Resume hub "Upload resume" is disabled.
 - Master Profile back link returns to `/resumes`.
@@ -262,11 +294,21 @@ Guest draft and onboarding:
 
 Application tracker/detail:
 - `app/(app)/applications/page.tsx`.
+- `app/(app)/applications/actions.ts`.
+- `app/(app)/applications/add-application-dialog.tsx`.
 - `app/(app)/applications/loading.tsx`.
 - `app/(app)/applications/[id]/page.tsx`.
 - `app/(app)/applications/[id]/loading.tsx`.
+- `app/(app)/applications/[id]/application-status-form.tsx`.
+- `app/(app)/applications/[id]/application-notes-form.tsx`.
+- `app/(app)/applications/[id]/application-deadline-form.tsx`.
+- `app/(app)/applications/[id]/application-follow-up-form.tsx`.
+- `app/(app)/applications/[id]/application-delete-control.tsx`.
+- `lib/applications/*`: persisted queries, types, and typed RPC helpers for
+  creation, status, notes, deadline, follow-up, and deletion.
 - Application cards are currently defined inside `applications/page.tsx`.
-- Application detail uses fallback timeline logic if no explicit timeline exists.
+- Application detail renders only persisted timeline rows through a safe,
+  event-specific metadata whitelist.
 
 UI primitives:
 - `components/ui/*`: shadcn/radix-style primitives including button, input, dropdown-menu, skeleton, tooltip, card, scroll-area, separator, avatar, badge.
@@ -277,11 +319,11 @@ UI primitives:
 ## 5. Mock Data Structure
 
 Mock data lives in `lib/mock/`. **Scope note (2026-07-13):** mock data now
-backs only the not-yet-persisted screens (Dashboard, Applications, Resumes
-hub, Tailoring Workspace, board fallbacks). Maya Chen is a mock fixture, not
-the production current user — persisted screens (`/board*`, `/jobs*`,
-`/resumes/master`) read real Supabase data, and the Master Profile page never
-initializes with mock data.
+backs only the not-yet-persisted screens (Dashboard, Resumes hub, Tailoring
+Workspace, and board fallbacks). Maya Chen is a mock fixture, not the
+production current user — persisted screens (`/board*`, `/jobs*`,
+`/applications*`, `/resumes/master`) read real Supabase data. Applications and
+Master Profile never initialize from mock data in production.
 
 Files:
 - `lib/mock/index.ts`: barrel export.
@@ -290,7 +332,9 @@ Files:
 - `lib/mock/dates.ts`: `daysUntil` and `formatDeadline`; mock today is fixed to `2026-07-08`.
 - `lib/mock/companies.ts`: company fixtures.
 - `lib/mock/jobs.ts`: jobs, job analyses, and derived job requirements.
-- `lib/mock/applications.ts`: tracker columns, application records, application timeline.
+- `lib/mock/applications.ts`: retained tracker/application/timeline fixtures
+  for compatibility and historical UI data; production Applications routes do
+  not import it.
 - `lib/mock/dashboard.ts`: dashboard metrics, pipeline stages, next actions.
 - `lib/mock/resumes.ts`: student profile, master resume, resume bullets, resume versions, resume performance, older AI suggestions, older keyword checklist.
 - `lib/mock/tailoring.ts`: full Tailoring Workspace session for Northstar Robotics `j11`.
@@ -312,7 +356,6 @@ Duplicated or drift-prone mock data:
 
 Data still awaiting persistence or production generation:
 - Dashboard metrics derived from persisted jobs/applications.
-- Applications and timelines (next phase).
 - Resume uploads metadata.
 - Resume versions.
 - Parsed job analyses/requirements.
@@ -390,8 +433,9 @@ UI libraries:
 State management:
 - No global state library.
 - Local React `useState` / `useMemo` in client components.
-- Supabase persistence exists for the public board, private jobs, Master
-  Profile, and guest-draft import; remaining screens use mock/local state.
+- Supabase persistence exists for the public board, private jobs, Applications,
+  Master Profile, and guest-draft import; remaining screens use mock/local
+  state.
 
 Charts/tables/drag-and-drop:
 - No chart library is implemented.
@@ -444,11 +488,10 @@ prohibits AI calls. TECHNICAL_DESIGN.md §3 is canonical.
 
 ## 8. Current Quality & Verification Status
 
-Repository snapshot at this synchronization: branch `main`; latest commit
-`05fc6b4` (`live tests complete. start application CRUD`); the configured
-remote `origin/main` contains the same commit. The worktree was clean before
-this documentation-only update; this pass leaves only the six current-state
-Markdown documents modified and uncommitted.
+Repository evidence reviewed through the focused atomic Application deletion
+implementation commit `3def3d94a062e6ec092243ab12e817c9abacb86c` and its
+session-log commit. The worktree was clean before this documentation-only
+update.
 
 Verification completed during the reported backend phases:
 - `npm run lint`: passed.
@@ -461,8 +504,9 @@ Verification completed during the reported backend phases:
 - Browser console showed no warnings or errors during the reported checks.
 
 Live verification completed against the development Supabase project:
-- All ten migrations through `202607130006` are committed, applied, and
-  represented in remote migration history. Migration 006 replaces only
+- All eighteen migrations through `202607130014` are committed, applied, and
+  represented in linked remote migration history. Migration `015` has not
+  been created. Migration 006 replaces only
   `save_master_profile(jsonb,jsonb,jsonb)`, removes invalid qualification from
   five `COALESCE` and five `NULLIF` expressions, and preserves its signature,
   return type, `SECURITY DEFINER`, empty `search_path`, and authenticated-only
@@ -489,6 +533,13 @@ Live verification completed against the development Supabase project:
   unauthenticated mutation rejection. The repaired public `/board/submit`
   returns 200 for guests, shows no private history, and sends mutation attempts
   to `/login?next=%2Fboard%2Fsubmit&reason=submit_board_job` with zero writes.
+- Applications live verification covers the foundation and RPCs in `007`–
+  `014`: atomic create/idempotency, seven statuses, persisted tracker/detail/
+  timeline, status/no-op/event behavior, private notes without note text in
+  metadata, deadline and follow-up set/change/clear behavior, authenticated
+  deletion, foreign/nonexistent equivalence, anonymous/two-user isolation,
+  concurrent serialization, saved-job preservation, recreation eligibility,
+  honest no-Supabase states, and scoped cleanup to zero.
 
 Current known risks (narrow, accurate):
 1. Guest-import mid-transaction rollback is conditionally complete, not
@@ -496,7 +547,7 @@ Current known risks (narrow, accurate):
    validated before writes, and later ownership, IDs, titles, intake source,
    and ledger values are derived or fixed. No safe deterministic post-write
    failure exists without altering production behavior, so none was
-   manufactured. This does not block Applications CRUD.
+   manufactured. It did not block the completed Applications CRUD phase.
 2. The required placeholder title `Imported job - add title` creates an
    explicit review step before an imported job is useful.
 3. Private manual job + company creation are separate RLS-protected writes; a
@@ -504,13 +555,14 @@ Current known risks (narrow, accurate):
    cleanup debt, not a blocker).
 4. Existing duplicate board saves intentionally cause the unique-index
    migration to fail rather than silently preserving invalid duplicates.
-5. Applications and downstream workflow remain mock/unpersisted until the
-   next phase.
-6. AI features and deterministic export are not implemented.
+5. There is no permanent browser/database integration-test suite for the
+   Applications flows; verified coverage used disposable live fixtures.
+6. AI parsing, URL intake, production tailoring, claim checking, and
+   deterministic export are not implemented.
 
 Known fragile areas (frontend):
-- Mock/local state remains in Dashboard, Applications, Resumes hub, and the
-  Tailoring Workspace (only `j11` has a full mock tailoring session).
+- Mock/local state remains in Dashboard, Resumes hub, and the Tailoring
+  Workspace (only `j11` has a full mock tailoring session).
 - Dashboard metrics/pipeline counts can drift from application mock data.
 - Application board is horizontally scrollable with a large min width;
   mobile behavior is improved but not deeply optimized.
@@ -521,10 +573,8 @@ Known fragile areas (frontend):
 
 ## 9. Important Product Constraints
 
-Do not implement unless explicitly requested:
-- Backend.
-- Auth.
-- Database.
+Do not expand outside the active, explicitly requested narrow phase:
+- Backend, auth, or database behavior beyond the completed foundations.
 - Real AI API.
 - Real scraping.
 - File upload.
@@ -544,20 +594,22 @@ Product safety constraints:
 
 Current backend status:
 - Supabase auth is implemented (hybrid public/private via `proxy.ts` — never a blanket wall).
-- Ten committed and applied migrations exist through `202607130006` (section
-  2); `/board*`, `/jobs*`, and `/resumes/master` are wired to Supabase with
-  honest disabled states when env vars are absent. The pre-Applications live
-  gate is complete with the conditional guest-import rollback limit in §8.
+- Eighteen committed and applied migrations exist through `202607130014`
+  (section 2); `/board*`, `/jobs*`, `/applications*`, and `/resumes/master`
+  are wired to Supabase with honest disabled states when env vars are absent.
+  Migration `015` does not exist.
 - No AI API is implemented anywhere. No URL is ever fetched. No scraping exists, and the board stays hand-moderated (full JD text is never republished through `board_jobs`).
 - Tailoring credits exist as schema only — no production consumption.
-- Dashboard, Applications, Resumes hub, Tailoring Workspace, Calendar, Insights, Documents, and Settings still render mock/local state.
+- Dashboard, Resumes hub, Tailoring Workspace, Calendar, Insights, Documents,
+  and Settings still render mock/local state.
 
 ---
 
 ## 10. Current Known UX Issues
 
 General:
-- Persistence exists for board, private jobs, and master profile; the remaining screens (Dashboard, Applications, Resumes hub, Tailoring) still reset on navigation/refresh.
+- Persistence exists for board, private jobs, Applications, and Master Profile;
+  Dashboard, Resumes hub, and Tailoring remain mock/local.
 - Topbar "Add job" routes to `/jobs`; it does not open the intake flow directly.
 - Notifications are disabled; sign out works.
 - Mock-data screens still contain fake "Original posting" URLs; persisted jobs use real user-entered `source_url` values (link-outs only, never fetched).
@@ -572,7 +624,9 @@ Dashboard:
 
 Jobs (persisted):
 - Jobs table is desktop-first and horizontally scrolls on smaller widths.
-- Saved jobs are persisted, but have no generated analysis ("Analysis not generated yet") and no application record until Applications CRUD lands.
+- Saved jobs are persisted and can create one tracked application through the
+  existing Add Application flow, but generated analysis remains unavailable
+  ("Analysis not generated yet").
 - Imported guest jobs carry the `Imported job - add title` review placeholder until edited.
 - Filter selects are simple native selects; no chips or saved filters.
 
@@ -583,9 +637,14 @@ Job Detail (persisted):
 Applications:
 - Application Tracker has no drag-and-drop.
 - Table and calendar toggles are disabled placeholders.
-- Add application is disabled.
+- Add Application is persisted and limited to eligible caller-owned saved jobs.
 - Board is horizontally wide and not card-adaptive on mobile.
-- Application Detail links existing resume versions to `/resumes`, not a specific version page.
+- Application Detail has no resume attachment/version control and supports no
+  arbitrary user-created timeline entries.
+- Recruiter-contact management, notification automation, and Calendar
+  integration are not implemented.
+- There is no permanent browser/database integration-test suite for these
+  flows; live verification used disposable fixtures.
 
 Resumes and Master Profile:
 - Resume upload is disabled (file upload not implemented).
@@ -598,7 +657,7 @@ Resume Tailoring Workspace:
 - Full session exists only for `j11`.
 - Save version only changes local button state.
 - Mark as ready only changes local workspace status and shows a tracker link.
-- Marking ready does not mutate `mockApplications`.
+- Marking ready does not mutate the persisted Applications tracker.
 - Save version is allowed before all suggestions are reviewed.
 - Readiness includes "Version saved" but `canMarkReady` only checks all reviewed and no unsupported accepted; it does not require version saved.
 - Unsupported accepted suggestions block readiness unless edited, but accepted unsupported text still remains in the draft until user undoes/edits.
@@ -610,37 +669,33 @@ Resume Tailoring Workspace:
 
 ## 11. Next Steps (2026-07-13)
 
-### Release-verification gate — complete
+### Applications CRUD phase — complete
 
-The pre-Applications gate is complete. Live coverage includes migrations
-through `202607130006`, Master Profile persistence/rollback, guest-import
-normal/idempotent/canonical/concurrent/merge behavior, the five specifically
-tested private RLS tables, approved-board save/duplicate/privacy behavior, and
-production route/sign-out/direct-HTTP behavior. Guest-import post-write
-rollback remains conditionally unexercised because the production RPC exposes
+The pre-Applications gate and Applications phase are complete. Linked history
+now runs through `202607130014`. Live coverage includes the earlier Master
+Profile/guest-import/board/route contracts plus Applications creation,
+tracker/detail/timeline, status, notes, deadline, follow-up, deletion,
+recreation, isolation, concurrency, and preservation behavior. Guest-import
+post-write rollback remains conditionally unexercised because that RPC exposes
 no safe caller-controlled later failure; this is documented, not a blocker.
 
-### Next product phase: Applications CRUD database foundation
+### Next product phase: AI job parser for privately pasted JD text
 
-Create the next unused migration,
-`202607130007_applications_crud_foundation.sql`, without claiming it exists
-before implementation. Support applications attached to user-owned private
-`job_postings`, one application per user/job for MVP, canonical statuses
-`saved | tailoring | ready | applied | interview | offer | rejected`, notes,
-deadline, follow-up, applied timestamp, persisted timeline, and per-user RLS.
-Do not add a resume-version foreign key, AI, credits, calendar integration, or
-frontend wiring in this first database task.
+Applications CRUD is complete through migration `014`; do not redo it. The
+next phase is the AI job parser for private `job_postings.raw_text`. Its first
+narrow task will be scoped separately when implementation starts. Do not claim
+AI parsing exists, create migration `015`, or stockpile implementation prompts
+in this document.
 
 ### Remaining product phases (in order)
 
-1. Applications CRUD (next).
-2. AI job parser for pasted JD text.
-3. Bounded, user-directed URL intake with manual paste fallback.
-4. AI resume tailoring with reviewable source evidence and the existing
+1. AI job parser for pasted JD text.
+2. Bounded, user-directed URL intake with manual paste fallback.
+3. AI resume tailoring with reviewable source evidence and the existing
    credit boundaries.
-5. Mechanical claim checker.
-6. Deterministic PDF export.
-7. Final MVP integration and end-to-end QA.
+4. Mechanical claim checker.
+5. Deterministic PDF export.
+6. Final MVP integration and end-to-end QA.
 
 One-week MVP execution priorities: PRODUCT_STRATEGY.md §12. Do not add
 speculative post-MVP phases.
@@ -651,11 +706,11 @@ speculative post-MVP phases.
 
 Work is driven by **one narrow Codex prompt at a time**, drafted when its
 phase actually starts — prompts for future phases are intentionally NOT
-stored in this document. When drafting the next prompt (Applications CRUD
-database foundation), ground it in:
-PRODUCT_STRATEGY.md §10/§10a/§12, TECHNICAL_DESIGN.md as-built sections H–K,
-HANDOFF.md §8–9, and the warnings in section 13 below. Completed phases (board
-submission, private Jobs CRUD, Master Profile persistence, guest-draft import)
+stored in this document. When the AI parser phase actually starts, draft its
+first narrow prompt from PRODUCT_STRATEGY.md §10/§12,
+TECHNICAL_DESIGN.md §3 and as-built sections H–L, HANDOFF.md §8–9, and the
+warnings in section 13 below. Completed phases (board submission, private Jobs
+CRUD, Master Profile persistence, guest-draft import, and Applications CRUD)
 must not be redone.
 
 For every meaningful core task, the director must require this completion
@@ -691,7 +746,11 @@ exact real `/feedback` Session ID.
 - Do not rewrite the app shell.
 - Do not redesign completed screens.
 - Do not replace the design system.
-- **Do not redo completed backend work:** board submission (`/board/submit` + `submit_board_job_with_private_copy`), private Jobs CRUD, Master Profile persistence (`save_master_profile`), and guest-draft import (`import_guest_draft` + `guest_draft_imports`) are done — extend, don't rewrite.
+- **Do not redo completed backend work:** board submission (`/board/submit` +
+  `submit_board_job_with_private_copy`), private Jobs CRUD, Master Profile
+  persistence (`save_master_profile`), guest-draft import
+  (`import_guest_draft` + `guest_draft_imports`), and Applications CRUD through
+  deletion/recreation (`007`–`014`) are done — extend, don't rewrite.
 - Do not add large dependencies without reason.
 - Do not expose secrets or env values.
 - **No blanket scraping or crawling, ever; no CAPTCHA/login-wall/bot-protection/access-control bypasses.** Future URL intake is one user-directed fetch with paste fallback.
@@ -763,7 +822,8 @@ npm run start
 
 Required env vars today (`.env.example` lists names only):
 - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` — required
-  for auth and the persisted screens (`/board*`, `/jobs*`, `/resumes/master`).
+  for auth and the persisted screens (`/board*`, `/jobs*`, `/applications*`,
+  `/resumes/master`).
   Without them the app still runs: those screens show honest
   configuration-disabled states, and mock-data screens keep working.
 
