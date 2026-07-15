@@ -1576,6 +1576,67 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Scope the first narrow AI job parser task for privately
   pasted job-description text in a separate implementation phase.
 
+### Versioned JD extraction contract and confidence classification
+
+- **Date and time:** 2026-07-14 21:11 PDT
+- **Development phase:** AI job parser foundation
+- **Session purpose:** Establish the provider-independent structured-output
+  trust boundary for privately pasted job descriptions before any AI call,
+  database write, route, or UI integration exists.
+- **Task or prompt summary:** Added a strict `job-extraction-v1` Zod contract,
+  inferred TypeScript output types, deterministic confidence classification,
+  a non-throwing safe parse result, and focused Node tests.
+- **Important constraints given to Codex:** No AI SDK/provider call, model
+  routing, environment key, job read, authentication change, server action,
+  API route, persistence, intake event, migration `015`, generated database
+  type, UI change, tailoring, credit use, matching, or export; do not push.
+- **Files changed:** `package.json`, `package-lock.json`,
+  `lib/ai/job-extraction-confidence.ts`,
+  `lib/ai/schemas/job-extraction.ts`, and
+  `tests/ai/job-extraction.test.ts`.
+- **Systems affected:** Provider-independent JD extraction schema validation,
+  confidence review classification, and focused test execution only.
+- **Architectural decisions:** Contract version is the literal
+  `job-extraction-v1`; existing job terminology and work-mode values are
+  reused. Every extractable field carries confidence. Missing scalar values
+  use `null`, collections allow `null` or empty arrays, strings are trimmed,
+  and normalized duplicate collection entries are rejected rather than
+  silently merged. Types are inferred from Zod.
+- **Security or privacy considerations:** Parsing accepts `unknown` and returns
+  only validated normalized data or the stable reason
+  `invalid_structured_output`. It returns no validation detail, raw provider
+  payload, raw JD text, invented fallback, match/eligibility judgment, resume
+  content, or user evidence, and logs nothing.
+- **Rejected alternatives:** No OpenAI SDK, full test framework, handwritten
+  duplicate interfaces, permissive unknown keys, JavaScript date coercion,
+  silent deduplication, inferred fallback values, database schema change,
+  persistence RPC, or UI preview.
+- **Tests run:** `npm run test:job-extraction` (17 tests), `npm run lint`,
+  `npm run typecheck`, configured `npm run build`, dependency inspection,
+  forbidden-integration search, scoped diff review, and
+  `git diff --check`/cached diff check.
+- **Lint result:** Passed with no warnings.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack.
+- **Manual verification performed:** Confirmed strict top-level/nested keys,
+  finite `0..1` confidence, exact `0.40`/`0.75` boundaries, missing or blank
+  company/title forcing manual review, canonical work mode, real calendar-date
+  validation including leap day, conservative exported limits, normalized
+  duplicate rejection, fail-closed output, and no AI/database/route/UI imports.
+- **Related commit hash or range:**
+  `13505978a792dd53bf92d94744f3b36aa603bf10`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  original Codex session for which that ID was already verified, so the ID was
+  reused and `/feedback` was not rerun.
+- **Known limitations:** This is only the provider-independent extraction
+  contract. It does not parse production job text or persist extraction data.
+- **Remaining risks:** A later persisted parser slice must resolve the trusted
+  `job_intake_events` write boundary. `npm install` also reported two moderate
+  dependency audit findings; no force-fix was applied in this narrow task.
+- **Next action:** Separately scope server-only provider integration and the
+  authenticated owner-read flow before any persistence or UI wiring.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
