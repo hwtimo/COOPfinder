@@ -1705,6 +1705,66 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Separately scope authenticated owner-read integration before
   any extraction persistence, route exposure, or UI wiring.
 
+### Authenticated owned-job extraction orchestration
+
+- **Date and time:** 2026-07-14 22:13 PDT
+- **Development phase:** AI job parser owner-read integration
+- **Session purpose:** Add an internal server-only orchestration boundary that
+  authenticates the current user, loads only their private pasted-text job
+  description, and delegates it to the existing extraction service.
+- **Task or prompt summary:** Added a one-argument owned-job extraction
+  function, narrow injectable auth/lookup/extraction dependencies, safe
+  orchestration outcomes, and focused no-network tests.
+- **Important constraints given to Codex:** Accept only a private job ID; call
+  `auth.getUser()`; query by both job and user IDs while retaining RLS; select
+  only `intake_source,raw_text`; parse only `pasted_text`; add no route, action,
+  UI, database write, migration `015`, service-role client, URL fetch, retry,
+  credit use, live OpenAI call, or push.
+- **Files changed:** `lib/ai/extract-owned-job-description.ts` and
+  `tests/ai/owned-job-extraction.test.ts`.
+- **Systems affected:** Internal server-only authenticated Supabase read and JD
+  extraction orchestration only. No invocation surface or persistence was
+  added.
+- **Architectural decisions:** The exported production function accepts exactly
+  one `jobId`. A factory injects authenticated-user lookup, owned-job lookup,
+  and extraction for isolated tests. The normal server Supabase client calls
+  `auth.getUser()` and queries `job_postings` with both `id` and `user_id`, while
+  RLS remains a second ownership boundary.
+- **Security or privacy considerations:** Foreign and nonexistent jobs return
+  the identical `job_unavailable` result. Only `intake_source` and `raw_text`
+  are selected. Raw text is passed unchanged to the existing service only for
+  an owned `pasted_text` row and is never returned or logged. Job rows, owner
+  IDs, source URLs, Supabase errors, provider payloads, and stack traces are not
+  exposed.
+- **Rejected alternatives:** No client-supplied JD argument, broad private-job
+  object query, source URL fallback, URL fetch, service-role client, database
+  mutation, intake-event write, extraction persistence, migration, route,
+  server action, UI control, live provider test, or alternate test framework.
+- **Tests run:** `npm run test:job-extraction` (47 tests), `npm run lint`,
+  `npm run typecheck`, configured Webpack `npm run build`, scoped forbidden-
+  integration search, staged-file review, and `git diff --check`/cached check.
+- **Lint result:** Passed with no warnings.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack.
+- **Manual verification performed:** Confirmed UUID validation precedes query,
+  authentication uses `auth.getUser()`, lookup filters by both IDs, RLS remains
+  enabled from the existing schema, only required columns are selected,
+  unsupported/missing/blank/over-limit input never reaches extraction, and no
+  route, action, UI, write, migration, service-role path, URL fetch, or live
+  OpenAI request was introduced.
+- **Related commit hash or range:**
+  `9a719f07babf75fdfefcfa695cbed8eef6449d20`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  verified Codex session, so the existing exact Session ID was reused and
+  `/feedback` was not rerun.
+- **Known limitations:** The function is intentionally internal and has no
+  route, action, UI, persistence, or client-callable invocation path.
+- **Remaining risks:** A later separately scoped persistence phase must define
+  the trusted extraction write and intake-event transaction boundary.
+- **Next action:** Separately design extraction persistence without weakening
+  authenticated ownership, private raw-text handling, or safe result contracts.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
