@@ -1637,6 +1637,74 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Separately scope server-only provider integration and the
   authenticated owner-read flow before any persistence or UI wiring.
 
+### Server-only OpenAI JD extraction service
+
+- **Date and time:** 2026-07-14 21:49 PDT
+- **Development phase:** AI job parser provider foundation
+- **Session purpose:** Add the internal production OpenAI boundary that sends
+  pasted JD text to the configured Luna-tier model and returns only canonical
+  `job-extraction-v1` data or a safe failure state.
+- **Task or prompt summary:** Added centralized `job_extraction`→Luna routing,
+  lazy server-only OpenAI client creation, a Responses API Structured Outputs
+  adapter, a strict provider wire schema, canonical post-provider validation,
+  safe service results, blank environment placeholders, and injected tests.
+- **Important constraints given to Codex:** No route, action, client-callable
+  parser, job/auth/ownership lookup, database write, intake event, migration
+  `015`, service-role access, UI, URL fetch, tools, retry/escalation, tailoring,
+  credit use, matching, Applications, export, live OpenAI call, or push.
+- **Files changed:** `.env.example`, `package.json`, `package-lock.json`,
+  `lib/ai/model-router.ts`, `lib/ai/job-extraction-provider.ts`,
+  `lib/ai/openai-job-extraction-provider.ts`,
+  `lib/ai/schemas/job-extraction-wire.ts`,
+  `lib/ai/extract-job-description.ts`, and
+  `tests/ai/job-extraction-service.test.ts`.
+- **Systems affected:** Internal server-only model configuration, OpenAI
+  Responses API request construction, provider adaptation, and JD extraction
+  service/test boundaries only.
+- **Architectural decisions:** Feature code requests `job_extraction`; only the
+  router reads `OPENAI_MODEL_LUNA`. The OpenAI client and API key are resolved
+  lazily during invocation. `responses.parse`, `zodTextFormat`, `store: false`,
+  and no tools are used. A separate strict wire schema is necessary because
+  canonical trimming, real-date, and normalized-duplicate checks are semantic;
+  canonical parsing remains the final trust boundary.
+- **Security or privacy considerations:** All server modules use the
+  `server-only` guard. Raw JD/provider/refusal/SDK content, API keys, model IDs,
+  response IDs, usage, validation payloads, and stack traces are excluded from
+  safe results and logs. Instructions forbid invention, eligibility/outcome/
+  matching advice, resume content, deadline inference, and board publication.
+- **Rejected alternatives:** No hardcoded model or fallback, import-time env
+  validation/client, alternate AI SDK, tool/web/file access, provider-only
+  validation, canonical-schema weakening, raw error forwarding, empty-success
+  fallback, retry/escalation, persistence, migration, route, action, or UI.
+- **Tests run:** `npm run test:job-extraction` (30 tests), `npm run lint`,
+  `npm run typecheck`, configured Webpack `npm run build`, Next server-only
+  guidance review, local official SDK type/helper inspection, no-env presence
+  checks, forbidden-integration search, scoped staged diff review, and
+  `git diff --check`/cached diff check.
+- **Lint result:** Passed with no warnings.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack while
+  `OPENAI_API_KEY` and `OPENAI_MODEL_LUNA` were absent from the process and
+  `.env.local`.
+- **Manual verification performed:** Confirmed lazy configuration/client
+  creation, routed model use, structured schema name, `store: false`, no tools
+  or browsing, refusal/error redaction, input bounds, exact safe result states,
+  wire-to-canonical revalidation, no external test request, and no database,
+  migration, route, action, job lookup, or UI change.
+- **Related commit hash or range:**
+  `604277889a52f97066bcd5948ba1d7fac0a8c670`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  original Codex session for which that ID was already verified, so the ID was
+  reused and `/feedback` was not rerun.
+- **Known limitations:** No live OpenAI request was made. The service is
+  internal only and does not read a user-owned job or persist extraction data.
+- **Remaining risks:** A later integration must enforce authenticated ownership
+  by job ID and resolve the trusted `job_intake_events` write boundary. NPM
+  continues to report two moderate audit findings; no force-fix was applied.
+- **Next action:** Separately scope authenticated owner-read integration before
+  any extraction persistence, route exposure, or UI wiring.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
