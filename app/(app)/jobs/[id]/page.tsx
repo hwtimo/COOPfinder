@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { DeadlineBadge, StatusBadge } from "@/components/app/status-badge";
 import { PrivateJobControls } from "@/components/jobs/private-job-controls";
+import { JobAnalysisControl } from "@/components/jobs/job-analysis-control";
 import { Button } from "@/components/ui/button";
 import {
   buildJobExtractionViewModel,
@@ -229,6 +230,10 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
     job.extracted,
     job.extractionConfidence,
   );
+  const canAnalyze =
+    job.intakeSource === "pasted_text" &&
+    Boolean(job.rawText?.trim()) &&
+    analysis.status !== "unavailable";
 
   return (
     <div className="space-y-6">
@@ -308,7 +313,15 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             title="Job analysis"
             description="Validated fields from the saved job description"
           >
-            <JobAnalysis analysis={analysis} />
+            <div className="space-y-4">
+              <JobAnalysis analysis={analysis} />
+              {canAnalyze ? (
+                <JobAnalysisControl
+                  jobId={job.id}
+                  hasSavedAnalysis={analysis.status === "ready"}
+                />
+              ) : null}
+            </div>
           </CardSection>
         </div>
 
