@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import type {
   PrivateJob,
+  PrivateJobDetail,
   PrivateJobIntakeSource,
   PrivateJobsQueryResult,
   PrivateJobStatus,
@@ -31,6 +32,12 @@ const PRIVATE_JOB_COLUMNS = [
   "company:companies!job_postings_company_id_fkey(id,name)",
 ].join(",");
 
+const PRIVATE_JOB_DETAIL_COLUMNS = [
+  PRIVATE_JOB_COLUMNS,
+  "extracted",
+  "extraction_confidence",
+].join(",");
+
 type CompanyRelation = { id: string; name: string };
 
 type PrivateJobRow = {
@@ -53,6 +60,11 @@ type PrivateJobRow = {
   created_at: string;
   updated_at: string;
   company: CompanyRelation | CompanyRelation[] | null;
+};
+
+type PrivateJobDetailRow = PrivateJobRow & {
+  extracted: unknown;
+  extraction_confidence: number | null;
 };
 
 function companyRelation(
@@ -89,6 +101,14 @@ function toPrivateJob(row: PrivateJobRow): PrivateJob {
   };
 }
 
+function toPrivateJobDetail(row: PrivateJobDetailRow): PrivateJobDetail {
+  return {
+    ...toPrivateJob(row),
+    extracted: row.extracted,
+    extractionConfidence: row.extraction_confidence,
+  };
+}
+
 export function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
@@ -118,7 +138,7 @@ export async function getPrivateJobs(
 export async function getPrivateJob(
   userId: string,
   jobId: string,
-): Promise<PrivateJobsQueryResult<PrivateJob | null>> {
+): Promise<PrivateJobsQueryResult<PrivateJobDetail | null>> {
   if (!isUuid(jobId)) return { status: "ready", data: null };
 
   const supabase = await createSupabaseServerClient();
@@ -126,7 +146,7 @@ export async function getPrivateJob(
 
   const { data, error } = await supabase
     .from("job_postings")
-    .select(PRIVATE_JOB_COLUMNS)
+    .select(PRIVATE_JOB_DETAIL_COLUMNS)
     .eq("id", jobId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -135,7 +155,7 @@ export async function getPrivateJob(
 
   return {
     status: "ready",
-    data: data ? toPrivateJob(data as unknown as PrivateJobRow) : null,
+    data: data ? toPrivateJobDetail(data as unknown as PrivateJobDetailRow) : null,
   };
 }
 

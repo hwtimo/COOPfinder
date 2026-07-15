@@ -52,6 +52,11 @@ export type PrivateJob = {
   updatedAt: string;
 };
 
+export type PrivateJobDetail = PrivateJob & {
+  extracted: unknown;
+  extractionConfidence: number | null;
+};
+
 export type PrivateJobsQueryResult<T> =
   | { status: "ready"; data: T }
   | { status: "error"; data: T };

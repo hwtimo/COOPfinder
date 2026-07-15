@@ -17,6 +17,10 @@ import { DeadlineBadge, StatusBadge } from "@/components/app/status-badge";
 import { PrivateJobControls } from "@/components/jobs/private-job-controls";
 import { Button } from "@/components/ui/button";
 import {
+  buildJobExtractionViewModel,
+  type JobExtractionAnalysisViewModel,
+} from "@/lib/ai/job-extraction-view-model";
+import {
   daysUntilPrivateJobDeadline,
   formatPrivateJobDate,
   formatPrivateJobDeadline,
@@ -60,6 +64,110 @@ function MutedPill({ children }: { children: ReactNode }) {
     <span className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-text-secondary">
       {children}
     </span>
+  );
+}
+
+const reviewClassificationLabels: Record<
+  Extract<JobExtractionAnalysisViewModel, { status: "ready" }>["reviewClassification"],
+  string
+> = {
+  normal_review: "Standard review",
+  low_confidence_review: "Low-confidence review",
+  manual_review: "Manual review",
+};
+
+function AnalysisList({
+  title,
+  items,
+}: {
+  title: string;
+  items: string[];
+}) {
+  return (
+    <section>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {items.length > 0 ? (
+        <ul className="mt-3 space-y-2 text-sm leading-6 text-text-secondary">
+          {items.map((item) => (
+            <li key={item} className="flex gap-2">
+              <span className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">Not provided</p>
+      )}
+    </section>
+  );
+}
+
+function JobAnalysis({ analysis }: { analysis: JobExtractionAnalysisViewModel }) {
+  if (analysis.status === "not_generated") {
+    return (
+      <div className="rounded-md border border-dashed bg-muted/20 px-4 py-10 text-center">
+        <FileQuestion className="mx-auto size-6 text-muted-foreground" aria-hidden />
+        <h3 className="mt-3 text-sm font-semibold">Analysis not generated yet</h3>
+        <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">
+          This phase stores private job data only. No AI summary, skills,
+          missing keywords, match score, or resume suggestions were fabricated.
+        </p>
+      </div>
+    );
+  }
+
+  if (analysis.status === "unavailable") {
+    return (
+      <div className="rounded-md border border-dashed bg-muted/20 px-4 py-8 text-center">
+        <AlertTriangle className="mx-auto size-5 text-muted-foreground" aria-hidden />
+        <h3 className="mt-3 text-sm font-semibold">Saved analysis is unavailable</h3>
+        <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">
+          The saved analysis could not be safely validated, so none of its
+          fields are shown.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <DetailItem label="Company">{analysis.company ?? "Not provided"}</DetailItem>
+        <DetailItem label="Title">{analysis.title ?? "Not provided"}</DetailItem>
+        <DetailItem label="Location">{analysis.location ?? "Not provided"}</DetailItem>
+        <DetailItem label="Work mode">{analysis.workMode ?? "Not provided"}</DetailItem>
+        <DetailItem label="Term">{analysis.term ?? "Not provided"}</DetailItem>
+        <DetailItem label="Deadline">{analysis.deadline ?? "Not provided"}</DetailItem>
+      </dl>
+
+      <div className="grid gap-6 border-t pt-5 lg:grid-cols-2">
+        <section>
+          <h3 className="text-sm font-semibold text-foreground">Named skills</h3>
+          {analysis.namedSkills.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {analysis.namedSkills.map((skill) => (
+                <MutedPill key={skill}>{skill}</MutedPill>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">Not provided</p>
+          )}
+        </section>
+        <dl className="grid grid-cols-2 gap-3">
+          <DetailItem label="Overall confidence">
+            {Math.round(analysis.overallConfidence * 100)}%
+          </DetailItem>
+          <DetailItem label="Review classification">
+            {reviewClassificationLabels[analysis.reviewClassification]}
+          </DetailItem>
+        </dl>
+      </div>
+
+      <div className="grid gap-6 border-t pt-5 lg:grid-cols-2">
+        <AnalysisList title="Responsibilities" items={analysis.responsibilities} />
+        <AnalysisList title="Explicit requirements" items={analysis.requirements} />
+      </div>
+    </div>
   );
 }
 
@@ -117,6 +225,10 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
 
   const deadlineDays = daysUntilPrivateJobDeadline(job.deadline);
   const validSourceUrl = job.sourceUrl && isValidHttpUrl(job.sourceUrl);
+  const analysis = buildJobExtractionViewModel(
+    job.extracted,
+    job.extractionConfidence,
+  );
 
   return (
     <div className="space-y-6">
@@ -194,16 +306,9 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
 
           <CardSection
             title="Job analysis"
-            description="Summary, requirements, keywords, and resume guidance"
+            description="Validated fields from the saved job description"
           >
-            <div className="rounded-md border border-dashed bg-muted/20 px-4 py-10 text-center">
-              <FileQuestion className="mx-auto size-6 text-muted-foreground" aria-hidden />
-              <h3 className="mt-3 text-sm font-semibold">Analysis not generated yet</h3>
-              <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">
-                This phase stores private job data only. No AI summary, skills,
-                missing keywords, match score, or resume suggestions were fabricated.
-              </p>
-            </div>
+            <JobAnalysis analysis={analysis} />
           </CardSection>
         </div>
 
