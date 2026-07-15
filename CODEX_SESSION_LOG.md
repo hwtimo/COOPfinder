@@ -2012,6 +2012,69 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Separately scope the private Job Detail Analyze control; do
   not fold invocation behavior into this read-only implementation.
 
+### Private Job Detail analysis control
+
+- **Date and time:** 2026-07-14 23:10 PDT
+- **Development phase:** AI job parser private UI invocation
+- **Session purpose:** Wire the existing safe extraction server action into one
+  eligible private Job Detail control without changing extraction behavior.
+- **Task or prompt summary:** Added an eligibility-gated client control for
+  pasted-text jobs, pending and duplicate-submit protection, fixed safe outcome
+  messages, in-place refresh after persisted outcomes, and focused pure tests.
+- **Important constraints given to Codex:** Invoke only
+  `extractAndPersistPrivateJobAction(jobId)`; no migration/SQL, provider, prompt,
+  model-router, schema, persistence, URL-fetch, creation-flow, tailoring,
+  credit, Applications, board, claim-checking, export, live AI test, or push.
+- **Files changed:** `app/(app)/jobs/[id]/page.tsx`,
+  `components/jobs/job-analysis-control.tsx`,
+  `lib/ai/job-analysis-control.ts`, and
+  `tests/ai/job-analysis-control.test.ts`.
+- **Systems affected:** Private Job Detail presentation and invocation of the
+  already-existing authenticated extraction action only.
+- **Architectural decisions:** The server page renders an active control only
+  for `pasted_text` jobs with nonblank persisted raw text and no malformed saved
+  analysis. Valid saved analysis changes the label to `Analyze again`. A pure
+  single-flight runner maps unknown action output closed, refreshes only after
+  `persisted` or `already_persisted`, and blocks a same-tick second invocation.
+- **Security or privacy considerations:** The client sends only the current job
+  ID. All messages are fixed local copy and contain no raw JD, provider payload,
+  model ID, credential, database detail, stack trace, or unknown action fields.
+  Existing server authentication, ownership, persistence, and RLS remain the
+  authoritative boundaries.
+- **Rejected alternatives:** No raw text or extraction data in client input,
+  duplicate provider request, toast infrastructure, redirect, optimistic
+  analysis, active control for unsupported/missing/malformed records, action
+  rewrite, migration, provider change, URL fetch, or unrelated page redesign.
+- **Tests run:** `npm run test:job-extraction` (116 tests), `npm run lint`,
+  `npm run typecheck`, configured Webpack `npm run build`, Next.js 16 server-
+  action guidance review, local browser route check, scoped forbidden-change
+  inspection, staged diff review, and `git diff --check`/cached check.
+- **Lint result:** Passed with no warnings.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack; route set remained
+  unchanged and `/jobs/[id]` remained dynamic.
+- **Manual verification performed:** Confirmed eligible no-analysis and valid-
+  analysis branches render `Analyze job description` and `Analyze again`;
+  unsupported source, blank text, and malformed saved analysis render no active
+  control; configuration/provider failures use fixed safe copy; success refreshes
+  in place; and the synchronous runner guard prevents duplicate submissions.
+  The local browser had no authenticated private session and correctly redirected
+  to `/board`, so no live provider call or database fixture mutation was used.
+- **Related commit hash or range:**
+  `ea36afe69b6f0ccf9131f3bc3087024bb5270062`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  verified Codex session, so the existing exact Session ID was reused and
+  `/feedback` was not rerun.
+- **Known limitations:** This task only wires the existing action into private
+  Job Detail UI. No authenticated live OpenAI call was made; provider success
+  and failure UI transitions were verified through injected pure tests.
+- **Remaining risks:** Live provider availability and latency remain dependent
+  on deployment configuration and are intentionally represented by safe pending
+  and failure states rather than a fabricated success.
+- **Next action:** Separately define any usage/credit or rate-limit policy before
+  expanding extraction invocation beyond this one private control.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
