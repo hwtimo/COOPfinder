@@ -1830,6 +1830,70 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Separately scope the server-only orchestration-to-RPC bridge;
   do not expose persistence directly to clients.
 
+### Internal extraction-to-persistence orchestration
+
+- **Date and time:** 2026-07-14 22:39 PDT
+- **Development phase:** AI job parser internal integration
+- **Session purpose:** Connect successful authenticated owned-job extraction to
+  the existing atomic persistence RPC without adding a public invocation path.
+- **Task or prompt summary:** Added a server-only typed RPC helper and a
+  one-private-job-ID orchestration function that persists only canonical
+  extraction success, maps known database states, and fails closed otherwise.
+- **Important constraints given to Codex:** Reuse the existing owned-job
+  extraction and `persist_job_extraction` RPC; derive confidence from canonical
+  extraction; no migration/schema/RPC SQL, provider, prompt, model-router, URL
+  fetch, route, action, API, UI, button, credit, tailoring, Applications, board,
+  claim-checking, export, live OpenAI request, or push.
+- **Files changed:** `lib/ai/persist-job-extraction.ts`,
+  `lib/ai/extract-and-persist-owned-job.ts`, and
+  `tests/ai/extract-and-persist-owned-job.test.ts`.
+- **Systems affected:** Internal server-only canonical extraction result mapping
+  and authenticated Supabase RPC invocation only. No public invocation or UI
+  was added.
+- **Architectural decisions:** The production bridge accepts exactly one job
+  ID. It invokes the existing owned-job orchestrator first and calls persistence
+  exactly once only for `success`. The helper accepts `JobExtractionV1`, derives
+  `overallConfidence` from that same object, uses the standard cookie-backed
+  server Supabase client, validates known RPC row shapes, and fails closed on
+  transport errors, thrown errors, empty/multiple rows, or unknown statuses.
+- **Security or privacy considerations:** Extraction failures never persist.
+  Only the canonical extraction object, its derived confidence, and job ID reach
+  the RPC. Safe results contain no raw JD, provider payload, Supabase message,
+  RPC internals, model ID, credential, or stack trace. No private data is logged
+  and no service-role client is used.
+- **Rejected alternatives:** No caller-supplied confidence, raw-text argument,
+  client-callable function, direct table write, duplicate persistence call,
+  optimistic fallback, unknown-status acceptance, Supabase error forwarding,
+  migration, provider change, route/action/API/UI exposure, or live network test.
+- **Tests run:** Starting local/remote migration-history verification,
+  `npm run test:job-extraction` (63 tests), `npm run lint`,
+  `npm run typecheck`, configured Webpack `npm run build`, Next server-only DAL
+  guidance review, scoped forbidden-integration search, staged-file review, and
+  `git diff --check`/cached check.
+- **Lint result:** Passed with no warnings.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack.
+- **Manual verification performed:** Confirmed non-success extraction makes no
+  persistence call; success invokes persistence exactly once; canonical object
+  identity is preserved; confidence is derived from canonical extraction;
+  `updated`/`unchanged` map to persisted/already persisted; unavailable,
+  unsupported, invalid, transport-failure, and malformed/unknown RPC responses
+  map safely; and no route, action, UI, migration, service-role path, URL fetch,
+  provider change, or live OpenAI call was introduced.
+- **Related commit hash or range:**
+  `18a6ebd6d97740a59b9f22be09a0c84f2b83f0f8`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  verified Codex session, so the existing exact Session ID was reused and
+  `/feedback` was not rerun.
+- **Known limitations:** The bridge remains internal and is not callable from a
+  route, server action, API, client component, or UI.
+- **Remaining risks:** Any future invocation surface must reauthorize the user,
+  preserve the one-ID input contract, and avoid exposing provider or database
+  details while the expensive extraction runs.
+- **Next action:** Separately scope an authenticated server invocation surface
+  only when product UX, rate limiting, and credit behavior are defined.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
