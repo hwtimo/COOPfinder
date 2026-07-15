@@ -1894,6 +1894,69 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Separately scope an authenticated server invocation surface
   only when product UX, rate limiting, and credit behavior are defined.
 
+### Private job extraction server-action boundary
+
+- **Date and time:** 2026-07-14 22:48 PDT
+- **Development phase:** AI job parser private invocation boundary
+- **Session purpose:** Expose the existing internal owned-job extract-and-
+  persist workflow through one authenticated, client-safe Jobs server action.
+- **Task or prompt summary:** Added a one-job-ID action wrapper, a separately
+  testable server-only handler, safe bridge-result sanitation, detail-only cache
+  revalidation, and the smallest bridge refinement needed to preserve safe
+  extraction failure states.
+- **Important constraints given to Codex:** Accept only a private job ID; reuse
+  existing authentication, ownership, provider, canonical schema, and atomic
+  persistence logic; no raw text/URL/extraction/confidence/model/user arguments;
+  no UI, route handler, migration/SQL, provider/prompt/model change, URL fetch,
+  credit, tailoring, Applications, board, export, live OpenAI call, or push.
+- **Files changed:** `app/(app)/jobs/actions.ts`,
+  `lib/ai/extract-and-persist-owned-job.ts`,
+  `lib/ai/job-extraction-action-handler.ts`,
+  `tests/ai/extract-and-persist-owned-job.test.ts`, and
+  `tests/ai/job-extraction-action-handler.test.ts`.
+- **Systems affected:** Existing Jobs server-action exports and internal safe
+  extraction-result mapping only. No UI invokes the action yet.
+- **Architectural decisions:** `extractAndPersistPrivateJobAction(jobId)` is a
+  one-argument wrapper around an injected handler. The handler validates UUID
+  form before one bridge call, accepts only known status-only results, strips
+  extra properties, fails closed on unknown output, and revalidates only the
+  literal private job-detail path after persisted or already-persisted results.
+- **Security or privacy considerations:** Client input cannot include raw JD,
+  source URL, extraction JSON, confidence, model, user ID, or credentials. The
+  action returns only a status discriminator and exposes no provider payload,
+  Supabase detail, internal exception, model ID, stack trace, or private text.
+  Existing authenticated ownership and RLS/RPC boundaries remain authoritative.
+- **Rejected alternatives:** No duplicated auth/job query/provider/persistence
+  logic, broad revalidation, FormData payload, public API route, raw error
+  forwarding, unknown-state passthrough, service-role client, UI/button/form,
+  migration, URL fetch, or live provider test.
+- **Tests run:** Starting Git and linked migration-history verification,
+  `npm run test:job-extraction` (91 tests), `npm run lint`,
+  `npm run typecheck`, configured Webpack `npm run build`, Next server-action
+  security/revalidation guidance review, scoped integration search, staged diff
+  review, and `git diff --check`/cached check.
+- **Lint result:** Passed with no warnings.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack; route set unchanged.
+- **Manual verification performed:** Confirmed malformed IDs stop before bridge;
+  valid IDs pass unchanged exactly once; all required safe states map; failed
+  extraction never persists; only the existing bridge reaches persistence;
+  unknown/extra bridge data is stripped; revalidation occurs only for success
+  on `/jobs/{id}`; and no UI, route handler, migration, URL fetch, service-role
+  client, duplicated data access, or live OpenAI request was introduced.
+- **Related commit hash or range:**
+  `1cc521f6652035234725b284adecf28f52a8d25b`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  verified Codex session, so the existing exact Session ID was reused and
+  `/feedback` was not rerun.
+- **Known limitations:** This task adds only the safe server-action boundary.
+  No production UI invokes the action, and no UI was added or changed.
+- **Remaining risks:** Before UI wiring, product work must define the user-facing
+  pending/error copy and any rate-limit or credit policy for provider calls.
+- **Next action:** Separately add the private Job Detail invocation control only
+  after its UX and provider-use policy are approved.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
