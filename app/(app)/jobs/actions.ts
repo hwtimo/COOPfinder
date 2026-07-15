@@ -5,6 +5,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getLoginHref } from "@/lib/auth/paths";
+import { extractAndPersistOwnedJob } from "@/lib/ai/extract-and-persist-owned-job";
+import {
+  createPrivateJobExtractionActionHandler,
+  type PrivateJobExtractionActionResult,
+} from "@/lib/ai/job-extraction-action-handler";
 import { getPublicBoardJob } from "@/lib/board/queries";
 import {
   EMPTY_PRIVATE_JOB_FORM_VALUES,
@@ -47,6 +52,17 @@ function mutationError(
 
 function escapedIlike(value: string): string {
   return value.replace(/[\\%_]/g, "\\$&");
+}
+
+const handlePrivateJobExtraction = createPrivateJobExtractionActionHandler({
+  runBridge: extractAndPersistOwnedJob,
+  revalidatePath,
+});
+
+export async function extractAndPersistPrivateJobAction(
+  jobId: string,
+): Promise<PrivateJobExtractionActionResult> {
+  return handlePrivateJobExtraction(jobId);
 }
 
 async function getOrCreateCompany(

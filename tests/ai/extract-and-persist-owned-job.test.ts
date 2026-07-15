@@ -93,10 +93,84 @@ test("extraction-stage failure causes no persistence call", async () => {
   );
 
   assert.deepEqual(await orchestrate(JOB_ID), {
-    status: "extraction_failed",
+    status: "provider_unavailable",
   });
   assert.equal(persistenceCalls, 0);
 });
+
+const safeExtractionMappings: Array<{
+  extraction: ExtractOwnedJobDescriptionResult;
+  expectedStatus:
+    | "unauthenticated"
+    | "invalid_job_id"
+    | "configuration_unavailable"
+    | "provider_refusal"
+    | "invalid_structured_output"
+    | "invalid_job_text";
+}> = [
+  {
+    extraction: { status: "unauthenticated", retryable: false },
+    expectedStatus: "unauthenticated",
+  },
+  {
+    extraction: { status: "invalid_job_id", retryable: false },
+    expectedStatus: "invalid_job_id",
+  },
+  {
+    extraction: {
+      status: "configuration_unavailable",
+      reason: "model_not_configured",
+      retryable: false,
+    },
+    expectedStatus: "configuration_unavailable",
+  },
+  {
+    extraction: {
+      status: "provider_refusal",
+      reason: "provider_refusal",
+      retryable: false,
+    },
+    expectedStatus: "provider_refusal",
+  },
+  {
+    extraction: {
+      status: "invalid_structured_output",
+      reason: "invalid_structured_output",
+      retryable: false,
+    },
+    expectedStatus: "invalid_structured_output",
+  },
+  {
+    extraction: { status: "missing_job_description", retryable: false },
+    expectedStatus: "invalid_job_text",
+  },
+  {
+    extraction: {
+      status: "invalid_input",
+      reason: "input_too_long",
+      retryable: false,
+    },
+    expectedStatus: "invalid_job_text",
+  },
+];
+
+for (const { extraction, expectedStatus } of safeExtractionMappings) {
+  test(`preserves safe ${expectedStatus} extraction mapping without persistence`, async () => {
+    let persistenceCalls = 0;
+    const orchestrate = createExtractAndPersistOwnedJob(
+      bridgeDependencies({
+        extractOwnedJob: async () => extraction,
+        persistExtraction: async () => {
+          persistenceCalls += 1;
+          return { status: "updated" };
+        },
+      }),
+    );
+
+    assert.deepEqual(await orchestrate(JOB_ID), { status: expectedStatus });
+    assert.equal(persistenceCalls, 0);
+  });
+}
 
 test("job-unavailable extraction causes no persistence call", async () => {
   let persistenceCalls = 0;

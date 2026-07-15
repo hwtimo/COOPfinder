@@ -23,9 +23,15 @@ export type ExtractAndPersistOwnedJobDependencies = {
 export type ExtractAndPersistOwnedJobResult =
   | { status: "persisted" }
   | { status: "already_persisted" }
-  | { status: "extraction_failed" }
+  | { status: "unauthenticated" }
+  | { status: "invalid_job_id" }
   | { status: "job_unavailable" }
   | { status: "unsupported_source" }
+  | { status: "configuration_unavailable" }
+  | { status: "provider_refusal" }
+  | { status: "provider_unavailable" }
+  | { status: "invalid_structured_output" }
+  | { status: "invalid_job_text" }
   | { status: "persistence_unavailable" }
   | { status: "persistence_rejected" };
 
@@ -37,19 +43,31 @@ export function createExtractAndPersistOwnedJob(
     try {
       extractionResult = await dependencies.extractOwnedJob(jobId);
     } catch {
-      return { status: "extraction_failed" };
+      return { status: "provider_unavailable" };
     }
 
-    if (extractionResult.status === "job_unavailable") {
-      return { status: "job_unavailable" };
-    }
-
-    if (extractionResult.status === "unsupported_intake_source") {
-      return { status: "unsupported_source" };
-    }
-
-    if (extractionResult.status !== "success") {
-      return { status: "extraction_failed" };
+    switch (extractionResult.status) {
+      case "unauthenticated":
+        return { status: "unauthenticated" };
+      case "invalid_job_id":
+        return { status: "invalid_job_id" };
+      case "job_unavailable":
+        return { status: "job_unavailable" };
+      case "unsupported_intake_source":
+        return { status: "unsupported_source" };
+      case "configuration_unavailable":
+        return { status: "configuration_unavailable" };
+      case "provider_refusal":
+        return { status: "provider_refusal" };
+      case "provider_unavailable":
+        return { status: "provider_unavailable" };
+      case "invalid_structured_output":
+        return { status: "invalid_structured_output" };
+      case "missing_job_description":
+      case "invalid_input":
+        return { status: "invalid_job_text" };
+      case "success":
+        break;
     }
 
     let persistenceResult: PersistJobExtractionResult;
