@@ -1765,6 +1765,71 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Separately design extraction persistence without weakening
   authenticated ownership, private raw-text handling, or safe result contracts.
 
+### Atomic job extraction persistence RPC
+
+- **Date and time:** 2026-07-14 22:28 PDT
+- **Development phase:** AI job parser persistence foundation
+- **Session purpose:** Add and live-verify one authenticated atomic database
+  primitive for persisting a validated `job-extraction-v1` result on a private
+  pasted-text job.
+- **Task or prompt summary:** Added migration `202607130015` with
+  `public.persist_job_extraction(uuid, jsonb, numeric)`, canonical extraction
+  validation, owned-row locking, idempotent update behavior, and one minimal
+  same-transaction intake success event.
+- **Important constraints given to Codex:** Add exactly one forward-only
+  migration; use existing schema only; no OpenAI/provider, model-router,
+  orchestration, TypeScript helper, route, action, UI, URL intake, Applications,
+  board, resume, credit, claim-checking, export, live OpenAI call, or push.
+- **Files changed:**
+  `supabase/migrations/202607130015_atomic_job_extraction_persistence.sql`.
+- **Systems affected:** Linked development Supabase database function catalog,
+  authenticated RPC execution, caller-owned `job_postings` extraction fields,
+  and minimal successful `job_intake_events` rows only.
+- **Architectural decisions:** The function derives ownership from `auth.uid()`,
+  locks by both job and owner IDs, permits only nonblank `pasted_text` rows,
+  validates the strict canonical object shape and limits, rounds confidence to
+  the existing `numeric(3,2)` storage precision, compares JSONB plus stored
+  confidence under lock, and tags successful events internally as Luna tier.
+- **Security or privacy considerations:** The RPC is `SECURITY DEFINER` with an
+  empty `search_path`; objects and functions are qualified; `PUBLIC` and `anon`
+  execute are revoked; only `authenticated` is granted. Foreign and nonexistent
+  rows return the same `unavailable` result. Events contain no raw JD, URL,
+  provider payload, prompt, credential, refusal, error, or caller metadata.
+- **Rejected alternatives:** No schema expansion, new table/column/index/policy,
+  service-role dependency, caller-supplied model tier, direct event insert
+  permission, non-atomic write, duplicate-event behavior, provider invocation,
+  orchestration wiring, route/action exposure, UI, or committed test harness.
+- **Tests run:** Linked migration-history inspection, linked dry run, migration
+  push, live function/grant catalog inspection, disposable two-user sequential
+  and concurrent RPC verification, anonymous denial, invalid-input/privacy/
+  noninterference checks, fixture cleanup count verification, `npm run lint`,
+  `npm run typecheck`, configured Webpack `npm run build`, scoped forbidden-
+  integration search, and `git diff --check`/cached check.
+- **Lint result:** Passed with no warnings.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack.
+- **Manual verification performed:** Confirmed `updated`, `unchanged`,
+  `unavailable`, `unsupported_source`, and `invalid_input`; extraction and
+  confidence persistence; one event per real change; no event for identical or
+  invalid input; foreign/nonexistent/cross-user equivalence; anonymous denial;
+  unsupported-source denial; null/malformed/wrong-version/oversized/confidence
+  rejection; minimal event content; unrelated job/application preservation;
+  and concurrent identical serialization to one update plus one event.
+- **Related commit hash or range:**
+  `abe443452222b585b0095f02b3dcf3529a09547a`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  verified Codex session, so the existing exact Session ID was reused and
+  `/feedback` was not rerun.
+- **Known limitations:** This task adds only the atomic persistence RPC. It is
+  not integrated with provider code, owned-job orchestration, application code,
+  a route, a server action, or UI.
+- **Remaining risks:** A later integration must invoke the RPC only after the
+  existing authenticated owner-read extraction service returns canonical
+  success, while preserving the RPC's idempotent and privacy boundaries.
+- **Next action:** Separately scope the server-only orchestration-to-RPC bridge;
+  do not expose persistence directly to clients.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
