@@ -1957,6 +1957,61 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Separately add the private Job Detail invocation control only
   after its UX and provider-use policy are approved.
 
+### Persisted private job analysis display
+
+- **Date and time:** 2026-07-14 22:59 PDT
+- **Development phase:** AI job parser read-only presentation
+- **Session purpose:** Display an already-persisted, canonical
+  `job-extraction-v1` result on the owned private Job Detail page.
+- **Task or prompt summary:** Extended only the private detail query with stored
+  extraction fields, added a canonical-parser-backed presentation view model,
+  and rendered compact validated analysis, honest missing-data states, and a
+  safe unavailable state for invalid stored JSON.
+- **Important constraints given to Codex:** Read-only display only; no Analyze
+  control, server-action invocation, provider/persistence change, migration,
+  URL fetch, tailoring, credits, Applications, board, live AI request, or push.
+- **Files changed:** `app/(app)/jobs/[id]/page.tsx`,
+  `lib/ai/job-extraction-view-model.ts`, `lib/jobs/queries.ts`,
+  `lib/jobs/types.ts`, and `tests/ai/job-extraction-view-model.test.ts`.
+- **Systems affected:** Authenticated private Job Detail query and rendering
+  only. The Jobs list query and all mutation paths remain unchanged.
+- **Architectural decisions:** A detail-specific type/query fetches `extracted`
+  and `extraction_confidence`. A pure view-model helper validates JSON through
+  the existing canonical parser and exposes only `not_generated`, `unavailable`,
+  or validated display fields. The database's default empty object is treated
+  as not generated; malformed content never reaches rendering.
+- **Security or privacy considerations:** Ownership remains enforced by the
+  existing job-ID and user-ID query plus private not-found behavior. Invalid
+  JSON, parser details, and raw stored payloads are never included in the safe
+  unavailable result or page output.
+- **Rejected alternatives:** No list-query payload expansion, direct JSON
+  rendering, parser-error display, invented fallback values, AI invocation,
+  action wiring, optimistic state, database write, migration, or provider call.
+- **Tests run:** `npm run test:job-extraction` (98 tests), `npm run lint`,
+  `npm run typecheck`, configured Webpack `npm run build`, scoped route/query
+  contract inspection, staged-file review, and `git diff --check`/cached check.
+- **Lint result:** Passed with no warnings.
+- **Typecheck result:** Passed.
+- **Build result:** Passed with Next.js 16.2.10 and webpack; `/jobs/[id]`
+  remained a dynamic server-rendered route.
+- **Manual verification performed:** Confirmed the no-extraction state preserves
+  `Analysis not generated yet`; valid extraction renders canonical fields;
+  malformed or wrong-version extraction renders only `Saved analysis is
+  unavailable`; and foreign/nonexistent IDs retain the existing owner-filtered
+  private not-found path.
+- **Related commit hash or range:**
+  `574e0f683ba9f7175d3b899d3afdf8f8772d897e`.
+- **Real `/feedback` Session ID:**
+  `019f43a2-41bc-7e53-8cab-4c33f31e557f`. This task continued in the same
+  verified Codex session, so the existing exact Session ID was reused and
+  `/feedback` was not rerun.
+- **Known limitations:** This task adds read-only display only. It does not
+  invoke AI, the existing extraction server action, or any persistence path.
+- **Remaining risks:** A separate UI task must define explicit provider-use,
+  pending, retry, and error behavior before exposing extraction invocation.
+- **Next action:** Separately scope the private Job Detail Analyze control; do
+  not fold invocation behavior into this read-only implementation.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
