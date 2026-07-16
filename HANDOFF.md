@@ -1,7 +1,7 @@
 # HANDOFF.md — COOPfinder Continuation Handoff
 
 > **Purpose:** Let the next coding agent continue without rediscovering the
-> current state. This reflects the codebase as of **2026-07-13**.
+> current state. This reflects the codebase as of **2026-07-15**.
 >
 > **Read before coding:** [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) (r2 —
 > current), [DESIGN.md](DESIGN.md) (esp. §22–24),
@@ -16,10 +16,11 @@
 > resume, exports a clean PDF, and sends you back to the original site to
 > apply yourself."
 >
-> **Repository evidence reviewed through:** atomic Application deletion
-> implementation commit `3def3d94a062e6ec092243ab12e817c9abacb86c` and its
-> session-log commit. The worktree was clean before this documentation-only
-> synchronization.
+> **Repository evidence reviewed through:** parser-credit foundation log commit
+> `498af7945fef106d06df10b60b36775eee276d45`, including atomic parser credits
+> commit `81cc53676fe51c85ee542b3000f93ad70d679aca` and append-only credit events
+> commit `2d1843c2ef2400404ce4a7db8ff2b163a2634c41`. The worktree was clean
+> before this documentation-only synchronization.
 
 ---
 
@@ -57,7 +58,9 @@
    (`intake_source='board_save'`, `board_job_id` set), duplicate board-saves
    prevented by `job_postings_user_board_job_unique_idx`
    (`202607130001_unique_private_board_saves.sql`), honest "Analysis not
-   generated yet" state, tailoring unavailable for unprocessed jobs.
+   generated yet" state when no persisted extraction exists, and tailoring
+   unavailable because production tailoring is not implemented. Eligible
+   pasted-text analysis is described in phase 9.
    Production Jobs pages no longer show mock jobs as the user's data.
 7. **Master Profile persistence + guest-draft import** —
    `202607130002_master_profile_guest_import.sql` (details in §3–4 below and
@@ -72,11 +75,27 @@
    application timeline, preserves the linked job/company, makes that job
    eligible for recreation, and creates no deletion event. Do not redo this
    phase.
+9. **Private pasted-text parser pipeline** — canonical versioned extraction
+   schema, deterministic confidence, server-only OpenAI Responses API,
+   centralized `OPENAI_MODEL_LUNA` production routing, authenticated owned-job
+   lookup, atomic extraction persistence (`015`), extraction-to-persistence
+   orchestration, authenticated Jobs server action, persisted Job Detail
+   analysis display, and Analyze / Analyze Again controls for eligible
+   `intake_source='pasted_text'` jobs. No live authenticated OpenAI success has
+   been proven; do not manufacture that verification claim.
+10. **Parser-analysis credit database foundation** — migration `016` adds
+    atomic authenticated reservation/finalization with lifetime successful
+    capacity 2 and rolling 24-hour attempt limit 3; migration `017` adds
+    separate append-only reserved/consumed/refunded events. These RPCs and
+    accounting rules are verified, but production Analyze does not call
+    `reserve_parser_analysis_credit` or `finalize_parser_analysis_credit`, so
+    the UI flow does not yet reserve, consume, or refund parser credits.
 
 Also in place since earlier phases: Supabase auth (`/login`,
 `/auth/callback`, `/auth/sign-out`), `proxy.ts` hybrid route protection,
 guest/authed shell states, `tailoring_credit_ledger` with +2 signup grant
-(schema only — **no production credit consumption exists yet**).
+(separate schema foundation — **no production tailoring-credit consumption
+exists yet**).
 
 ## 2. Current routes (as built)
 
@@ -89,7 +108,8 @@ Private (via `proxy.ts`): `/dashboard`, `/jobs`, `/jobs/[id]`,
 `/resumes/tailor/[jobId]`, `/calendar`, `/insights`, `/documents`,
 `/settings`. Guests hitting `/jobs` are redirected to `/board`.
 
-Persistence status by screen: `/board*`, `/jobs*`, `/applications*`, and
+Persistence status by screen: `/board*`, `/jobs*` (including eligible private
+pasted-text Job analysis), `/applications*`, and
 `/resumes/master` read and write **real Supabase data** (with honest disabled
 states when Supabase env is absent). Dashboard, Resumes hub, Tailoring
 Workspace, Calendar, Insights, Documents, and Settings still render
@@ -132,8 +152,10 @@ Workspace, Calendar, Insights, Documents, and Settings still render
   skills, target roles, guest-authored evidence (imported `confirmed = true`
   because the user typed it), stashed URL jobs (`source_url`,
   `intake_source='pasted_url'`) and pasted-text jobs (`raw_text`,
-  `intake_source='pasted_text'`). No fetch, no scraping, no AI parsing, no
-  invented metadata. Title-less imports use the honest schema-required
+  `intake_source='pasted_text'`). The guest-import path itself performs no
+  fetch, scraping, or AI parsing and invents no metadata; an authenticated
+  user may analyze the imported pasted-text job later. Title-less imports use
+  the honest schema-required
   placeholder **`Imported job - add title`** — never present it as extracted
   information or as analyzed.
 - **Existing account:** RPC returns `needs_confirmation`; the client shows an
@@ -218,32 +240,60 @@ Workspace, Calendar, Insights, Documents, and Settings still render
 16. `202607130012_atomic_application_deadline.sql`
 17. `202607130013_atomic_application_follow_up.sql`
 18. `202607130014_atomic_application_deletion.sql`
+19. `202607130015_atomic_job_extraction_persistence.sql`
+20. `202607130016_atomic_parser_analysis_credits.sql`
+21. `20260716042744_append_only_parser_analysis_credit_events.sql`
 
-All eighteen are committed and applied to the connected development Supabase
-project. Migration `015` has not been created. Migrations 003–005 are
+All twenty-one are committed and applied to the connected development Supabase
+project. Migrations 003–005 are
 forward-only repairs to `import_guest_draft()`; migration 006 repairs only
 `save_master_profile()`; `007`–`014` are the Applications foundation and
-atomic creation/status/notes/deadline/follow-up/deletion sequence. Do not edit
-or squash applied migration history.
+atomic creation/status/notes/deadline/follow-up/deletion sequence; `015` is
+atomic extraction persistence; and `016`–`017` are the mutable parser-credit
+reservation plus append-only event foundations. Do not edit or squash applied
+migration history.
 
-## 5a. Planned AI routing (not implemented)
+## 5a. AI routing (Luna parser implemented; Terra/Sol planned)
 
-- **GPT-5.6 Luna** (`gpt-5.6-luna`): validated structured JD cleanup,
-  extraction, classification, and duplicate candidates. Never final resume
-  content.
-- **GPT-5.6 Terra** (`gpt-5.6-terra`): requirement normalization,
+- **Luna parser route — implemented:** validated structured JD extraction uses
+  the server-only OpenAI Responses API, versioned schemas, deterministic
+  confidence, and environment-driven `OPENAI_MODEL_LUNA`. Feature code does
+  not hardcode a production model ID. It never writes final resume content.
+- **Terra route — planned only:** requirement normalization,
   confirmed-evidence mapping, directional explanations, next actions, and
   first-pass claim classification.
-- **GPT-5.6 Sol** (`gpt-5.6-sol`): nuanced evidence-backed resume suggestions,
+- **Sol route — planned only:** nuanced evidence-backed resume suggestions,
   supported rewriting, difficult claim review, and final semantic review.
 
-Model resolution belongs in one server-only configuration module. Feature
-code requests a task category and never hardcodes a model ID. Luna failures or
-ambiguity escalate to Terra; high-impact language and difficult evidence
-questions escalate to Sol. Every suggestion remains reviewable and linked to
-confirmed evidence. Failed generations do not consume credits. Unsupported
-claims block readiness/export, and final PDF rendering prohibits AI calls.
-See TECHNICAL_DESIGN.md §3 and v3 §F for the canonical policy.
+`OPENAI_API_KEY` and `OPENAI_MODEL_LUNA` configure the runnable parser.
+`OPENAI_MODEL_TERRA` and `OPENAI_MODEL_SOL` are planned names only; no Terra or
+Sol production route is runnable. The future escalation, reviewable evidence,
+claim, and deterministic-rendering policy remains in TECHNICAL_DESIGN.md §3
+and v3 §F. Do not invent concrete model values or claim an escalation route
+exists before it is implemented.
+
+Parser-credit boundary as built:
+
+- Migration `016` uses a mutable reservation-state table and authenticated
+  reserve/finalize RPCs. Lifetime successful capacity is two: `reserved` and
+  `consumed` count, while `refunded` does not. The rolling 24-hour attempt
+  limit is three and counts every reservation row, including refunded rows.
+  Limit evaluation returns `daily_limit` before `no_credits`; advisory/row
+  locking protects concurrent calls, and finalization is idempotent.
+- Migration `017` keeps accounting separate in append-only events. Each real
+  reservation produces one `reserved` event, each real terminal transition
+  produces one `consumed` or `refunded` event, repeats produce no duplicate,
+  and consumed/refunded cannot coexist. Ownership is derived, fields are
+  minimal, users can select only their own events, and anonymous/authenticated
+  direct event writes are not allowed.
+- This parser-credit system is separate from `tailoring_credit_ledger`, and
+  Analyze currently invokes extraction without reserve/finalize wrapping.
+- `parser_analysis_credit_reservations` has only an authenticated own-row
+  SELECT policy, so RLS blocks direct authenticated writes. Its ACL nevertheless
+  still includes authenticated INSERT/UPDATE/DELETE privileges; this is a
+  hardening caveat, not a demonstrated bypass. The next forward migration must
+  revoke unnecessary direct write privileges while preserving authenticated
+  RPC execute and own-row SELECT/RLS behavior.
 
 ## 5b. Codex working record
 
@@ -280,8 +330,8 @@ no browser console warnings/errors observed.
 
 Live checks completed against the development Supabase project:
 
-- all eighteen migrations through `202607130014` applied and expected objects
-  found; migration `015` has not been created;
+- all twenty-one migrations through `20260716042744` applied and expected
+  objects found;
 - `save_master_profile()` persistence, replacement/clearing, confirmation,
   ownership, application payload, and later-failure rollback passed;
 - normal, sequential-idempotent, canonicalized, concurrent, and
@@ -306,6 +356,16 @@ Live checks completed against the development Supabase project:
   Add Application re-eligibility, recreation with one initial event, foreign
   private-not-found behavior, honest no-Supabase states, and complete fixture
   cleanup.
+- the private pasted-text parser passed its reported versioned-schema,
+  deterministic-confidence, server-only provider, ownership, atomic
+  persistence, orchestration, server-action, and Job Detail display/control
+  checks; no live authenticated OpenAI success is claimed;
+- parser credits passed lifetime-limit and refund behavior, rolling 24-hour
+  limit and exact boundary behavior, concurrent reservations near both limits,
+  concurrent consume/refund/mixed finalization, finalize idempotency, event
+  uniqueness/consistency, ownership isolation, anonymous rejection, cleanup,
+  and tailoring-credit noninterference. No OpenAI API request was made for the
+  database credit work.
 
 The pre-Applications release gate is complete. The only conditional limit is
 guest-import post-write rollback: it was not behaviorally exercised because
@@ -330,24 +390,36 @@ and it did not block Applications CRUD.
 6. Tracker drag-and-drop, Table/Calendar modes, resume attachment, arbitrary
    timeline entries, recruiter contacts, notifications, and Calendar
    integration are not implemented.
-7. AI parsing, URL intake, production tailoring, claim checking, and
-   deterministic export are not implemented.
+7. Production Analyze is not wrapped in parser-credit reservation/finalization;
+   migrations `016`–`017` therefore do not enforce UI credits yet.
+8. Direct authenticated writes to parser-credit reservations are blocked by
+   current RLS (only own-row SELECT is permitted), but the table ACL still
+   includes authenticated INSERT/UPDATE/DELETE. This has not demonstrated a
+   bypass; remove the unnecessary grants with a forward-only migration before
+   production credit integration.
+9. No live authenticated OpenAI success is proven. URL intake, production
+   tailoring, claim checking, and deterministic export are not implemented.
 
 ## 8. Next work (in order)
 
-**Next product phase: AI job parser for privately pasted JD text.** Applications
-CRUD is complete through migration `014`; do not redo it. Scope the first AI
-parser task separately when that phase begins. Do not claim parsing exists or
-create migration `015` during documentation work.
+**Next narrow boundary: parser-credit table privilege hardening.** The private
+pasted-text parser and migrations `015`–`017` are complete; do not redo them.
+Create one forward-only migration that revokes unnecessary authenticated
+INSERT/UPDATE/DELETE privileges on
+`parser_analysis_credit_reservations` while preserving authenticated execute
+on the reserve/finalize RPCs and own-row SELECT/RLS behavior. Do not combine
+this hardening migration with production Analyze integration.
 
 Remaining roadmap order:
 
-1. AI parser for pasted JD text.
-2. Bounded user-directed URL intake with manual paste fallback.
-3. Evidence-backed reviewable resume tailoring.
-4. Mechanical claim checker.
-5. Deterministic PDF export.
-6. Final MVP integration and end-to-end QA.
+1. Parser-credit privilege-hardening migration described above.
+2. Wrap Analyze in reserve/finalize after the ACL boundary is resolved or
+   explicitly accepted.
+3. Bounded user-directed URL intake with manual paste fallback.
+4. Evidence-backed reviewable resume tailoring.
+5. Mechanical claim checker.
+6. Deterministic PDF export.
+7. Final MVP integration and end-to-end QA.
 
 One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
 
@@ -355,8 +427,9 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
 
 - **Do not redo completed work:** board submission (`/board/submit` + atomic
   RPC), private Jobs CRUD, Master Profile persistence, guest-draft import, and
-  Applications CRUD through deletion/recreation (`007`–`014`) are done —
-  extend, don't rewrite.
+  Applications CRUD through deletion/recreation (`007`–`014`), private
+  pasted-text parsing (`015`), and parser-credit database foundations
+  (`016`–`017`) are done — extend, don't rewrite.
 - **Do not rewrite the app shell or redesign completed screens.**
 - **No blanket scraping or crawling, ever.** Future URL intake is ONE
   user-directed fetch with paste fallback. No CAPTCHA/login-wall/bot-
@@ -373,13 +446,19 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   may back future AI suggestions; never mark AI output as confirmed.
 - **Match language:** "N roles match your profile", never "you are eligible";
   no interview/offer/outcome implications (DESIGN.md §22.4, §23.6).
-- **Credits are ledger-based and server-written**; failed generations must
-  never burn credits. No production consumption exists yet.
+- **Parser-credit RPCs/events are server-controlled database foundation, not
+  Analyze enforcement.** The production action is not wrapped yet. Tailoring
+  credits remain separate and also have no production consumption.
+- **Resolve the reservation-table ACL caveat first.** RLS currently blocks
+  authenticated direct writes, but remove residual authenticated write grants
+  with a forward-only migration before wiring Analyze credits; do not describe
+  the current state as a proven bypass.
 - **Final PDF rendering must be deterministic** — no AI call, exact accepted
   content only, gated on review + claim checks (TECHNICAL_DESIGN.md v3 §G).
-- **AI routing is planned, not implemented.** Use the centralized
-  Luna/Terra/Sol task policy in TECHNICAL_DESIGN.md §3; only confirmed
-  evidence may support suggestions, and feature code never hardcodes models.
+- **Only the Luna parser route is runnable.** It resolves
+  `OPENAI_MODEL_LUNA` server-side. Terra and Sol remain planned; only confirmed
+  evidence may support future suggestions, and feature code never hardcodes
+  models.
 - **Log meaningful Codex work** with the mandatory verified implementation
   commit → verified Session ID for the actual session → completed existing
   log fields → separate log-only commit sequence. Reuse a known verified ID

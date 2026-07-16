@@ -2,9 +2,10 @@
 
 Use this file as context for a future temporary ChatGPT chat where ChatGPT should act as a product and engineering director. Its job should be to tell the user exactly what to do next and provide precise prompts to give coding agents such as Codex or Fable.
 
-Last reviewed: 2026-07-13 (migrations through `202607130014`, persisted
-Applications CRUD, and its live verification synchronized; Strategy Revision
-2 remains current and no AI integration was implemented).
+Last reviewed: 2026-07-15 (private pasted-text parsing and parser-credit
+database foundations synchronized through migration
+`20260716042744_append_only_parser_analysis_credit_events.sql`; Strategy
+Revision 2 remains current).
 
 Working method: drive implementation with **one narrow Codex prompt at a time**, drafted when a phase actually starts. Do not stockpile prompts for future phases in the docs. Record meaningful core sessions in `CODEX_SESSION_LOG.md`, including their verified commit range and real `/feedback` Session ID when available; never fabricate either verification or an ID.
 
@@ -46,7 +47,7 @@ Adopted strategy (2026-07-09, **revision 2**) — see `PRODUCT_STRATEGY.md`:
 
 ---
 
-## 2. Current Development Status (2026-07-13)
+## 2. Current Development Status (2026-07-15)
 
 Completed migrations, chronological:
 `202607090001_initial_mvp_schema.sql` ·
@@ -66,10 +67,13 @@ Completed migrations, chronological:
 `202607130011_fix_application_notes_whitespace.sql` ·
 `202607130012_atomic_application_deadline.sql` ·
 `202607130013_atomic_application_follow_up.sql` ·
-`202607130014_atomic_application_deletion.sql`
-(All eighteen are committed and applied to the connected development
-database; migration `015` has not been created. See section 8 for the exact
-behavioral coverage and remaining limits.)
+`202607130014_atomic_application_deletion.sql` ·
+`202607130015_atomic_job_extraction_persistence.sql` ·
+`202607130016_atomic_parser_analysis_credits.sql` ·
+`20260716042744_append_only_parser_analysis_credit_events.sql`
+(All twenty-one are committed and applied to the connected development
+database. See section 8 for the exact behavioral coverage and remaining
+limits.)
 
 **Completed:**
 1. Strategy Revision 2 documentation.
@@ -116,9 +120,24 @@ behavioral coverage and remaining limits.)
 19. Authenticated application deletion (`014`): deletes the caller-owned
     application and cascaded timeline only, preserves its private job/company,
     makes the job eligible for creation again, and creates no deletion event.
+20. Private pasted-text parser pipeline: canonical versioned extraction
+    schema, deterministic confidence, server-only OpenAI Responses API,
+    centralized `OPENAI_MODEL_LUNA` routing, authenticated owned-job lookup,
+    atomic extraction persistence (`015`), extraction-to-persistence
+    orchestration, authenticated Jobs server action, persisted Job Detail
+    analysis display, and Analyze / Analyze Again controls for eligible
+    `intake_source='pasted_text'` jobs.
+21. Parser-analysis credit database foundation (`016`–`017`): atomic
+    reservation/finalization with a lifetime successful capacity of two and a
+    rolling 24-hour attempt limit of three, plus append-only reserved/
+    consumed/refunded accounting events. This database foundation is verified,
+    but the production Analyze action does not yet call
+    `reserve_parser_analysis_credit` or `finalize_parser_analysis_credit`, so
+    parser credits are not enforced or consumed in the UI flow.
 
 **Not completed** (do not claim these exist):
-- AI JD parser; bounded user-directed URL intake; real extraction-confidence pipeline.
+- Parser-credit wrapping of the production Analyze action; bounded
+  user-directed URL intake and fetching.
 - AI resume tailoring; production tailoring-credit consumption.
 - Mechanical claim checker.
 - Deterministic PDF export; DOCX export; file upload.
@@ -128,13 +147,14 @@ behavioral coverage and remaining limits.)
 
 Screens still rendering mock/local data: Dashboard, Resumes hub, Resume
 Tailoring Workspace (full mock session for `j11` only), Calendar/Insights/
-Documents/Settings. Applications tracker and detail are now Supabase-backed;
+Documents/Settings. Applications tracker, detail, and eligible private
+pasted-text Job analysis are now Supabase-backed;
 the old fixture file still exists but is not imported by production routes.
 A mock screen existing does not make its feature complete.
 
 Evidence-confirmation trust boundary (implemented): user-authored evidence can be confirmed; editing confirmed evidence makes it unconfirmed; the user must explicitly reconfirm; future AI must treat `confirmed` as the boundary and never mark AI output confirmed.
 
-Guest-import specifics (implemented): empty accounts auto-import valid drafts (guest-typed evidence arrives `confirmed = true`); stashed URL jobs keep `source_url`, pasted-text jobs keep `raw_text`; no fetch/scrape/AI-parse and no invented metadata; title-less imports use the honest schema-required placeholder `Imported job - add title`. LocalStorage is cleared only on a complete matching `imported` / `already_imported` result; it remains stored on validation failure, invalid URL, Supabase unavailability, RPC failure, rollback, or a non-matching response.
+Guest-import specifics (implemented): empty accounts auto-import valid drafts (guest-typed evidence arrives `confirmed = true`); stashed URL jobs keep `source_url`, pasted-text jobs keep `raw_text`; the import itself performs no fetch/scrape/AI parse and invents no metadata, though an authenticated user may analyze an imported pasted-text job later; title-less imports use the honest schema-required placeholder `Imported job - add title`. LocalStorage is cleared only on a complete matching `imported` / `already_imported` result; it remains stored on validation failure, invalid URL, Supabase unavailability, RPC failure, rollback, or a non-matching response.
 
 ---
 
@@ -156,7 +176,7 @@ Private routes (enforced by `proxy.ts`): `/dashboard`, `/jobs`, `/jobs/[id]`,
 | `/board/submit` | Public form and sign-in-required guest state; authenticated atomic private+pending submission and private history | Complete (Supabase-backed) |
 | `/login` | Email/Google auth with `next`/`reason` params | Complete |
 | `/jobs` | **My jobs** — private saved jobs: persisted CRUD, search, filters | Complete (Supabase-backed) |
-| `/jobs/[id]` | Private saved-job detail: edit/delete, raw JD, submission status labels, "Analysis not generated yet" | Complete (Supabase-backed) |
+| `/jobs/[id]` | Private saved-job detail: edit/delete, raw JD, persisted pasted-text analysis, Analyze / Analyze Again, honest unavailable states | Complete (Supabase-backed parser; tailoring still unavailable) |
 | `/resumes/master` | Master Profile: persisted profile, skills, ordered evidence with confirmation state | Complete (Supabase-backed) |
 | `/dashboard` | Overview (metrics, pipeline, deadlines, next actions) | UI complete, **mock data** |
 | `/applications` | Persisted private tracker and atomic Add Application flow | Complete (Supabase-backed) |
@@ -189,9 +209,12 @@ Main route flows and buttons:
 - Jobs table row click opens `/jobs/[id]`.
 - Jobs row action button also opens `/jobs/[id]`.
 - Jobs page Add Job flow creates a persisted private `job_postings` row (paste text; URL stored as metadata only, never fetched).
-- Persisted Job Detail shows the honest disabled action "Tailor resume
-  unavailable" until analysis/tailoring is implemented; the mock tailoring
-  route remains reachable only from mock flows.
+- Eligible pasted-text Job Detail records expose Analyze / Analyze Again and
+  render persisted extraction results; unsupported/missing cases stay honest.
+  Analyze is not yet wrapped in parser-credit reserve/finalize RPCs.
+- Persisted Job Detail still shows the honest disabled action "Tailor resume
+  unavailable" because production tailoring is not implemented; the mock
+  tailoring route remains reachable only from mock flows.
 - Job Detail secondary buttons "Mark as ready", "Add deadline", and "Save notes" are disabled placeholders.
 - Application Tracker cards open the caller-owned `/applications/[id]`.
 - Application Tracker Board button is active; Table and Calendar remain
@@ -263,6 +286,11 @@ Jobs:
 - `app/(app)/jobs/loading.tsx`.
 - `components/jobs/private-job-form-modal.tsx` and
   `components/jobs/private-job-controls.tsx`.
+- `components/jobs/job-analysis-control.tsx` provides the authenticated
+  Analyze / Analyze Again UI for eligible private pasted-text jobs.
+- `lib/ai/*` contains the versioned extraction schemas, deterministic
+  confidence, server-only Luna provider, owned-job orchestration, persistence,
+  and safe view-model/action handling.
 - Jobs page client owns local UI state for filters, search, and modal
   visibility; rows and create/edit/delete mutations use authenticated
   Supabase queries/server actions.
@@ -270,7 +298,9 @@ Jobs:
 Job Detail:
 - `app/(app)/jobs/[id]/page.tsx`.
 - `app/(app)/jobs/[id]/loading.tsx`.
-- Uses local helper components inside the page: trust labels, muted pills, detail items, bullet lists, keyword lists, analysis blocks.
+- Uses local helper components inside the page plus the Job analysis control;
+  persisted extractions render through safe analysis view models, with honest
+  missing/unavailable states.
 
 Resume tailoring:
 - `app/(app)/resumes/page.tsx`.
@@ -358,11 +388,14 @@ Data still awaiting persistence or production generation:
 - Dashboard metrics derived from persisted jobs/applications.
 - Resume uploads metadata.
 - Resume versions.
-- Parsed job analyses/requirements.
+- URL-sourced job analyses/requirements; pasted-text analysis persistence is
+  implemented.
 - Tailoring sessions and suggestions.
 - Keyword reports.
 - Exported documents.
-- Production credit-consumption events (the ledger/schema foundation exists).
+- Production parser-credit enforcement in Analyze and production tailoring-
+  credit consumption. Parser reservation/finalization and append-only event
+  foundations exist in the database but are not called by Analyze.
 
 ---
 
@@ -433,9 +466,9 @@ UI libraries:
 State management:
 - No global state library.
 - Local React `useState` / `useMemo` in client components.
-- Supabase persistence exists for the public board, private jobs, Applications,
-  Master Profile, and guest-draft import; remaining screens use mock/local
-  state.
+- Supabase persistence exists for the public board, private jobs (including
+  pasted-text extraction results), Applications, Master Profile, and
+  guest-draft import; remaining screens use mock/local state.
 
 Charts/tables/drag-and-drop:
 - No chart library is implemented.
@@ -456,42 +489,41 @@ Next.js note:
 
 ---
 
-## 7a. Planned AI Architecture (not implemented)
+## 7a. AI Architecture (Luna parser implemented; Terra/Sol planned)
 
-- **GPT-5.6 Luna** (`gpt-5.6-luna`) handles validated, schema-constrained JD
-  cleanup, explicit extraction, classification, and duplicate candidates. It
-  never writes final resume content.
-- **GPT-5.6 Terra** (`gpt-5.6-terra`) normalizes requirements, maps them to
-  confirmed evidence, explains directional match, recommends next actions,
-  classifies claims, and decides whether Sol is required.
-- **GPT-5.6 Sol** (`gpt-5.6-sol`) handles nuanced evidence-backed resume
-  suggestions, supported rewriting, difficult evidence/claim review, and the
-  final semantic review of accepted content. It may not invent or expand
-  evidence.
+- **Luna parser route — implemented:** private pasted-text JD extraction uses
+  a server-only OpenAI Responses API provider, canonical versioned schemas,
+  deterministic confidence, and centrally resolved `OPENAI_MODEL_LUNA`.
+  Feature code does not hardcode a production model ID. The result is persisted
+  atomically through migration `015` and displayed on the owned Job Detail.
+- **Terra route — planned only:** requirement normalization, confirmed-
+  evidence mapping, directional explanations, next actions, and first-pass
+  claim classification are not runnable production routes.
+- **Sol route — planned only:** nuanced evidence-backed resume suggestions,
+  supported rewriting, difficult claim review, and final semantic review are
+  not runnable production routes.
 
-The planned server-only router maps task categories to models through one
-configuration module. Feature code never hardcodes IDs. Documentation-only
-environment examples are `OPENAI_API_KEY`, `OPENAI_MODEL_LUNA`,
-`OPENAI_MODEL_TERRA`, and `OPENAI_MODEL_SOL`; they do not currently configure
-the application.
+`OPENAI_API_KEY` and `OPENAI_MODEL_LUNA` configure the implemented parser.
+`OPENAI_MODEL_TERRA` and `OPENAI_MODEL_SOL` remain future configuration names;
+their presence does not make Terra or Sol runnable. Do not invent or document
+specific model values beyond the environment-driven routing contract.
 
-Luna output is schema-validated; invalid, low-confidence, contradictory, or
-unclear output escalates to Terra. Ambiguous evidence, high-impact wording,
-claim disputes, and final resume language escalate to Sol. Retries and
-escalations are bounded. Failures return honest manual/retry states and do not
-consume credits. All suggestions retain confirmed source-evidence references
-and remain accept/reject/edit reviewable. Unsupported claims block readiness
-and export. Final PDF rendering uses accepted reviewed content only and
-prohibits AI calls. TECHNICAL_DESIGN.md §3 is canonical.
+The broader planned policy remains: invalid or unclear extraction should fail
+honestly or follow a deliberately implemented bounded escalation path; future
+resume suggestions must retain confirmed source-evidence references and remain
+accept/reject/edit reviewable; unsupported claims block readiness/export; and
+final PDF rendering must use accepted reviewed content with no AI call.
+TECHNICAL_DESIGN.md §3 remains canonical for the target architecture.
 
 ---
 
 ## 8. Current Quality & Verification Status
 
-Repository evidence reviewed through the focused atomic Application deletion
-implementation commit `3def3d94a062e6ec092243ab12e817c9abacb86c` and its
-session-log commit. The worktree was clean before this documentation-only
-update.
+Repository evidence reviewed through parser-credit foundation log commit
+`498af7945fef106d06df10b60b36775eee276d45`, including atomic parser credits
+commit `81cc53676fe51c85ee542b3000f93ad70d679aca` and append-only parser-credit
+events commit `2d1843c2ef2400404ce4a7db8ff2b163a2634c41`. The worktree was clean
+before this documentation-only update.
 
 Verification completed during the reported backend phases:
 - `npm run lint`: passed.
@@ -504,9 +536,10 @@ Verification completed during the reported backend phases:
 - Browser console showed no warnings or errors during the reported checks.
 
 Live verification completed against the development Supabase project:
-- All eighteen migrations through `202607130014` are committed, applied, and
-  represented in linked remote migration history. Migration `015` has not
-  been created. Migration 006 replaces only
+- All twenty-one migrations through
+  `20260716042744_append_only_parser_analysis_credit_events.sql` are committed,
+  applied, and represented in linked remote migration history. Migration 006
+  replaces only
   `save_master_profile(jsonb,jsonb,jsonb)`, removes invalid qualification from
   five `COALESCE` and five `NULLIF` expressions, and preserves its signature,
   return type, `SECURITY DEFINER`, empty `search_path`, and authenticated-only
@@ -540,6 +573,16 @@ Live verification completed against the development Supabase project:
   deletion, foreign/nonexistent equivalence, anonymous/two-user isolation,
   concurrent serialization, saved-job preservation, recreation eligibility,
   honest no-Supabase states, and scoped cleanup to zero.
+- The private pasted-text parser pipeline passed its reported schema,
+  confidence, provider, owned-job, atomic persistence, orchestration, server-
+  action, and Job Detail control/display checks without claiming a live
+  authenticated OpenAI success where none was demonstrated.
+- Parser-credit verification covered lifetime capacity, refund semantics,
+  rolling 24-hour attempts and boundary behavior, concurrent reservations near
+  both limits, concurrent consume/refund/mixed finalization, idempotency,
+  append-only event uniqueness/consistency, ownership isolation, anonymous
+  rejection, cleanup, and noninterference with tailoring credits. The database
+  work made no OpenAI API request.
 
 Current known risks (narrow, accurate):
 1. Guest-import mid-transaction rollback is conditionally complete, not
@@ -557,8 +600,16 @@ Current known risks (narrow, accurate):
    migration to fail rather than silently preserving invalid duplicates.
 5. There is no permanent browser/database integration-test suite for the
    Applications flows; verified coverage used disposable live fixtures.
-6. AI parsing, URL intake, production tailoring, claim checking, and
-   deterministic export are not implemented.
+6. The Analyze action invokes extraction without reserving or finalizing a
+   parser-analysis credit. Migrations `016`–`017` are database foundation, not
+   production credit enforcement.
+7. `parser_analysis_credit_reservations` has only an own-row authenticated
+   SELECT policy, so RLS blocks direct authenticated writes; however, its ACL
+   still grants authenticated INSERT/UPDATE/DELETE (and other table
+   privileges). This is not a demonstrated bypass, but a forward-only
+   privilege-revocation migration is the next hardening boundary.
+8. No live authenticated OpenAI success is proven. URL intake, production
+   tailoring, claim checking, and deterministic export remain unimplemented.
 
 Known fragile areas (frontend):
 - Mock/local state remains in Dashboard, Resumes hub, and the Tailoring
@@ -594,12 +645,18 @@ Product safety constraints:
 
 Current backend status:
 - Supabase auth is implemented (hybrid public/private via `proxy.ts` — never a blanket wall).
-- Eighteen committed and applied migrations exist through `202607130014`
+- Twenty-one committed and applied migrations exist through
+  `20260716042744`
   (section 2); `/board*`, `/jobs*`, `/applications*`, and `/resumes/master`
   are wired to Supabase with honest disabled states when env vars are absent.
-  Migration `015` does not exist.
-- No AI API is implemented anywhere. No URL is ever fetched. No scraping exists, and the board stays hand-moderated (full JD text is never republished through `board_jobs`).
-- Tailoring credits exist as schema only — no production consumption.
+  Private pasted-text Jobs can persist and display Luna parser results through
+  migration `015`.
+- A server-only OpenAI Responses API parser is implemented for owned pasted-
+  text jobs. No URL is fetched, no scraping exists, and the board stays hand-
+  moderated (full JD text is never republished through `board_jobs`).
+- Parser-credit reservation/finalization and event accounting exist in the
+  database, but Analyze does not call them. Tailoring credits remain separate
+  schema/ledger foundation with no production consumption.
 - Dashboard, Resumes hub, Tailoring Workspace, Calendar, Insights, Documents,
   and Settings still render mock/local state.
 
@@ -608,8 +665,9 @@ Current backend status:
 ## 10. Current Known UX Issues
 
 General:
-- Persistence exists for board, private jobs, Applications, and Master Profile;
-  Dashboard, Resumes hub, and Tailoring remain mock/local.
+- Persistence exists for board, private jobs and pasted-text analysis,
+  Applications, and Master Profile; Dashboard, Resumes hub, and Tailoring
+  remain mock/local.
 - Topbar "Add job" routes to `/jobs`; it does not open the intake flow directly.
 - Notifications are disabled; sign out works.
 - Mock-data screens still contain fake "Original posting" URLs; persisted jobs use real user-entered `source_url` values (link-outs only, never fetched).
@@ -625,13 +683,16 @@ Dashboard:
 Jobs (persisted):
 - Jobs table is desktop-first and horizontally scrolls on smaller widths.
 - Saved jobs are persisted and can create one tracked application through the
-  existing Add Application flow, but generated analysis remains unavailable
-  ("Analysis not generated yet").
+  existing Add Application flow. Eligible pasted-text jobs can run Analyze /
+  Analyze Again and display persisted results; jobs without a usable persisted
+  extraction retain honest missing/unavailable states.
 - Imported guest jobs carry the `Imported job - add title` review placeholder until edited.
 - Filter selects are simple native selects; no chips or saved filters.
 
 Job Detail (persisted):
-- Real tailoring is unavailable for unprocessed jobs (honest state).
+- Real tailoring remains unavailable; parser analysis does not imply a
+  production tailoring workflow.
+- Analyze is not yet wrapped in parser-credit reservation/finalization.
 - `source_url` is a link-out only; nothing is fetched or scraped.
 
 Applications:
@@ -667,7 +728,7 @@ Resume Tailoring Workspace:
 
 ---
 
-## 11. Next Steps (2026-07-13)
+## 11. Next Steps (2026-07-15)
 
 ### Applications CRUD phase — complete
 
@@ -679,23 +740,27 @@ recreation, isolation, concurrency, and preservation behavior. Guest-import
 post-write rollback remains conditionally unexercised because that RPC exposes
 no safe caller-controlled later failure; this is documented, not a blocker.
 
-### Next product phase: AI job parser for privately pasted JD text
+### Immediate next boundary: revoke unnecessary parser-credit table privileges
 
-Applications CRUD is complete through migration `014`; do not redo it. The
-next phase is the AI job parser for private `job_postings.raw_text`. Its first
-narrow task will be scoped separately when implementation starts. Do not claim
-AI parsing exists, create migration `015`, or stockpile implementation prompts
-in this document.
+The private pasted-text parser and the parser-credit database foundations are
+complete through migrations `015`–`017`; do not redo them. Before integrating
+credits into Analyze, add one forward-only migration that revokes unnecessary
+authenticated direct INSERT/UPDATE/DELETE privileges on
+`parser_analysis_credit_reservations` while preserving authenticated RPC
+execution and own-row SELECT/RLS behavior. Treat the present ACL as hardening
+debt, not as a demonstrated RLS bypass.
 
 ### Remaining product phases (in order)
 
-1. AI job parser for pasted JD text.
-2. Bounded, user-directed URL intake with manual paste fallback.
-3. AI resume tailoring with reviewable source evidence and the existing
+1. Parser-credit privilege-hardening migration described above.
+2. Wrap the production Analyze action in parser-credit reserve/finalize only
+   after the privilege boundary is resolved or explicitly accepted.
+3. Bounded, user-directed URL intake with manual paste fallback.
+4. AI resume tailoring with reviewable source evidence and the existing
    credit boundaries.
-4. Mechanical claim checker.
-5. Deterministic PDF export.
-6. Final MVP integration and end-to-end QA.
+5. Mechanical claim checker.
+6. Deterministic PDF export.
+7. Final MVP integration and end-to-end QA.
 
 One-week MVP execution priorities: PRODUCT_STRATEGY.md §12. Do not add
 speculative post-MVP phases.
@@ -706,12 +771,14 @@ speculative post-MVP phases.
 
 Work is driven by **one narrow Codex prompt at a time**, drafted when its
 phase actually starts — prompts for future phases are intentionally NOT
-stored in this document. When the AI parser phase actually starts, draft its
-first narrow prompt from PRODUCT_STRATEGY.md §10/§12,
-TECHNICAL_DESIGN.md §3 and as-built sections H–L, HANDOFF.md §8–9, and the
-warnings in section 13 below. Completed phases (board submission, private Jobs
-CRUD, Master Profile persistence, guest-draft import, and Applications CRUD)
-must not be redone.
+stored in this document. The next prompt should cover only the forward
+privilege-revocation migration in section 11. Do not redo the private parser
+or parser-credit foundations, and do not combine Analyze integration with
+that hardening task. Draft later prompts only when their phase starts, using
+PRODUCT_STRATEGY.md, TECHNICAL_DESIGN.md, HANDOFF.md §8–9, and the warnings
+below. Completed phases (board submission, private Jobs CRUD, Master Profile
+persistence, guest-draft import, Applications CRUD, pasted-text parsing, and
+migrations `015`–`017`) must not be redone.
 
 For every meaningful core task, the director must require this completion
 sequence: implement one narrow task; finish all automated and manual
@@ -750,7 +817,9 @@ exact real `/feedback` Session ID.
   `submit_board_job_with_private_copy`), private Jobs CRUD, Master Profile
   persistence (`save_master_profile`), guest-draft import
   (`import_guest_draft` + `guest_draft_imports`), and Applications CRUD through
-  deletion/recreation (`007`–`014`) are done — extend, don't rewrite.
+  deletion/recreation (`007`–`014`), private pasted-text parsing (`015`), and
+  parser-credit database foundations (`016`–`017`) are done — extend, don't
+  rewrite.
 - Do not add large dependencies without reason.
 - Do not expose secrets or env values.
 - **No blanket scraping or crawling, ever; no CAPTCHA/login-wall/bot-protection/access-control bypasses.** Future URL intake is one user-directed fetch with paste fallback.
@@ -759,8 +828,14 @@ exact real `/feedback` Session ID.
 - Do not pretend disabled backend actions work; do not remove honest disabled/placeholder states without implementing the feature.
 - Do not invent resume experience, metrics, skills, tools, roles, or claims; never mark AI output as confirmed evidence.
 - Do not imply eligibility, interviews, offers, or hiring outcomes; match scores are directional.
-- Planned AI work must follow the centralized GPT-5.6 Luna/Terra/Sol task
-  router in TECHNICAL_DESIGN.md §3. Feature modules never hardcode model IDs.
+- The Luna parser route is runnable through `OPENAI_MODEL_LUNA`; Terra and Sol
+  remain planned only. Follow the centralized task policy in
+  TECHNICAL_DESIGN.md §3 and never hardcode model IDs.
+- Do not claim parser credits are enforced in Analyze: the `016`–`017`
+  database foundation is not yet called by the production action.
+- Harden `parser_analysis_credit_reservations` with a forward-only privilege-
+  revocation migration before credit integration. Current RLS blocks direct
+  authenticated writes; the residual ACL is a caveat, not a proven bypass.
 - Final PDF rendering must be deterministic — no AI call in the render path.
 - Preserve meaningful Codex session evidence in `CODEX_SESSION_LOG.md` using
   the mandatory verified implementation commit → verified Session ID for the
@@ -827,9 +902,11 @@ Required env vars today (`.env.example` lists names only):
   Without them the app still runs: those screens show honest
   configuration-disabled states, and mock-data screens keep working.
 
-Planned AI env vars (documentation only; no AI is implemented yet):
+Parser env vars required to invoke implemented AI extraction:
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL_LUNA`
+
+Planned model env names (no runnable Terra/Sol production routes yet):
 - `OPENAI_MODEL_TERRA`
 - `OPENAI_MODEL_SOL`
 - Optional storage/export variables later
