@@ -2075,6 +2075,89 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Separately define any usage/credit or rate-limit policy before
   expanding extraction invocation beyond this one private control.
 
+### Parser-analysis credit database foundation and lifecycle events
+
+- **Date and time:** 2026-07-15 23:13 PDT
+- **Development phase:** AI job parser credit controls
+- **Session purpose:** Preserve and document the verified atomic parser-analysis
+  credit reservation foundation and its append-only lifecycle-event extension.
+- **Task or prompt summary:** Added migration `202607130016` with atomic
+  reservation/finalization RPCs and migration `20260716042744` with a separate
+  trigger-maintained append-only event ledger, then verified both against the
+  linked development project before preserving them in focused commits.
+- **Important constraints given to Codex:** Keep parser-analysis credits separate
+  from tailoring credits; store accounting metadata only; use authenticated
+  caller ownership and database concurrency controls; do not integrate the
+  Analyze action, change model routing, make an OpenAI request, or push.
+- **Files changed:**
+  `supabase/migrations/202607130016_atomic_parser_analysis_credits.sql` and
+  `supabase/migrations/20260716042744_append_only_parser_analysis_credit_events.sql`.
+- **Systems affected:** Linked Supabase migration history,
+  `parser_analysis_credit_reservations`, `parser_analysis_credit_events`, the
+  parser-credit reservation/finalization RPCs, and lifecycle triggers only.
+- **Architectural decisions:** Migration 016 provides two lifetime
+  parser-analysis credits and a rolling three-attempt-per-24-hours limit.
+  `reserved` and `consumed` reservations count against lifetime capacity;
+  `refunded` reservations do not, while every reservation state counts toward
+  the rolling attempt limit. The rolling predicate is inclusive, and
+  `daily_limit` is evaluated before `no_credits`. Per-user advisory locking
+  prevents concurrent over-reservation; job and reservation row locks preserve
+  ownership and terminal-state correctness; repeated finalization returns the
+  existing terminal state. Migration 017 preserves that mutable state machine
+  and records separate canonical `reserved`, `consumed`, and `refunded` events.
+  Trigger-derived ownership, one-reserved and one-terminal unique indexes, and
+  transition guards ensure one reserved event, at most one terminal event, no
+  consumed/refunded coexistence, and no duplicate event on repeated
+  finalization. Existing reservations are backfilled deterministically.
+- **Security or privacy considerations:** Both RPCs are authenticated-only
+  `SECURITY DEFINER` functions with empty search paths and derive ownership from
+  `auth.uid()`. Reservation and event tables use RLS with own-row SELECT
+  policies. Authenticated and anonymous clients cannot directly write event
+  rows. Events contain only reservation ID, user ID, event type, and timestamp;
+  no raw JD, extraction, provider, prompt, model, error, credential, or resume
+  content is stored. Known least-privilege caveat: authenticated direct writes
+  to reservations are blocked by RLS because no write policy exists, but the
+  authenticated role still has unnecessary table-level INSERT, UPDATE, and
+  DELETE privileges. This is not an active direct-write bypass; a future
+  forward migration should explicitly revoke those privileges.
+- **Rejected alternatives:** No tailoring-credit modification, direct client
+  event writes, combined mutable/event table, caller-authored ownership,
+  provider or model integration, TypeScript/UI change, or destructive rewrite
+  of applied migration history.
+- **Tests run:** Linked migration application/history and dry-run alignment;
+  lifetime and refund behavior; rolling 24-hour capacity and inclusive boundary;
+  synchronized reservation near lifetime and rolling limits; concurrent consume,
+  refund, and mixed consume/refund finalization; event uniqueness and
+  reservation-to-event consistency; authenticated isolation; anonymous and
+  direct-event-write rejection; scoped cleanup and noninterference checks.
+- **Lint result:** Not run; the implementation was database-only.
+- **Typecheck result:** Not run; the implementation was database-only.
+- **Build result:** Not run; the implementation was database-only.
+- **Manual verification performed:** Linked history contains `202607130016`
+  and `20260716042744`. Live checks passed the two-credit lifetime limit,
+  refunded-credit release, three-attempt rolling window and boundary behavior,
+  advisory/row-lock concurrency, idempotent terminal finalization, event
+  uniqueness and consistency, ownership isolation, anonymous rejection, direct
+  event-write rejection, complete disposable-fixture cleanup, and no change to
+  tailoring-credit behavior. No OpenAI API request was made.
+- **Related commit hash or range:** Migration 016:
+  `81cc53676fe51c85ee542b3000f93ad70d679aca`; migration 017:
+  `2d1843c2ef2400404ce4a7db8ff2b163a2634c41`.
+- **Real `/feedback` Session ID:**
+  `019f68d2-071e-79b1-86a9-f96fcc3b3cbc`.
+- **Known limitations:** Production TypeScript does not call
+  `reserve_parser_analysis_credit` or `finalize_parser_analysis_credit`; the
+  private Analyze / Analyze Again pipeline still invokes extraction without
+  reservation/finalization wrapping. `OPENAI_MODEL_LUNA` remains the only
+  runnable production parser-model setting; Terra and Sol are not runnable
+  production routes.
+- **Remaining risks:** The reservation-table authenticated DML grants should be
+  explicitly revoked or consciously accepted before the credit RPCs wrap the
+  production Analyze action.
+- **Next action:** Resolve or explicitly accept the reservation-table DML grant
+  caveat, then integrate server-side reservation and finalization around the
+  existing Analyze action in a separate narrow task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
