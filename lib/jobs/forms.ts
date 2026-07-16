@@ -5,6 +5,11 @@ import {
   type PrivateJob,
   type PrivateJobStatus,
 } from "./types";
+import {
+  jobUrlFieldError,
+  normalizeJobUrl,
+  PRIVATE_JOB_DESCRIPTION_MAX_LENGTH,
+} from "./job-url-intake";
 
 export type PrivateJobFormValues = {
   sourceUrl: string;
@@ -44,6 +49,17 @@ export type SaveBoardJobState = {
   alreadySaved?: boolean;
 };
 
+export type ManualJobDescriptionActionState = {
+  status:
+    | "idle"
+    | "success"
+    | "invalid_job_text"
+    | "unauthenticated"
+    | "job_unavailable"
+    | "persistence_unavailable";
+  message: string;
+};
+
 export const EMPTY_PRIVATE_JOB_FORM_VALUES: PrivateJobFormValues = {
   sourceUrl: "",
   title: "",
@@ -66,6 +82,11 @@ export const INITIAL_DELETE_PRIVATE_JOB_STATE: DeletePrivateJobState = {
 };
 
 export const INITIAL_SAVE_BOARD_JOB_STATE: SaveBoardJobState = {
+  status: "idle",
+  message: "",
+};
+
+export const INITIAL_MANUAL_JOB_DESCRIPTION_STATE: ManualJobDescriptionActionState = {
   status: "idle",
   message: "",
 };
@@ -149,8 +170,11 @@ function isValidDate(value: string): boolean {
 export function validatePrivateJobFormValues(values: PrivateJobFormValues) {
   const fieldErrors: Partial<Record<PrivateJobFormField, string>> = {};
 
-  if (values.sourceUrl && !isValidHttpUrl(values.sourceUrl)) {
-    fieldErrors.sourceUrl = "Enter a valid http or https URL.";
+  if (values.sourceUrl) {
+    const result = normalizeJobUrl(values.sourceUrl);
+    if (result.status !== "success") {
+      fieldErrors.sourceUrl = jobUrlFieldError(result.status);
+    }
   }
   if (!values.title || values.title.length > 200) {
     fieldErrors.title = "Enter a title between 1 and 200 characters.";
@@ -189,7 +213,7 @@ export function validatePrivateJobFormValues(values: PrivateJobFormValues) {
   if (values.notes.length > 5000) {
     fieldErrors.notes = "Keep notes to 5,000 characters or fewer.";
   }
-  if (values.rawText.length > 100000) {
+  if (values.rawText.length > PRIVATE_JOB_DESCRIPTION_MAX_LENGTH) {
     fieldErrors.rawText = "Keep the job description to 100,000 characters or fewer.";
   }
 

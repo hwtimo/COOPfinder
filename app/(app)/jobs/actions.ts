@@ -14,6 +14,7 @@ import { getPublicBoardJob } from "@/lib/board/queries";
 import {
   EMPTY_PRIVATE_JOB_FORM_VALUES,
   type DeletePrivateJobState,
+  type ManualJobDescriptionActionState,
   type PrivateJobFormValues,
   type PrivateJobMutationState,
   type SaveBoardJobState,
@@ -21,8 +22,18 @@ import {
   isValidHttpUrl,
   validatePrivateJobFormValues,
 } from "@/lib/jobs/forms";
+import {
+  intakeSourceAfterManualEdit,
+  jobUrlFieldError,
+  preparePrivateJobIntake,
+  type JobUrlIntakeFailureStatus,
+} from "@/lib/jobs/job-url-intake";
+import { transitionPastedUrlJobToManualText } from "@/lib/jobs/manual-job-description-transition";
 import { getPrivateJobByBoardId, isUuid } from "@/lib/jobs/queries";
-import { PRIVATE_JOB_WORK_AUTHORIZATIONS } from "@/lib/jobs/types";
+import {
+  PRIVATE_JOB_WORK_AUTHORIZATIONS,
+  type PrivateJobIntakeSource,
+} from "@/lib/jobs/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type AuthenticatedContext = {
@@ -50,6 +61,18 @@ function mutationError(
   return { status: "error", message, fieldErrors: {}, values };
 }
 
+function urlMutationError(
+  values: PrivateJobFormValues,
+  status: JobUrlIntakeFailureStatus,
+): PrivateJobMutationState {
+  return {
+    status: "error",
+    message: "Review the highlighted fields and try again.",
+    fieldErrors: { sourceUrl: jobUrlFieldError(status) },
+    values,
+  };
+}
+
 function escapedIlike(value: string): string {
   return value.replace(/[\\%_]/g, "\\$&");
 }
@@ -63,6 +86,47 @@ export async function extractAndPersistPrivateJobAction(
   jobId: string,
 ): Promise<PrivateJobExtractionActionResult> {
   return handlePrivateJobExtraction(jobId);
+}
+
+export async function saveManualJobDescriptionAction(
+  jobId: string,
+  _previousState: ManualJobDescriptionActionState,
+  formData: FormData,
+): Promise<ManualJobDescriptionActionState> {
+  void _previousState;
+  const result = await transitionPastedUrlJobToManualText(
+    jobId,
+    formData.get("rawText"),
+  );
+
+  switch (result.status) {
+    case "success":
+      revalidatePath(`/jobs/${jobId}`);
+      return {
+        status: "success",
+        message: "Job description saved. You can now analyze this job.",
+      };
+    case "invalid_job_text":
+      return {
+        status: "invalid_job_text",
+        message: "Paste a job description between 1 and 100,000 characters.",
+      };
+    case "unauthenticated":
+      return {
+        status: "unauthenticated",
+        message: "Log in again to update this private job.",
+      };
+    case "job_unavailable":
+      return {
+        status: "job_unavailable",
+        message: "This private job is no longer available.",
+      };
+    case "persistence_unavailable":
+      return {
+        status: "persistence_unavailable",
+        message: "The job description could not be saved. Try again.",
+      };
+  }
 }
 
 async function getOrCreateCompany(
@@ -141,6 +205,16 @@ export async function createPrivateJobAction(
     };
   }
 
+  const preparedIntake = preparePrivateJobIntake({
+    sourceUrl: values.sourceUrl,
+    rawText: values.rawText,
+  });
+  if (preparedIntake.status !== "success") {
+    return urlMutationError(values, preparedIntake.status);
+  }
+  values.sourceUrl = preparedIntake.sourceUrl ?? "";
+  values.rawText = preparedIntake.rawText ?? "";
+
   const company = await getOrCreateCompany(
     context.supabase,
     context.user.id,
@@ -150,18 +224,12 @@ export async function createPrivateJobAction(
     return mutationError(values, "The company could not be saved. Try again.");
   }
 
-  const intakeSource = values.rawText
-    ? "pasted_text"
-    : values.sourceUrl
-      ? "pasted_url"
-      : "manual";
-
   const { data, error } = await context.supabase
     .from("job_postings")
     .insert({
       ...jobPayload(values, company.id),
       user_id: context.user.id,
-      intake_source: intakeSource,
+      intake_source: preparedIntake.intakeSource,
     })
     .select("id")
     .single();
@@ -213,9 +281,19 @@ export async function updatePrivateJobAction(
     };
   }
 
+  const preparedIntake = preparePrivateJobIntake({
+    sourceUrl: values.sourceUrl,
+    rawText: values.rawText,
+  });
+  if (preparedIntake.status !== "success") {
+    return urlMutationError(values, preparedIntake.status);
+  }
+  values.sourceUrl = preparedIntake.sourceUrl ?? "";
+  values.rawText = preparedIntake.rawText ?? "";
+
   const { data: existing, error: existingError } = await context.supabase
     .from("job_postings")
-    .select("id")
+    .select("id,intake_source")
     .eq("id", jobId)
     .eq("user_id", context.user.id)
     .maybeSingle();
@@ -235,7 +313,13 @@ export async function updatePrivateJobAction(
 
   const { data, error } = await context.supabase
     .from("job_postings")
-    .update(jobPayload(values, company.id))
+    .update({
+      ...jobPayload(values, company.id),
+      intake_source: intakeSourceAfterManualEdit(
+        existing.intake_source as PrivateJobIntakeSource,
+        values.rawText,
+      ),
+    })
     .eq("id", jobId)
     .eq("user_id", context.user.id)
     .select("id")

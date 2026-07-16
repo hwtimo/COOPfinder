@@ -139,6 +139,10 @@ function JobFormDialog({
               aria-describedby={describedBy("sourceUrl", state)}
               className={inputClassName}
             />
+            <p className="text-xs leading-5 text-muted-foreground">
+              Saved as a source link only. Automatic URL retrieval is not
+              currently supported.
+            </p>
             <FieldError field="sourceUrl" state={state} />
           </label>
 

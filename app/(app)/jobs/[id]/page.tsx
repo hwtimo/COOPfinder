@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { DeadlineBadge, StatusBadge } from "@/components/app/status-badge";
 import { PrivateJobControls } from "@/components/jobs/private-job-controls";
 import { JobAnalysisControl } from "@/components/jobs/job-analysis-control";
+import { ManualJobDescriptionForm } from "@/components/jobs/manual-job-description-form";
 import { Button } from "@/components/ui/button";
 import {
   buildJobExtractionViewModel,
@@ -27,6 +28,10 @@ import {
   formatPrivateJobDeadline,
 } from "@/lib/jobs/dates";
 import { isValidHttpUrl } from "@/lib/jobs/forms";
+import {
+  isPreparedForJobAnalysis,
+  requiresManualJobDescription,
+} from "@/lib/jobs/job-url-intake";
 import { getPrivateJob } from "@/lib/jobs/queries";
 import type { PrivateJobIntakeSource } from "@/lib/jobs/types";
 import { getSupabaseEnv } from "@/lib/supabase/env";
@@ -231,9 +236,12 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
     job.extractionConfidence,
   );
   const canAnalyze =
-    job.intakeSource === "pasted_text" &&
-    Boolean(job.rawText?.trim()) &&
+    isPreparedForJobAnalysis(job.intakeSource, job.rawText) &&
     analysis.status !== "unavailable";
+  const needsManualJobDescription = requiresManualJobDescription(
+    job.intakeSource,
+    job.rawText,
+  );
 
   return (
     <div className="space-y-6">
@@ -315,6 +323,12 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
           >
             <div className="space-y-4">
               <JobAnalysis analysis={analysis} />
+              {needsManualJobDescription ? (
+                <ManualJobDescriptionForm
+                  jobId={job.id}
+                  sourceUrl={validSourceUrl ? job.sourceUrl : null}
+                />
+              ) : null}
               {canAnalyze ? (
                 <JobAnalysisControl
                   jobId={job.id}
