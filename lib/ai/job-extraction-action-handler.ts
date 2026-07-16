@@ -2,7 +2,7 @@ import "server-only";
 
 import { isUuid } from "@/lib/jobs/queries";
 
-import type { ExtractAndPersistOwnedJobResult } from "./extract-and-persist-owned-job";
+import type { ParserCreditEnforcedJobResult } from "./parser-analysis-credit-coordinator";
 
 export type PrivateJobExtractionActionResult =
   | { status: "persisted" }
@@ -17,7 +17,10 @@ export type PrivateJobExtractionActionResult =
   | { status: "invalid_structured_output" }
   | { status: "invalid_job_text" }
   | { status: "persistence_unavailable" }
-  | { status: "persistence_rejected" };
+  | { status: "persistence_rejected" }
+  | { status: "no_credits" }
+  | { status: "daily_limit" }
+  | { status: "credit_unavailable" };
 
 export type PrivateJobExtractionActionDependencies = {
   runBridge: (jobId: string) => Promise<unknown>;
@@ -38,6 +41,9 @@ const ACTION_STATUSES = new Set<PrivateJobExtractionActionResult["status"]>([
   "invalid_job_text",
   "persistence_unavailable",
   "persistence_rejected",
+  "no_credits",
+  "daily_limit",
+  "credit_unavailable",
 ]);
 
 function isActionStatus(
@@ -49,7 +55,7 @@ function isActionStatus(
   );
 }
 
-function safeBridgeResult(value: unknown): ExtractAndPersistOwnedJobResult | null {
+function safeBridgeResult(value: unknown): ParserCreditEnforcedJobResult | null {
   if (typeof value !== "object" || value === null || !("status" in value)) {
     return null;
   }
@@ -57,7 +63,7 @@ function safeBridgeResult(value: unknown): ExtractAndPersistOwnedJobResult | nul
   const status = value.status;
   if (!isActionStatus(status)) return null;
 
-  return { status } as ExtractAndPersistOwnedJobResult;
+  return { status } as ParserCreditEnforcedJobResult;
 }
 
 export function createPrivateJobExtractionActionHandler(

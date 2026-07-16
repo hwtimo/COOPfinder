@@ -79,6 +79,9 @@ const directMappings: PrivateJobExtractionActionResult[] = [
   { status: "invalid_job_text" },
   { status: "persistence_unavailable" },
   { status: "persistence_rejected" },
+  { status: "no_credits" },
+  { status: "daily_limit" },
+  { status: "credit_unavailable" },
 ];
 
 for (const expected of directMappings) {

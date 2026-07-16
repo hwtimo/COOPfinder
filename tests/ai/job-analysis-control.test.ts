@@ -16,6 +16,15 @@ const safeFailures = [
     "unsupported_source",
     "Analysis is available only for pasted job descriptions.",
   ],
+  ["no_credits", "You have used your available job analyses."],
+  [
+    "daily_limit",
+    "You have reached the rolling 24-hour analysis attempt limit. Try again later.",
+  ],
+  [
+    "credit_unavailable",
+    "Analysis credits are temporarily unavailable. Try again.",
+  ],
   ["invalid_job_text", "Add a valid job description before analyzing."],
   ["configuration_unavailable", "AI analysis is not configured right now."],
   [

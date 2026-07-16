@@ -61,6 +61,24 @@ export function jobAnalysisFeedback(result: unknown): JobAnalysisFeedback {
         message: "Analysis is available only for pasted job descriptions.",
         refresh: false,
       };
+    case "no_credits":
+      return {
+        tone: "error",
+        message: "You have used your available job analyses.",
+        refresh: false,
+      };
+    case "daily_limit":
+      return {
+        tone: "error",
+        message: "You have reached the rolling 24-hour analysis attempt limit. Try again later.",
+        refresh: false,
+      };
+    case "credit_unavailable":
+      return {
+        tone: "error",
+        message: "Analysis credits are temporarily unavailable. Try again.",
+        refresh: false,
+      };
     case "invalid_job_text":
       return {
         tone: "error",
