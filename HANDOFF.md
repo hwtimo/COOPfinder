@@ -16,12 +16,18 @@
 > resume, exports a clean PDF, and sends you back to the original site to
 > apply yourself."
 >
-> **Repository evidence reviewed through:** parser-credit integration log
-> commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, including reservation-table
+> **As built today:** saving a URL stores only its normalized link. Automatic
+> retrieval is not implemented; the owner must paste the job description
+> before the existing Analyze path becomes available.
+>
+> **Repository evidence reviewed through:** URL/manual-fallback implementation
+> commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
+> integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
 > privilege hardening commit `2276ef39a1a6dfc128bfe8d4677c7385302fbab8`
 > and Analyze integration commit
-> `5744ba72a3dae9008ff9ff95d0d641c0b0476caa`. The worktree was clean before
-> this documentation-only synchronization.
+> `5744ba72a3dae9008ff9ff95d0d641c0b0476caa`. A validated URL/manual-fallback
+> session-log draft was the only pre-existing worktree change before this
+> documentation-only synchronization.
 
 ---
 
@@ -96,6 +102,15 @@
     existing authenticated server action. It reserves before provider work,
     proceeds only after `reserved`, and finalizes successful persistence as
     consumed or post-reservation failure as refunded.
+12. **Authenticated URL-only private-job intake with manual pasted-text
+    fallback** — HTTP/HTTPS URLs are normalized and stored as `pasted_url`
+    without fabricated `raw_text`. No server-side fetch, DNS lookup, HTML
+    parsing, crawling, redirect processing, scraping, or job-board adapter
+    exists. Only the authenticated owner can submit valid manual text to the
+    same job; one conditional update writes `raw_text` and changes
+    `intake_source` to `pasted_text` together while preserving `source_url` and
+    existing extraction. The unchanged credit-enforced Analyze path then
+    becomes available, and no duplicate job is created.
 
 Also in place since earlier phases: Supabase auth (`/login`,
 `/auth/callback`, `/auth/sign-out`), `proxy.ts` hybrid route protection,
@@ -114,8 +129,8 @@ Private (via `proxy.ts`): `/dashboard`, `/jobs`, `/jobs/[id]`,
 `/resumes/tailor/[jobId]`, `/calendar`, `/insights`, `/documents`,
 `/settings`. Guests hitting `/jobs` are redirected to `/board`.
 
-Persistence status by screen: `/board*`, `/jobs*` (including eligible private
-pasted-text Job analysis), `/applications*`, and
+Persistence status by screen: `/board*`, `/jobs*` (including URL-only manual-
+paste preparation and eligible private pasted-text Job analysis), `/applications*`, and
 `/resumes/master` read and write **real Supabase data** (with honest disabled
 states when Supabase env is absent). Dashboard, Resumes hub, Tailoring
 Workspace, Calendar, Insights, Documents, and Settings still render
@@ -322,6 +337,25 @@ Parser-credit boundary as built:
   Reservation IDs stay server-only, and blocked or failed re-analysis preserves
   the previous persisted analysis.
 
+URL/manual-fallback boundary as built:
+
+- URL-only private jobs store a normalized HTTP/HTTPS `source_url`,
+  `intake_source='pasted_url'`, and no fabricated `raw_text`. Common tracking
+  parameters and fragments are removed; unsafe local/literal hosts,
+  credentials, non-default ports, unsupported protocols, malformed URLs, and
+  sensitive query keys are rejected.
+- Automatic URL retrieval is not implemented. There is no server-side fetch,
+  DNS lookup, HTML parsing, crawling, redirect processing, scraping, or job-
+  board adapter. Manual pasted text remains the only parser input.
+- A URL-only Job Detail shows a manual-paste-required state. Only the
+  authenticated owner can atomically add valid manual text and transition the
+  same job from `pasted_url` to `pasted_text`; `source_url` and existing
+  extraction remain unchanged, and no duplicate job is created.
+- URL creation and manual preparation call no provider, parser-credit reserve
+  or finalize path, extraction persistence, `job_intake_events`, or tailoring-
+  credit function/table. After transition, Analyze and Analyze Again use the
+  existing parser-credit-enforced path unchanged.
+
 ## 5b. Codex working record
 
 Continue with one narrow Codex prompt at a time. Every meaningful core task
@@ -404,6 +438,12 @@ Live checks completed against the development Supabase project:
   transport failure received exactly one retry without repeated provider or
   persistence work. Failed re-analysis preserved existing persisted analysis.
   No real OpenAI API request was made.
+- URL/creation/transition/UI-state verification passed 56 focused tests, and
+  the existing AI/parser-credit/action regression suite passed 136 tests.
+  Lint, typecheck, the production webpack build, both diff checks, and complete
+  implementation diff review passed. URL creation and manual preparation made
+  no provider, parser-credit reservation/finalization, extraction-persistence,
+  intake-event, or tailoring-credit call.
 
 Parser-credit action integration is `CONDITIONALLY COMPLETE`: production
 integration and repository verification passed, and the database lifecycle was
@@ -411,6 +451,18 @@ verified live. The deployed Server Action was not tested with a fake provider
 because safely injecting one would require an unauthorized production testing
 bypass. This is a verification limitation, not a known implementation defect;
 no deployed fake- or real-provider success is claimed.
+
+URL/manual-fallback browser verification is `CONDITIONALLY COMPLETE`. The
+local development app started, linked development Supabase was reachable, and
+disposable identities were created, but the available administrative login
+flow produced an implicit-token callback while the application requires PKCE
+authorization-code authentication. An authenticated application session and
+URL-only browser job could not be completed; Analyze was never submitted. This
+is a verification-environment limitation, not a known implementation defect.
+No submitted job URL or OpenAI request occurred. All disposable identities and
+scoped rows were deleted, final scoped fixture counts returned to zero, and no
+test authentication material was retained in the repository, documents,
+browser state, or fixtures.
 
 The pre-Applications release gate is complete. The only conditional limit is
 guest-import post-write rollback: it was not behaviorally exercised because
@@ -438,23 +490,32 @@ and it did not block Applications CRUD.
 7. The deployed Server Action was not tested with a fake provider because that
    would require an unauthorized production testing bypass. Repository and
    live database lifecycle verification passed; this is not a known defect.
-8. No live authenticated OpenAI success is proven. URL intake, production
+8. No live authenticated OpenAI success is proven. URL collection plus manual
+   pasted-text fallback is implemented, but authenticated browser smoke
+   completion and any server-side URL retrieval remain outstanding. Production
    tailoring, claim checking, and deterministic export are not implemented.
 
 ## 8. Next work (in order)
 
-**Next narrow boundary: bounded user-directed job URL intake with a manual
-pasted-text fallback.** The private pasted-text parser, migrations `015`–`018`,
-and production Analyze / Analyze Again credit enforcement are complete; do not
-redo them.
+**Next narrow boundary: establish a normal PKCE-compatible disposable browser-
+auth testing path and complete the deferred URL-only/manual-paste smoke test
+before considering any server-side URL retrieval.** The private pasted-text
+parser, migrations `015`–`018`, production Analyze / Analyze Again credit
+enforcement, and URL-only/manual-paste implementation are complete; do not redo
+them. This is a testing/infrastructure boundary, not permission to add a
+production authentication bypass.
 
 Remaining roadmap order:
 
-1. Bounded user-directed job URL intake with a manual pasted-text fallback.
-2. Evidence-backed reviewable resume tailoring.
-3. Mechanical claim checker.
-4. Deterministic PDF export.
-5. Final MVP integration and end-to-end QA.
+1. Establish a normal PKCE-compatible disposable browser-auth testing path and
+   complete the deferred URL-only/manual-paste smoke test.
+2. Only after that verification, consider a separately bounded server-side URL
+   retrieval transport with manual fallback preserved; it is not implemented
+   or approved by this handoff.
+3. Evidence-backed reviewable resume tailoring.
+4. Mechanical claim checker.
+5. Deterministic PDF export.
+6. Final MVP integration and end-to-end QA.
 
 One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
 
@@ -464,12 +525,20 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   RPC), private Jobs CRUD, Master Profile persistence, guest-draft import, and
   Applications CRUD through deletion/recreation (`007`–`014`), private
   pasted-text parsing (`015`), parser-credit database foundations and ACL
-  hardening (`016`–`018`), and production Analyze credit enforcement are done
-  — extend, don't rewrite.
+  hardening (`016`–`018`), production Analyze credit enforcement, and URL-only
+  collection with owner-only manual pasted-text fallback are done — extend,
+  don't rewrite.
 - **Do not rewrite the app shell or redesign completed screens.**
-- **No blanket scraping or crawling, ever.** Future URL intake is ONE
-  user-directed fetch with paste fallback. No CAPTCHA/login-wall/bot-
-  protection bypasses of any kind.
+- **No blanket scraping or crawling, ever.** Current URL intake stores a
+  normalized URL and requires manual pasted text; it performs no fetch, DNS
+  lookup, HTML parsing, redirect processing, scraping, or job-board adaptation.
+  Do not add `fetch(url)` casually or claim URL contents are retrieved
+  automatically. No CAPTCHA/login-wall/bot-protection bypasses of any kind.
+- **Do not bypass authentication for browser testing.** Complete the deferred
+  smoke test only through a normal PKCE-compatible disposable-user flow.
+- **Do not reimplement parsing or credit logic inside URL intake.** Preserve
+  manual pasted text as parser input and the existing credit-enforced Analyze /
+  Analyze Again path after transition to `pasted_text`.
 - **No auto-apply, ever.** Users apply on the original site via `source_url`.
 - **Never republish job-description text through `board_jobs`.** Raw pasted
   JD belongs only in private `job_postings.raw_text`; board entries are

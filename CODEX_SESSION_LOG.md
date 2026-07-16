@@ -2242,6 +2242,92 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** **bounded user-directed URL intake with a manual pasted-text
   fallback**
 
+### URL-only saved jobs with owner-only manual-paste fallback
+
+- **Date and time:** 2026-07-16 08:53 PDT
+- **Development phase:** Private-job URL intake and preparation
+- **Completion classification:** `CONDITIONALLY COMPLETE`. Implementation and
+  automated repository verification passed. Authenticated browser smoke
+  testing could not be completed because the available administrative magic-
+  link flow produced an implicit-token callback while the application requires
+  a PKCE authorization-code callback. Safely completing that test would require
+  either a disposable inbox capable of following the normal PKCE email flow or
+  an unauthorized session/test bypass. This is a test-environment limitation,
+  not a known implementation defect.
+- **Session purpose:** Add the intentionally limited URL-only private-job save
+  state and an authenticated owner-only manual-paste transition into the
+  existing pasted-text Analyze path, without retrieving remote page content.
+- **Implementation commit:** `feat: add manual fallback for URL jobs`,
+  `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`.
+- **Files changed:** `app/(app)/jobs/[id]/page.tsx`,
+  `app/(app)/jobs/actions.ts`,
+  `components/jobs/private-job-form-modal.tsx`,
+  `components/jobs/manual-job-description-form.tsx`, `lib/jobs/forms.ts`,
+  `lib/jobs/job-url-intake.ts`,
+  `lib/jobs/manual-job-description-transition.ts`,
+  `tests/jobs/job-url-intake.test.ts`, and
+  `tests/jobs/manual-job-description-transition.test.ts`.
+- **Architecture:** URL intake is pure and performs no server-side fetch, DNS
+  lookup, HTML parsing, crawling, redirect processing, scraping, or job-board
+  adaptation. It stores only a normalized URL and preserves the existing
+  pasted-text Analyze path. The owner-only transition conditionally updates one
+  caller-owned `pasted_url` row, writing `raw_text` and changing
+  `intake_source` to `pasted_text` together. It preserves `source_url`, leaves
+  existing extraction data unchanged, creates no duplicate job, writes no
+  `job_intake_events`, and invokes no parser-credit, provider,
+  extraction-persistence, or tailoring-credit path during intake.
+- **URL validation contract:** Only HTTP and HTTPS are accepted. Normalization
+  lowercases scheme and hostname, removes fragments and default ports, removes
+  common tracking parameters, and orders retained query parameters
+  deterministically. Validation rejects malformed URLs, embedded credentials,
+  unsupported protocols, explicit non-default ports, localhost and localhost
+  subdomains, unsafe IPv4 and IPv6 literals, and case-insensitive sensitive
+  query keys. It does not claim DNS-based SSRF protection or remote-host
+  verification; no network request occurs in this implementation.
+- **Creation behavior:** URL-only creation stores normalized `source_url`, uses
+  `intake_source = 'pasted_url'`, and fabricates no `raw_text`. A valid URL plus
+  manual text uses `intake_source = 'pasted_text'`; the existing pasted-text
+  path remains supported. Rejected URLs produce no job write.
+- **Manual-paste transition:** Only the authenticated owner and only a
+  `pasted_url` job are eligible. The action requires nonblank plain text of at
+  most 100,000 characters and updates `raw_text` and `intake_source` together,
+  yielding `pasted_text`. Missing and foreign-user jobs share the same safe
+  unavailable result. `source_url` and existing extraction remain unchanged.
+- **UI behavior:** A URL-only private job displays a manual-paste-required
+  state, shows the saved URL through the existing safe display pattern, states
+  that automatic URL retrieval is not currently supported, and provides one
+  textarea and one save action. After a successful transition, the existing
+  Analyze control becomes available. Analyze and Analyze Again continue
+  through the existing parser-credit-enforced path.
+- **Automated verification:** Focused URL, creation, transition, and UI-state
+  tests passed 56/56; existing AI/parser-credit/action regression tests passed
+  136/136. Lint, typecheck, the production webpack build,
+  `git diff --check`, `git diff --cached --check`, and complete diff review
+  passed. The implementation changed or performed no migration, SQL,
+  dependency, lockfile, environment content, documentation, database schema,
+  external URL request, or OpenAI request.
+- **Browser smoke-test limitation:** The local development app started
+  successfully, linked development Supabase was reachable, and disposable
+  users were created. An authenticated application session could not be
+  established because the available administrative flow and the application's
+  PKCE callback contract were incompatible. Consequently, no URL-only job
+  browser flow was completed. Analyze was never submitted, no real OpenAI
+  request occurred, and no submitted job URL was fetched. Disposable identities
+  and all scoped rows were deleted; final disposable-user, private-job,
+  parser-reservation, parser-event, extraction-fixture, intake-event, and
+  tailoring-fixture counts were all zero.
+- **Current product boundary:** URL-only collection plus a manual pasted-text
+  fallback is implemented; automatic URL retrieval remains unsupported.
+- **Real `/feedback` Session ID:**
+  `019f68d2-071e-79b1-86a9-f96fcc3b3cbc`. The current Codex session did not
+  change, so `/feedback` was not rerun.
+- **Known limitation:** The authenticated browser flow remains unverified until
+  a disposable email inbox or another authorized PKCE-compatible test path is
+  available.
+- **Next action:** Establish a normal PKCE-compatible disposable browser-auth
+  testing path and complete the deferred URL-only/manual-paste smoke test before
+  considering any server-side URL retrieval.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
