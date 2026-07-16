@@ -2158,6 +2158,90 @@ only when necessary to explain configuration; never record their values.
   caveat, then integrate server-side reservation and finalization around the
   existing Analyze action in a separate narrow task.
 
+### Parser-credit production integration for Analyze and Analyze Again
+
+- **Date and time:** 2026-07-16 00:18 PDT
+- **Development phase:** AI job parser production credit enforcement
+- **Completion classification:** `CONDITIONALLY COMPLETE`. Production
+  integration and repository verification passed. The only condition is that
+  the deployed Server Action was not tested with a fake provider because safely
+  injecting one would have required a forbidden production testing bypass. No
+  real OpenAI request was made. This is a verification limitation, not a known
+  implementation defect.
+- **Session purpose:** Enforce parser-analysis credits on the production Analyze
+  and Analyze Again path while preserving the existing extraction and
+  persistence architecture.
+- **Implementation commit:** `feat: enforce parser credits on job analysis`,
+  `5744ba72a3dae9008ff9ff95d0d641c0b0476caa`.
+- **Files changed:** `app/(app)/jobs/actions.ts`,
+  `lib/ai/parser-analysis-credit-coordinator.ts`,
+  `lib/ai/job-extraction-action-handler.ts`,
+  `lib/ai/job-analysis-control.ts`,
+  `tests/ai/parser-analysis-credit-coordinator.test.ts`,
+  `tests/ai/job-extraction-action-handler.test.ts`, and
+  `tests/ai/job-analysis-control.test.ts`.
+- **Architecture:** The integration reuses
+  `extractAndPersistPrivateJobAction`,
+  `createPrivateJobExtractionActionHandler`, and
+  `extractAndPersistOwnedJob`. A new server-only coordinator wraps the existing
+  extraction and persistence path rather than duplicating it. Analyze and
+  Analyze Again now share this parser-credit-enforced server path.
+- **Production behavior:** The authenticated request-bound Supabase client
+  reserves credit before provider invocation, and only `reserved` proceeds to
+  extraction. Blocked outcomes make no provider request and persist no
+  extraction. Successful extraction and persistence finalize as consumed;
+  post-reservation failures finalize as refunded. A transport-level
+  finalization failure receives exactly one idempotent retry without repeating
+  provider or persistence work. Reservation identifiers remain server-only.
+  Existing persisted analysis survives a blocked or failed Analyze Again. The
+  normal user path uses no elevated service-role or admin client, and parser
+  credits remain separate from tailoring credits.
+- **Reservation outcome mapping:** `reserved` proceeds through the existing
+  extraction/persistence path; `no_credits` returns the typed no-credit result;
+  `daily_limit` returns the typed rolling-limit result; `unsupported_source`
+  returns the typed unsupported-source result; `invalid_input` returns the
+  existing invalid-job-text result; and `unavailable`, malformed RPC responses,
+  or reservation transport failure return a sanitized credit-unavailable
+  result.
+- **Finalization behavior:** Persisted and `already_persisted` successful
+  results finalize with success and require `consumed`. Provider, extraction,
+  validation, orchestration, or persistence failures after reservation finalize
+  with failure and require `refunded`. Failed finalization receives one retry;
+  provider and persistence do not run again during that retry. The database
+  remains authoritative for lifetime and rolling limits.
+- **Focused verification:** 136 tests passed and 0 failed. Every blocked
+  reservation outcome invoked provider 0 times, persistence 0 times, and
+  finalization 0 times. Success invoked reserve once, provider once,
+  persistence once, and successful finalization once. Provider failure invoked
+  provider once, persistence 0 times, and refund finalization once. Persistence
+  failure invoked provider once, persistence once, and refund finalization
+  once. A finalization transport failure received exactly one retry with no
+  repeated provider or persistence invocation. Tests also confirmed that no
+  reservation ID is exposed, no tailoring-credit RPC or table is invoked, and
+  prior persisted analysis is preserved after failed re-analysis.
+- **Linked-development verification:** The database portion was verified live
+  without OpenAI. A simulated success produced `reserved -> consumed`, one
+  reserved event, and one consumed event. A simulated failed re-analysis
+  produced `reserved -> refunded` while leaving the previous extraction
+  unchanged. Cross-user job, reservation, and event visibility was zero.
+  Tailoring-credit rows and balance were unchanged. Disposable users, jobs,
+  reservations, events, tailoring rows, and extraction fixtures were cleaned
+  up. No OpenAI API request occurred. The deployed Server Action itself was not
+  executed with a fake provider.
+- **Standard checks:** Focused tests, lint, typecheck, the Next.js production
+  webpack build, `git diff --check`, `git diff --cached --check`, and complete
+  diff review passed. The implementation changed or performed no migration,
+  SQL schema, documentation, environment content, dependency manifest,
+  lockfile, configuration, push, or real OpenAI request.
+- **Real `/feedback` Session ID:**
+  `019f68d2-071e-79b1-86a9-f96fcc3b3cbc`. The current Codex session did not
+  change, so `/feedback` was not rerun.
+- **Known limitation:** Verification did not execute the deployed Server Action
+  with a fake provider; doing so safely would have required a forbidden
+  production testing bypass. This does not identify an implementation defect.
+- **Next action:** **bounded user-directed URL intake with a manual pasted-text
+  fallback**
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
