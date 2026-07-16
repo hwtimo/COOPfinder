@@ -1,7 +1,7 @@
 # HANDOFF.md — COOPfinder Continuation Handoff
 
 > **Purpose:** Let the next coding agent continue without rediscovering the
-> current state. This reflects the codebase as of **2026-07-15**.
+> current state. This reflects the codebase as of **2026-07-16**.
 >
 > **Read before coding:** [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) (r2 —
 > current), [DESIGN.md](DESIGN.md) (esp. §22–24),
@@ -16,11 +16,12 @@
 > resume, exports a clean PDF, and sends you back to the original site to
 > apply yourself."
 >
-> **Repository evidence reviewed through:** parser-credit foundation log commit
-> `498af7945fef106d06df10b60b36775eee276d45`, including atomic parser credits
-> commit `81cc53676fe51c85ee542b3000f93ad70d679aca` and append-only credit events
-> commit `2d1843c2ef2400404ce4a7db8ff2b163a2634c41`. The worktree was clean
-> before this documentation-only synchronization.
+> **Repository evidence reviewed through:** parser-credit integration log
+> commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, including reservation-table
+> privilege hardening commit `2276ef39a1a6dfc128bfe8d4677c7385302fbab8`
+> and Analyze integration commit
+> `5744ba72a3dae9008ff9ff95d0d641c0b0476caa`. The worktree was clean before
+> this documentation-only synchronization.
 
 ---
 
@@ -83,13 +84,18 @@
    analysis display, and Analyze / Analyze Again controls for eligible
    `intake_source='pasted_text'` jobs. No live authenticated OpenAI success has
    been proven; do not manufacture that verification claim.
-10. **Parser-analysis credit database foundation** — migration `016` adds
+10. **Parser-analysis credit database foundation and ACL hardening** —
+    migration `016` adds
     atomic authenticated reservation/finalization with lifetime successful
     capacity 2 and rolling 24-hour attempt limit 3; migration `017` adds
-    separate append-only reserved/consumed/refunded events. These RPCs and
-    accounting rules are verified, but production Analyze does not call
-    `reserve_parser_analysis_credit` or `finalize_parser_analysis_credit`, so
-    the UI flow does not yet reserve, consume, or refund parser credits.
+    separate append-only reserved/consumed/refunded events; migration `018`
+    removes authenticated direct INSERT/UPDATE/DELETE reservation-table
+    privileges while preserving own-row SELECT through RLS and authenticated
+    reserve/finalize RPC execution.
+11. **Parser-credit Analyze integration** — Analyze and Analyze Again share the
+    existing authenticated server action. It reserves before provider work,
+    proceeds only after `reserved`, and finalizes successful persistence as
+    consumed or post-reservation failure as refunded.
 
 Also in place since earlier phases: Supabase auth (`/login`,
 `/auth/callback`, `/auth/sign-out`), `proxy.ts` hybrid route protection,
@@ -243,15 +249,18 @@ Workspace, Calendar, Insights, Documents, and Settings still render
 19. `202607130015_atomic_job_extraction_persistence.sql`
 20. `202607130016_atomic_parser_analysis_credits.sql`
 21. `20260716042744_append_only_parser_analysis_credit_events.sql`
+22. `20260716064357_revoke_parser_reservation_client_writes.sql`
 
-All twenty-one are committed and applied to the connected development Supabase
+All twenty-two are committed and applied to the connected development Supabase
 project. Migrations 003–005 are
 forward-only repairs to `import_guest_draft()`; migration 006 repairs only
 `save_master_profile()`; `007`–`014` are the Applications foundation and
 atomic creation/status/notes/deadline/follow-up/deletion sequence; `015` is
-atomic extraction persistence; and `016`–`017` are the mutable parser-credit
-reservation plus append-only event foundations. Do not edit or squash applied
-migration history.
+atomic extraction persistence; `016`–`017` are the mutable parser-credit
+reservation plus append-only event foundations; and `018` revokes direct
+reservation-table writes from authenticated while retaining own-row SELECT via
+RLS and authenticated RPC execution. Do not edit or squash applied migration
+history.
 
 ## 5a. AI routing (Luna parser implemented; Terra/Sol planned)
 
@@ -287,13 +296,31 @@ Parser-credit boundary as built:
   minimal, users can select only their own events, and anonymous/authenticated
   direct event writes are not allowed.
 - This parser-credit system is separate from `tailoring_credit_ledger`, and
-  Analyze currently invokes extraction without reserve/finalize wrapping.
+  Analyze and Analyze Again share the parser-credit-enforced action path.
 - `parser_analysis_credit_reservations` has only an authenticated own-row
-  SELECT policy, so RLS blocks direct authenticated writes. Its ACL nevertheless
-  still includes authenticated INSERT/UPDATE/DELETE privileges; this is a
-  hardening caveat, not a demonstrated bypass. The next forward migration must
-  revoke unnecessary direct write privileges while preserving authenticated
-  RPC execute and own-row SELECT/RLS behavior.
+  SELECT policy. Migration `018` removed authenticated direct INSERT/UPDATE/
+  DELETE privileges while preserving that SELECT/RLS boundary and
+  authenticated reserve/finalize RPC execution.
+- `extractAndPersistPrivateJobAction` and
+  `createPrivateJobExtractionActionHandler` route through the server-only
+  `extractAndPersistOwnedJobWithCredits` coordinator, created by
+  `createParserAnalysisCreditCoordinator`, which reuses
+  `extractAndPersistOwnedJob`. The request-bound authenticated Supabase client
+  relies on `auth.uid()` inside the existing RPCs; normal user execution uses
+  no service-role client and duplicates neither provider nor persistence logic.
+- Reservation mapping is typed and closed: `reserved` proceeds; `no_credits`
+  returns no-credit; `daily_limit` returns rolling-limit;
+  `unsupported_source` returns unsupported-source; `invalid_input` returns
+  invalid-job-text; and unavailable, malformed, or reservation transport
+  failures return sanitized credit-unavailable. Internal reservation IDs, SQL
+  errors, provider payloads, prompts, and stack traces are not exposed.
+- Blocked outcomes invoke neither provider nor persistence. Successful
+  persistence, including `already_persisted`, finalizes as `consumed`; provider,
+  extraction, validation, orchestration, or persistence failures after
+  reservation finalize as `refunded`. Finalization transport failure receives
+  exactly one idempotent retry without repeating provider or persistence work.
+  Reservation IDs stay server-only, and blocked or failed re-analysis preserves
+  the previous persisted analysis.
 
 ## 5b. Codex working record
 
@@ -330,7 +357,7 @@ no browser console warnings/errors observed.
 
 Live checks completed against the development Supabase project:
 
-- all twenty-one migrations through `20260716042744` applied and expected
+- all twenty-two migrations through `20260716064357` applied and expected
   objects found;
 - `save_master_profile()` persistence, replacement/clearing, confirmation,
   ownership, application payload, and later-failure rollback passed;
@@ -366,6 +393,24 @@ Live checks completed against the development Supabase project:
   uniqueness/consistency, ownership isolation, anonymous rejection, cleanup,
   and tailoring-credit noninterference. No OpenAI API request was made for the
   database credit work.
+- migration `018` verified authenticated own-row reservation SELECT through
+  RLS, removal of direct authenticated INSERT/UPDATE/DELETE table privileges,
+  and continued authenticated reserve/finalize RPC execution;
+- parser-credit action integration passed 136 focused tests, lint, typecheck,
+  and the production webpack build. Blocked reservation outcomes made zero
+  provider, persistence, and finalization calls. Success made one reserve, one
+  provider call, one persistence operation, and one successful finalization.
+  Provider and persistence failures caused refund finalization. Finalization
+  transport failure received exactly one retry without repeated provider or
+  persistence work. Failed re-analysis preserved existing persisted analysis.
+  No real OpenAI API request was made.
+
+Parser-credit action integration is `CONDITIONALLY COMPLETE`: production
+integration and repository verification passed, and the database lifecycle was
+verified live. The deployed Server Action was not tested with a fake provider
+because safely injecting one would require an unauthorized production testing
+bypass. This is a verification limitation, not a known implementation defect;
+no deployed fake- or real-provider success is claimed.
 
 The pre-Applications release gate is complete. The only conditional limit is
 guest-import post-write rollback: it was not behaviorally exercised because
@@ -390,36 +435,26 @@ and it did not block Applications CRUD.
 6. Tracker drag-and-drop, Table/Calendar modes, resume attachment, arbitrary
    timeline entries, recruiter contacts, notifications, and Calendar
    integration are not implemented.
-7. Production Analyze is not wrapped in parser-credit reservation/finalization;
-   migrations `016`–`017` therefore do not enforce UI credits yet.
-8. Direct authenticated writes to parser-credit reservations are blocked by
-   current RLS (only own-row SELECT is permitted), but the table ACL still
-   includes authenticated INSERT/UPDATE/DELETE. This has not demonstrated a
-   bypass; remove the unnecessary grants with a forward-only migration before
-   production credit integration.
-9. No live authenticated OpenAI success is proven. URL intake, production
+7. The deployed Server Action was not tested with a fake provider because that
+   would require an unauthorized production testing bypass. Repository and
+   live database lifecycle verification passed; this is not a known defect.
+8. No live authenticated OpenAI success is proven. URL intake, production
    tailoring, claim checking, and deterministic export are not implemented.
 
 ## 8. Next work (in order)
 
-**Next narrow boundary: parser-credit table privilege hardening.** The private
-pasted-text parser and migrations `015`–`017` are complete; do not redo them.
-Create one forward-only migration that revokes unnecessary authenticated
-INSERT/UPDATE/DELETE privileges on
-`parser_analysis_credit_reservations` while preserving authenticated execute
-on the reserve/finalize RPCs and own-row SELECT/RLS behavior. Do not combine
-this hardening migration with production Analyze integration.
+**Next narrow boundary: bounded user-directed job URL intake with a manual
+pasted-text fallback.** The private pasted-text parser, migrations `015`–`018`,
+and production Analyze / Analyze Again credit enforcement are complete; do not
+redo them.
 
 Remaining roadmap order:
 
-1. Parser-credit privilege-hardening migration described above.
-2. Wrap Analyze in reserve/finalize after the ACL boundary is resolved or
-   explicitly accepted.
-3. Bounded user-directed URL intake with manual paste fallback.
-4. Evidence-backed reviewable resume tailoring.
-5. Mechanical claim checker.
-6. Deterministic PDF export.
-7. Final MVP integration and end-to-end QA.
+1. Bounded user-directed job URL intake with a manual pasted-text fallback.
+2. Evidence-backed reviewable resume tailoring.
+3. Mechanical claim checker.
+4. Deterministic PDF export.
+5. Final MVP integration and end-to-end QA.
 
 One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
 
@@ -428,8 +463,9 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
 - **Do not redo completed work:** board submission (`/board/submit` + atomic
   RPC), private Jobs CRUD, Master Profile persistence, guest-draft import, and
   Applications CRUD through deletion/recreation (`007`–`014`), private
-  pasted-text parsing (`015`), and parser-credit database foundations
-  (`016`–`017`) are done — extend, don't rewrite.
+  pasted-text parsing (`015`), parser-credit database foundations and ACL
+  hardening (`016`–`018`), and production Analyze credit enforcement are done
+  — extend, don't rewrite.
 - **Do not rewrite the app shell or redesign completed screens.**
 - **No blanket scraping or crawling, ever.** Future URL intake is ONE
   user-directed fetch with paste fallback. No CAPTCHA/login-wall/bot-
@@ -446,13 +482,10 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   may back future AI suggestions; never mark AI output as confirmed.
 - **Match language:** "N roles match your profile", never "you are eligible";
   no interview/offer/outcome implications (DESIGN.md §22.4, §23.6).
-- **Parser-credit RPCs/events are server-controlled database foundation, not
-  Analyze enforcement.** The production action is not wrapped yet. Tailoring
-  credits remain separate and also have no production consumption.
-- **Resolve the reservation-table ACL caveat first.** RLS currently blocks
-  authenticated direct writes, but remove residual authenticated write grants
-  with a forward-only migration before wiring Analyze credits; do not describe
-  the current state as a proven bypass.
+- **Parser credits are enforced in Analyze and Analyze Again.** Keep the
+  request-bound authenticated RPC path, server-only reservation identifiers,
+  existing extraction/persistence bridge, and separation from tailoring
+  credits. Tailoring credits still have no production consumption.
 - **Final PDF rendering must be deterministic** — no AI call, exact accepted
   content only, gated on review + claim checks (TECHNICAL_DESIGN.md v3 §G).
 - **Only the Luna parser route is runnable.** It resolves
