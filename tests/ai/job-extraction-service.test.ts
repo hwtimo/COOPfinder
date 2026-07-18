@@ -222,6 +222,17 @@ test("returns canonical normalized output and classification from a fake provide
     "React",
     "PostgreSQL",
   ]);
+  assert.deepEqual(result.canonicalRequirements.keywords, [
+    "TypeScript",
+    "React",
+    "PostgreSQL",
+  ]);
+  assert.deepEqual(result.canonicalRequirements.responsibilities, [
+    "Build accessible product features.",
+  ]);
+  assert.deepEqual(result.canonicalRequirements.uncategorizedRequirements, [
+    "Enrolled in a Canadian co-op program.",
+  ]);
   assert.equal(result.reviewClassification, "normal_review");
   assert.deepEqual(receivedInput, {
     model: CONFIGURED_LUNA_MODEL,

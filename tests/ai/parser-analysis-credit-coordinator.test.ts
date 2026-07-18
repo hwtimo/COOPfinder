@@ -13,6 +13,7 @@ import {
   JOB_EXTRACTION_CONTRACT_VERSION,
   type JobExtractionV1,
 } from "../../lib/ai/schemas/job-extraction";
+import { normalizeJobRequirements } from "../../lib/jobs/job-requirement-normalization";
 
 const JOB_ID = "46c24649-4b46-4ef4-8daf-49f575e6fe84";
 const RESERVATION_ID = "fe751351-250c-4b6d-bcce-b2e4ee640b53";
@@ -61,6 +62,7 @@ function extractionBridge(
       return {
         status: "success" as const,
         extraction: EXTRACTION,
+        canonicalRequirements: normalizeJobRequirements(EXTRACTION),
         reviewClassification: "normal_review" as const,
       };
     },

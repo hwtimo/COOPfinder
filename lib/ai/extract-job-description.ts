@@ -6,6 +6,7 @@ import {
 } from "./schemas/job-extraction";
 import type { JobExtractionReviewClassification } from "./job-extraction-confidence";
 import type { JobExtractionProvider } from "./job-extraction-provider";
+import type { CanonicalJobRequirements } from "../jobs/job-requirement-normalization";
 import { resolveAiModel, type AiModelResolution } from "./model-router";
 import { openAIJobExtractionProvider } from "./openai-job-extraction-provider";
 
@@ -15,6 +16,7 @@ export type ExtractJobDescriptionResult =
   | {
       status: "success";
       extraction: JobExtractionV1;
+      canonicalRequirements: CanonicalJobRequirements;
       reviewClassification: JobExtractionReviewClassification;
     }
   | {
@@ -140,6 +142,7 @@ export async function extractJobDescription(
   return {
     status: "success",
     extraction: canonicalResult.extraction,
+    canonicalRequirements: canonicalResult.canonicalRequirements,
     reviewClassification: canonicalResult.reviewClassification,
   };
 }

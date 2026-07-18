@@ -16,6 +16,7 @@ import {
   JOB_EXTRACTION_CONTRACT_VERSION,
   type JobExtractionV1,
 } from "../../lib/ai/schemas/job-extraction";
+import { normalizeJobRequirements } from "../../lib/jobs/job-requirement-normalization";
 
 const JOB_ID = "46c24649-4b46-4ef4-8daf-49f575e6fe84";
 
@@ -36,6 +37,7 @@ const CANONICAL_EXTRACTION: JobExtractionV1 = {
 const EXTRACTION_SUCCESS: ExtractOwnedJobDescriptionResult = {
   status: "success",
   extraction: CANONICAL_EXTRACTION,
+  canonicalRequirements: normalizeJobRequirements(CANONICAL_EXTRACTION),
   reviewClassification: "normal_review",
 };
 

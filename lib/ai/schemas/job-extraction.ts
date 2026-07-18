@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { PRIVATE_JOB_WORK_MODES } from "../../jobs/types";
 import {
+  normalizeJobRequirements,
+  type CanonicalJobRequirements,
+} from "../../jobs/job-requirement-normalization";
+import {
   classifyJobExtractionConfidence,
   type JobExtractionReviewClassification,
 } from "../job-extraction-confidence";
@@ -108,6 +112,7 @@ export type ParseJobExtractionResult =
   | {
       status: "valid";
       extraction: JobExtractionV1;
+      canonicalRequirements: CanonicalJobRequirements;
       reviewClassification: JobExtractionReviewClassification;
     }
   | {
@@ -127,6 +132,7 @@ export function parseJobExtractionOutput(
   return {
     status: "valid",
     extraction: parsed.data,
+    canonicalRequirements: normalizeJobRequirements(parsed.data),
     reviewClassification: classifyJobExtractionConfidence(parsed.data),
   };
 }

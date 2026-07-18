@@ -10,7 +10,11 @@ import {
   PRIVATE_JOB_DESCRIPTION_MAX_LENGTH,
   type ExtractJobDescriptionResult,
 } from "../../lib/ai/extract-job-description";
-import { JOB_EXTRACTION_CONTRACT_VERSION } from "../../lib/ai/schemas/job-extraction";
+import {
+  JOB_EXTRACTION_CONTRACT_VERSION,
+  type JobExtractionV1,
+} from "../../lib/ai/schemas/job-extraction";
+import { normalizeJobRequirements } from "../../lib/jobs/job-requirement-normalization";
 
 const USER_ID = "2fa1b93d-91fc-41cb-a199-7aa3b9547ef5";
 const JOB_ID = "46c24649-4b46-4ef4-8daf-49f575e6fe84";
@@ -22,21 +26,24 @@ const SAFE_EXTRACTION_FAILURE: ExtractJobDescriptionResult = {
   retryable: true,
 };
 
+const SAFE_EXTRACTION: JobExtractionV1 = {
+  contractVersion: JOB_EXTRACTION_CONTRACT_VERSION,
+  companyName: { value: "Clio", confidence: 0.9 },
+  title: { value: "Software Developer Co-op", confidence: 0.9 },
+  location: { value: "Vancouver, BC", confidence: 0.8 },
+  workMode: { value: "Hybrid", confidence: 0.8 },
+  term: { value: "Fall 2026", confidence: 0.8 },
+  deadline: { value: null, confidence: 0 },
+  namedSkills: { value: ["TypeScript"], confidence: 0.8 },
+  responsibilities: { value: [], confidence: 0 },
+  requirements: { value: [], confidence: 0 },
+  overallConfidence: 0.85,
+};
+
 const SAFE_EXTRACTION_SUCCESS: ExtractJobDescriptionResult = {
   status: "success",
-  extraction: {
-    contractVersion: JOB_EXTRACTION_CONTRACT_VERSION,
-    companyName: { value: "Clio", confidence: 0.9 },
-    title: { value: "Software Developer Co-op", confidence: 0.9 },
-    location: { value: "Vancouver, BC", confidence: 0.8 },
-    workMode: { value: "Hybrid", confidence: 0.8 },
-    term: { value: "Fall 2026", confidence: 0.8 },
-    deadline: { value: null, confidence: 0 },
-    namedSkills: { value: ["TypeScript"], confidence: 0.8 },
-    responsibilities: { value: [], confidence: 0 },
-    requirements: { value: [], confidence: 0 },
-    overallConfidence: 0.85,
-  },
+  extraction: SAFE_EXTRACTION,
+  canonicalRequirements: normalizeJobRequirements(SAFE_EXTRACTION),
   reviewClassification: "normal_review",
 };
 
