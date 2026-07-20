@@ -2,6 +2,7 @@ import "server-only";
 
 export const AI_TASK_CAPABILITY_TIERS = {
   job_extraction: "luna",
+  tailoring_generation: "luna",
 } as const;
 
 export type AiTaskCategory = keyof typeof AI_TASK_CAPABILITY_TIERS;
