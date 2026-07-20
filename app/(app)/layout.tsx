@@ -44,9 +44,9 @@ export default async function AppLayout({
   return (
     <div className="min-h-dvh bg-background">
       <AppSidebar user={shellUser} />
-      <div className="md:pl-60">
+      <div className="md:pl-60 print:pl-0">
         <AppTopbar user={shellUser} />
-        <main className="mx-auto max-w-[1400px] px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+        <main className="mx-auto max-w-[1400px] px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6 print:max-w-none print:p-0">
           {user ? <GuestDraftImportHandoff userId={user.id} /> : null}
           {children}
         </main>

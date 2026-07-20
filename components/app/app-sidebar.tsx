@@ -60,7 +60,7 @@ export function AppSidebar({ user }: { user: ShellUser | null }) {
   const secondaryViews = isAuthenticated ? savedViews : guestViews;
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-sidebar text-sidebar-foreground md:flex">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-sidebar text-sidebar-foreground md:flex print:hidden">
       {/* Logo */}
       <div className="flex h-14 items-center gap-2.5 px-4">
         <div className="flex size-7 items-center justify-center rounded-md bg-sidebar-primary text-[13px] font-semibold text-sidebar-primary-foreground">

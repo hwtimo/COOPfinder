@@ -1,8 +1,14 @@
+import { randomUUID } from "node:crypto";
+
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, WandSparkles } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
+import { TailoringPreflightSummary } from "@/components/app/tailor/tailoring-preflight-summary";
+import { TailoringGenerationControl } from "@/components/app/tailor/tailoring-generation-control";
+import { getLoginHref } from "@/lib/auth/paths";
+import { isUuid } from "@/lib/jobs/queries";
 import { TailoringWorkspace } from "./tailoring-workspace";
 import {
   mockJobAnalyses,
@@ -11,6 +17,8 @@ import {
   mockStudentProfile,
   mockTailoringSessions,
 } from "@/lib/mock";
+import { getOwnedTailoringPreflight } from "@/lib/tailoring/get-owned-tailoring-preflight";
+import { getCurrentTailoringCreditBalance } from "@/lib/tailoring/get-current-tailoring-credit-balance";
 
 type TailorPageProps = {
   params: Promise<{ jobId: string }>;
@@ -25,7 +33,57 @@ export default async function TailorPage({ params }: TailorPageProps) {
   const job = mockJobs.find((item) => item.id === jobId);
 
   if (!job) {
-    notFound();
+    if (!isUuid(jobId)) notFound();
+
+    const [result, balance] = await Promise.all([
+      getOwnedTailoringPreflight(jobId),
+      getCurrentTailoringCreditBalance(),
+    ]);
+    if (result.status === "unauthenticated") {
+      redirect(getLoginHref(`/resumes/tailor/${jobId}`));
+    }
+    if (balance.status === "unauthenticated") {
+      redirect(getLoginHref(`/resumes/tailor/${jobId}`));
+    }
+    if (result.status === "not_found") notFound();
+
+    const preflight =
+      result.status === "ready" ||
+      result.status === "insufficient_job_data" ||
+      result.status === "insufficient_candidate_data"
+        ? result.preflight
+        : null;
+
+    return (
+      <div className="space-y-6">
+        <Link
+          href={`/jobs/${jobId}`}
+          className="inline-flex items-center gap-1 rounded-sm text-sm font-medium text-text-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Back to job detail
+        </Link>
+        <PageHeader
+          title="Tailoring preflight"
+          description={
+            preflight
+              ? `${preflight.job.companyName} — ${preflight.job.title}`
+              : "Review verified Master Profile evidence before generating a tailored resume."
+          }
+        />
+        <TailoringPreflightSummary result={result} />
+        <TailoringGenerationControl
+          jobId={jobId}
+          availableCredits={
+            balance.status === "ready" ? balance.available : null
+          }
+          initialIdempotencyKey={randomUUID()}
+          canGenerate={
+            result.status === "ready" && result.preflight.readiness === "ready"
+          }
+        />
+      </div>
+    );
   }
 
   const session = mockTailoringSessions[job.id];

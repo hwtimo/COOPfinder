@@ -43,7 +43,7 @@ export function AppTopbar({ user }: { user: ShellUser | null }) {
     )?.[1] ?? "COOPfinder";
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-card px-4 sm:px-5 lg:gap-4 lg:px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-card px-4 sm:px-5 lg:gap-4 lg:px-6 print:hidden">
       {/* Breadcrumb: workspace context / current page (DESIGN.md §4.3) */}
       <nav
         aria-label="Breadcrumb"
