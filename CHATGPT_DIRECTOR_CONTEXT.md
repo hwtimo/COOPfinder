@@ -2,11 +2,11 @@
 
 Use this file as context for a future temporary ChatGPT chat where ChatGPT should act as a product and engineering director. Its job should be to tell the user exactly what to do next and provide precise prompts to give coding agents such as Codex or Fable.
 
-Last reviewed: 2026-07-16 (URL-only private-job intake with manual pasted-text
-fallback synchronized through implementation commit
-`fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`; parser-credit production
-integration and migrations through
-`20260716064357_revoke_parser_reservation_client_writes.sql` remain current).
+Last reviewed: 2026-07-20 (structured extraction, deterministic Profile Match,
+approved resume fragments, credit-safe tailoring generation, immutable review,
+and Print/PDF synchronized through commit
+`5a840a582cd6eaf9701d847b51afc44844d1db7a`; linked-development migrations are
+current through `20260720205747_finalize_tailored_resume_documents_v2.sql`).
 
 Working method: drive implementation with **one narrow Codex prompt at a time**, drafted when a phase actually starts. Do not stockpile prompts for future phases in the docs. Record meaningful core sessions in `CODEX_SESSION_LOG.md`, including their verified commit range and real `/feedback` Session ID when available; never fabricate either verification or an ID.
 
@@ -75,8 +75,16 @@ Completed migrations, chronological:
 `202607130015_atomic_job_extraction_persistence.sql` ·
 `202607130016_atomic_parser_analysis_credits.sql` ·
 `20260716042744_append_only_parser_analysis_credit_events.sql` ·
-`20260716064357_revoke_parser_reservation_client_writes.sql`
-(All twenty-two are committed and applied to the connected development
+`20260716064357_revoke_parser_reservation_client_writes.sql` ·
+`20260718235941_extend_job_extraction_requirements.sql` ·
+`20260719033047_extend_master_profile_candidate_evidence.sql` ·
+`20260720180155_tailoring_generation_reservations.sql` ·
+`20260720180928_fix_tailoring_version_name_encoding.sql` ·
+`20260720183952_harden_tailoring_generation_execution_boundary.sql` ·
+`20260720190758_persist_tailoring_generated_content.sql` ·
+`20260720201240_add_resume_source_fragments.sql` ·
+`20260720205747_finalize_tailored_resume_documents_v2.sql`
+(All thirty are committed and applied to the connected development
 database. See section 8 for the exact behavioral coverage and remaining
 limits.)
 
@@ -150,6 +158,18 @@ limits.)
     extraction. The existing credit-enforced Analyze path then becomes
     available unchanged. URL intake itself consumes no parser credit and makes
     no provider request.
+24. Structured job requirements, categorized candidate evidence, deterministic
+    exact Profile Match, and owner-only Job Detail explanation with no overall
+    score or persisted match result.
+25. Explicitly approved resume fragments, source-safe tailoring preflight, and
+    strict reference-only provider contracts that exclude raw profile/job
+    prose and forbid provider-authored claims.
+26. Tailoring reservation, refund, replay, service-role-only trusted execution,
+    one provider request with retries disabled, and atomic credit debit only
+    after a complete immutable tailored-resume document is persisted.
+27. Persisted UUID Generate, owner-only review, and deterministic browser
+    Print/PDF UI. Legacy recognized mock workspace IDs remain isolated from
+    persisted UUID routes.
 
 **Not completed** (do not claim these exist):
 - Server-side URL retrieval or any generic fetch transport. The completed
@@ -160,9 +180,8 @@ limits.)
   administrative implicit-token flow is incompatible with the application's
   PKCE authorization-code callback. This is a verification-environment limit,
   not a known implementation defect.
-- AI resume tailoring; production tailoring-credit consumption.
 - Mechanical claim checker.
-- Deterministic PDF export; DOCX export; file upload.
+- Downloadable PDF/DOCX export and file upload; browser Print/PDF is complete.
 - Moderation dashboard; notifications.
 - Calendar and Insights functionality; production document-management workflow.
 - Final product-level end-to-end MVP QA after the remaining product phases.
@@ -198,13 +217,14 @@ Private routes (enforced by `proxy.ts`): `/dashboard`, `/jobs`, `/jobs/[id]`,
 | `/board/submit` | Public form and sign-in-required guest state; authenticated atomic private+pending submission and private history | Complete (Supabase-backed) |
 | `/login` | Email/Google auth with `next`/`reason` params | Complete |
 | `/jobs` | **My jobs** — private saved jobs: persisted CRUD, search, filters | Complete (Supabase-backed) |
-| `/jobs/[id]` | Private saved-job detail: edit/delete, URL-only manual-paste-required state, raw JD, persisted pasted-text analysis, Analyze / Analyze Again, honest unavailable states | Complete (Supabase-backed parser; tailoring still unavailable) |
-| `/resumes/master` | Master Profile: persisted profile, skills, ordered evidence with confirmation state | Complete (Supabase-backed) |
+| `/jobs/[id]` | Private saved-job detail: edit/delete, URL fallback, analysis, Analyze / Analyze Again, Profile Match, tailoring entry | Complete (Supabase-backed) |
+| `/resumes/master` | Master Profile: profile, categorized evidence, ordered entries, approved resume fragments | Complete (Supabase-backed) |
 | `/dashboard` | Overview (metrics, pipeline, deadlines, next actions) | UI complete, **mock data** |
 | `/applications` | Persisted private tracker and atomic Add Application flow | Complete (Supabase-backed) |
 | `/applications/[id]` | Persisted private detail, timeline, status/notes/deadline/follow-up/delete controls | Complete (Supabase-backed) |
 | `/resumes` | Resume hub; upload disabled | Partial, mock |
-| `/resumes/tailor/[jobId]` | Tailoring Workspace (full mock session for `j11` only) | UI complete, **mock data** |
+| `/resumes/tailor/[jobId]` | Persisted UUID tailoring preflight and Generate; recognized legacy mock workspace IDs remain isolated | Complete for persisted UUIDs |
+| `/resumes/versions/[versionId]` | Owner-only immutable tailored-resume review and Print/PDF | Complete (Supabase-backed) |
 | `/calendar`, `/insights`, `/documents` | Placeholders | Placeholder |
 | `/settings` | Static mock profile | Partial, mock |
 
@@ -557,7 +577,8 @@ Next.js note:
   supported rewriting, difficult claim review, and final semantic review are
   not runnable production routes.
 
-`OPENAI_API_KEY` and `OPENAI_MODEL_LUNA` configure the implemented parser.
+`OPENAI_API_KEY` and `OPENAI_MODEL_LUNA` configure the implemented parser and
+reference-only tailoring-generation tasks.
 `OPENAI_MODEL_TERRA` and `OPENAI_MODEL_SOL` remain future configuration names;
 their presence does not make Terra or Sol runnable. Do not invent or document
 specific model values beyond the environment-driven routing contract.
@@ -839,15 +860,14 @@ recreation, isolation, concurrency, and preservation behavior. Guest-import
 post-write rollback remains conditionally unexercised because that RPC exposes
 no safe caller-controlled later failure; this is documented, not a blocker.
 
-### Immediate next boundary: PKCE-compatible disposable browser authentication
+### Immediate next boundary: PKCE-compatible browser verification
 
-The private pasted-text parser, parser-credit migrations through `018`,
-production Analyze / Analyze Again credit enforcement, and URL-only collection
-with manual pasted-text fallback are complete; do not redo them. The next
-boundary is **establish a normal PKCE-compatible disposable browser-auth
-testing path and complete the deferred URL-only/manual-paste smoke test before
-considering any server-side URL retrieval**. This is testing infrastructure,
-not permission to add a production authentication bypass.
+The parser, URL/manual fallback, structured Profile Match, approved-fragment
+preflight, credit-safe generation, immutable review, and Print/PDF are
+complete; do not redo them. The next boundary is **configure SMTP or another
+safe PKCE-compatible authenticated fixture and complete deferred browser smoke
+verification**. This is testing infrastructure, not permission to add a
+production authentication bypass.
 
 ### Remaining product phases (in order)
 
@@ -856,11 +876,9 @@ not permission to add a production authentication bypass.
 2. Only after that verification, consider a separately bounded server-side URL
    retrieval transport while preserving manual fallback; do not assume it is
    approved or implemented.
-3. AI resume tailoring with reviewable source evidence and the existing
-   credit boundaries.
-4. Mechanical claim checker.
-5. Deterministic PDF export.
-6. Final MVP integration and end-to-end QA.
+3. Mechanical claim checker.
+4. Downloadable deterministic file export beyond browser Print/PDF.
+5. Final MVP integration and end-to-end QA.
 
 One-week MVP execution priorities: PRODUCT_STRATEGY.md §12. Do not add
 speculative post-MVP phases.
@@ -921,8 +939,9 @@ exact real `/feedback` Session ID.
   (`import_guest_draft` + `guest_draft_imports`), and Applications CRUD through
   deletion/recreation (`007`–`014`), private pasted-text parsing (`015`), and
   parser-credit database foundations and ACL hardening (`016`–`018`),
-  production Analyze credit enforcement, and authenticated URL-only collection
-  with owner-only manual pasted-text fallback are done — extend, don't rewrite.
+  production Analyze credit enforcement, authenticated URL-only collection,
+  structured Profile Match, approved fragments, and credit-safe immutable
+  tailoring generation are done — extend, don't rewrite.
 - Do not add large dependencies without reason.
 - Do not expose secrets or env values.
 - **No blanket scraping or crawling, ever; no CAPTCHA/login-wall/bot-protection/access-control bypasses.** Current URL intake stores a normalized URL and requires manual pasted text; it performs no fetch, DNS lookup, HTML parsing, redirect processing, scraping, or job-board adaptation. Do not add `fetch(url)` casually or claim automatic retrieval.
@@ -936,8 +955,8 @@ exact real `/feedback` Session ID.
 - Do not pretend disabled backend actions work; do not remove honest disabled/placeholder states without implementing the feature.
 - Do not invent resume experience, metrics, skills, tools, roles, or claims; never mark AI output as confirmed evidence.
 - Do not imply eligibility, interviews, offers, or hiring outcomes; match scores are directional.
-- The Luna parser route is runnable through `OPENAI_MODEL_LUNA`; Terra and Sol
-  remain planned only. Follow the centralized task policy in
+- The Luna parser and tailoring-generation routes are runnable through
+  `OPENAI_MODEL_LUNA`; Terra and Sol remain planned only. Follow the centralized task policy in
   TECHNICAL_DESIGN.md §3 and never hardcode model IDs.
 - Parser credits are enforced in Analyze and Analyze Again through the existing
   authenticated action and persistence path. Keep reservation IDs and
@@ -1009,7 +1028,7 @@ Required env vars today (`.env.example` lists names only):
   Without them the app still runs: those screens show honest
   configuration-disabled states, and mock-data screens keep working.
 
-Parser env vars required to invoke implemented AI extraction:
+Provider env vars required to invoke implemented extraction or tailoring:
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL_LUNA`
 

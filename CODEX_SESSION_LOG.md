@@ -2328,6 +2328,48 @@ only when necessary to explain configuration; never record their values.
   testing path and complete the deferred URL-only/manual-paste smoke test before
   considering any server-side URL retrieval.
 
+### Structured Profile Match and credit-safe tailoring milestone
+
+- **Date and time:** 2026-07-20 (America/Vancouver)
+- **Development phase:** Structured matching and production resume tailoring
+- **Classification:** PASS
+- **Session purpose:** Finalize structured extraction and candidate evidence,
+  deterministic Profile Match, approved resume fragments, tailoring preflight,
+  reference-only generation, credit-safe immutable persistence, and the
+  Generate/review/Print product surfaces.
+- **Implementation commits:**
+  `857f96369237f15f7f3710de99b7725f86536542` (structured matching and
+  resume evidence), `d8d5c7ef6012df347a165529c502dd5e329bfe7d`
+  (credit-safe tailored resume generation), and
+  `5a840a582cd6eaf9701d847b51afc44844d1db7a` (generation, review, and Print UI).
+- **Architecture and security:** Only confirmed candidate evidence and approved
+  resume fragments enter the strict reference-only provider contract. The
+  provider performs one request with retries disabled. Trusted lifecycle RPCs
+  are service-role-only; reservation refund/replay is preserved; the debit,
+  complete immutable resume-version insert, and consumed transition finalize
+  atomically. Generated versions exclude raw profile and job prose.
+- **Product behavior:** Structured requirements and candidate evidence drive
+  exact deterministic Profile Match. Persisted UUID tailoring routes provide
+  preflight, Generate, owner-only immutable review, and deterministic browser
+  Print/PDF. No overall match score, provider-authored claim, or persisted
+  match result was added.
+- **Migrations:** Linked development is aligned through
+  `20260720205747_finalize_tailored_resume_documents_v2.sql`.
+- **Verification:** Full repository suite passed 496/496 tests (464 server and
+  32 TSX rendering). Lint, typecheck, production webpack build,
+  `git diff --check`, and `git diff --cached --check` passed. Final review found
+  and corrected one stale preflight sentence; no secret, generated artifact,
+  dependency, unsafe browser RPC, weakened RLS/auth, or mock-to-UUID leak was
+  found.
+- **Browser verification:** Deferred because SMTP or another safe authenticated
+  PKCE browser fixture is not configured. No authentication email or real
+  provider request was sent.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  Codex session, so `/feedback` was not rerun.
+- **Next action:** Configure SMTP or another safe PKCE-compatible authenticated
+  fixture and complete the deferred browser smoke verification.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

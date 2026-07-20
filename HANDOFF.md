@@ -111,12 +111,20 @@
     `intake_source` to `pasted_text` together while preserving `source_url` and
     existing extraction. The unchanged credit-enforced Analyze path then
     becomes available, and no duplicate job is created.
+13. **Structured matching and production tailoring milestone** — extended job
+    requirements and candidate evidence feed deterministic Profile Match;
+    only approved resume fragments and structured evidence enter the
+    reference-only tailoring contract. Tailoring preflight, one-request
+    provider generation, reservation/refund/replay, atomic credit finalization,
+    immutable tailored-resume persistence, owner-only review, and deterministic
+    Print/PDF presentation are implemented. No raw profile or job prose is
+    provider-authored or copied into generated versions.
 
 Also in place since earlier phases: Supabase auth (`/login`,
 `/auth/callback`, `/auth/sign-out`), `proxy.ts` hybrid route protection,
-guest/authed shell states, `tailoring_credit_ledger` with +2 signup grant
-(separate schema foundation — **no production tailoring-credit consumption
-exists yet**).
+guest/authed shell states, and `tailoring_credit_ledger` with +2 signup grant.
+Production tailoring now consumes exactly one credit only in the same atomic
+transaction that persists a complete immutable resume version.
 
 ## 2. Current routes (as built)
 
@@ -130,11 +138,11 @@ Private (via `proxy.ts`): `/dashboard`, `/jobs`, `/jobs/[id]`,
 `/settings`. Guests hitting `/jobs` are redirected to `/board`.
 
 Persistence status by screen: `/board*`, `/jobs*` (including URL-only manual-
-paste preparation and eligible private pasted-text Job analysis), `/applications*`, and
-`/resumes/master` read and write **real Supabase data** (with honest disabled
-states when Supabase env is absent). Dashboard, Resumes hub, Tailoring
-Workspace, Calendar, Insights, Documents, and Settings still render
-**mock/local data**.
+paste preparation, pasted-text analysis, and Profile Match), `/applications*`,
+`/resumes/master`, persisted UUID `/resumes/tailor/[jobId]`, and
+`/resumes/versions/[versionId]` use **real Supabase data**. Dashboard, Resumes
+hub, the legacy recognized mock Tailoring Workspace, Calendar, Insights,
+Documents, and Settings still render **mock/local data**.
 
 ## 3. Master Profile persistence (as built)
 
@@ -277,19 +285,24 @@ reservation-table writes from authenticated while retaining own-row SELECT via
 RLS and authenticated RPC execution. Do not edit or squash applied migration
 history.
 
-## 5a. AI routing (Luna parser implemented; Terra/Sol planned)
+## 5a. AI routing (Luna parser and tailoring implemented; Terra/Sol planned)
 
 - **Luna parser route — implemented:** validated structured JD extraction uses
   the server-only OpenAI Responses API, versioned schemas, deterministic
   confidence, and environment-driven `OPENAI_MODEL_LUNA`. Feature code does
   not hardcode a production model ID. It never writes final resume content.
+- **Luna tailoring route — implemented:** one server-only Responses request
+  selects references from approved fragments and structured evidence. Retries
+  are disabled, free-form claims are rejected, and complete document assembly
+  remains deterministic outside the provider.
 - **Terra route — planned only:** requirement normalization,
   confirmed-evidence mapping, directional explanations, next actions, and
   first-pass claim classification.
 - **Sol route — planned only:** nuanced evidence-backed resume suggestions,
   supported rewriting, difficult claim review, and final semantic review.
 
-`OPENAI_API_KEY` and `OPENAI_MODEL_LUNA` configure the runnable parser.
+`OPENAI_API_KEY` and `OPENAI_MODEL_LUNA` configure the runnable parser and
+tailoring-generation tasks.
 `OPENAI_MODEL_TERRA` and `OPENAI_MODEL_SOL` are planned names only; no Terra or
 Sol production route is runnable. The future escalation, reviewable evidence,
 claim, and deterministic-rendering policy remains in TECHNICAL_DESIGN.md §3
@@ -491,19 +504,19 @@ and it did not block Applications CRUD.
    would require an unauthorized production testing bypass. Repository and
    live database lifecycle verification passed; this is not a known defect.
 8. No live authenticated OpenAI success is proven. URL collection plus manual
-   pasted-text fallback is implemented, but authenticated browser smoke
-   completion and any server-side URL retrieval remain outstanding. Production
-   tailoring, claim checking, and deterministic export are not implemented.
+   pasted-text fallback and production tailoring are implemented, but browser
+   PKCE smoke verification and server-side URL retrieval remain outstanding.
+   Mechanical claim checking and downloadable file export remain deferred;
+   the current deterministic Print/PDF surface uses the browser print path.
 
 ## 8. Next work (in order)
 
-**Next narrow boundary: establish a normal PKCE-compatible disposable browser-
-auth testing path and complete the deferred URL-only/manual-paste smoke test
-before considering any server-side URL retrieval.** The private pasted-text
-parser, migrations `015`–`018`, production Analyze / Analyze Again credit
-enforcement, and URL-only/manual-paste implementation are complete; do not redo
-them. This is a testing/infrastructure boundary, not permission to add a
-production authentication bypass.
+**Next narrow boundary: configure SMTP or another safe PKCE-compatible
+authenticated fixture and complete the deferred browser smoke verification.**
+Structured extraction, Profile Match, approved resume fragments, tailoring
+preflight, credit-safe generation, immutable review, and Print/PDF are
+complete; do not redo them. This is a testing-infrastructure boundary, not
+permission to add a production authentication bypass.
 
 Remaining roadmap order:
 
@@ -512,10 +525,9 @@ Remaining roadmap order:
 2. Only after that verification, consider a separately bounded server-side URL
    retrieval transport with manual fallback preserved; it is not implemented
    or approved by this handoff.
-3. Evidence-backed reviewable resume tailoring.
-4. Mechanical claim checker.
-5. Deterministic PDF export.
-6. Final MVP integration and end-to-end QA.
+3. Mechanical claim checker.
+4. Downloadable deterministic file export beyond browser Print/PDF.
+5. Final MVP integration and end-to-end QA.
 
 One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
 
@@ -525,8 +537,9 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   RPC), private Jobs CRUD, Master Profile persistence, guest-draft import, and
   Applications CRUD through deletion/recreation (`007`–`014`), private
   pasted-text parsing (`015`), parser-credit database foundations and ACL
-  hardening (`016`–`018`), production Analyze credit enforcement, and URL-only
-  collection with owner-only manual pasted-text fallback are done — extend,
+  hardening (`016`–`018`), production Analyze credit enforcement, URL-only
+  collection with owner-only manual pasted-text fallback, structured Profile
+  Match, and credit-safe immutable tailoring generation are done — extend,
   don't rewrite.
 - **Do not rewrite the app shell or redesign completed screens.**
 - **No blanket scraping or crawling, ever.** Current URL intake stores a
@@ -554,13 +567,14 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
 - **Parser credits are enforced in Analyze and Analyze Again.** Keep the
   request-bound authenticated RPC path, server-only reservation identifiers,
   existing extraction/persistence bridge, and separation from tailoring
-  credits. Tailoring credits still have no production consumption.
-- **Final PDF rendering must be deterministic** — no AI call, exact accepted
-  content only, gated on review + claim checks (TECHNICAL_DESIGN.md v3 §G).
-- **Only the Luna parser route is runnable.** It resolves
-  `OPENAI_MODEL_LUNA` server-side. Terra and Sol remain planned; only confirmed
-  evidence may support future suggestions, and feature code never hardcodes
-  models.
+  credits. Tailoring credits are reserved before generation and debited only
+  with complete document persistence; preserve refund and replay semantics.
+- **Print/PDF rendering is deterministic** — no AI call and only the persisted
+  immutable document. Downloadable export and mechanical claim checking remain
+  separate future boundaries (TECHNICAL_DESIGN.md v3 §G).
+- **Luna parser and tailoring-generation routes are runnable.** Both resolve
+  `OPENAI_MODEL_LUNA` server-side. Terra and Sol remain planned, and feature
+  code never hardcodes models.
 - **Log meaningful Codex work** with the mandatory verified implementation
   commit → verified Session ID for the actual session → completed existing
   log fields → separate log-only commit sequence. Reuse a known verified ID
