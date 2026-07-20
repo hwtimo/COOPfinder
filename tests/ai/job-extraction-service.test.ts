@@ -45,6 +45,21 @@ function validExtraction() {
       value: ["Enrolled in a Canadian co-op program."],
       confidence: 0.85,
     },
+    structuredRequirements: {
+      requiredSkills: ["Problem solving"],
+      preferredSkills: [],
+      requiredTechnologies: ["TypeScript"],
+      preferredTechnologies: ["PostgreSQL"],
+      education: ["Enrolled in a Canadian co-op program."],
+      certifications: [],
+      languages: [],
+      workAuthorization: [],
+      experience: [],
+      responsibilities: ["Build accessible product features."],
+      softSkills: [],
+      keywords: ["React"],
+      uncategorizedRequirements: [],
+    },
     overallConfidence: 0.91,
   };
 }
@@ -222,17 +237,20 @@ test("returns canonical normalized output and classification from a fake provide
     "React",
     "PostgreSQL",
   ]);
-  assert.deepEqual(result.canonicalRequirements.keywords, [
+  assert.deepEqual(result.canonicalRequirements.requiredTechnologies, [
     "TypeScript",
-    "React",
+  ]);
+  assert.deepEqual(result.canonicalRequirements.preferredTechnologies, [
     "PostgreSQL",
   ]);
+  assert.deepEqual(result.canonicalRequirements.keywords, ["React"]);
   assert.deepEqual(result.canonicalRequirements.responsibilities, [
     "Build accessible product features.",
   ]);
-  assert.deepEqual(result.canonicalRequirements.uncategorizedRequirements, [
+  assert.deepEqual(result.canonicalRequirements.education, [
     "Enrolled in a Canadian co-op program.",
   ]);
+  assert.deepEqual(result.canonicalRequirements.uncategorizedRequirements, []);
   assert.equal(result.reviewClassification, "normal_review");
   assert.deepEqual(receivedInput, {
     model: CONFIGURED_LUNA_MODEL,

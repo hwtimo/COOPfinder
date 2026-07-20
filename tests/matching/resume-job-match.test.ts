@@ -230,7 +230,7 @@ test("distinguishes every work-authorization state using exact equality", () => 
   assert.equal(exact.status, "comparable");
 });
 
-test("preserves unassessed requirements by category and stable order", () => {
+test("keeps only unsupported requirements unassessed in stable order", () => {
   const result = matchResumeToJob(
     requirements({
       education: ["Degree"],
@@ -248,15 +248,179 @@ test("preserves unassessed requirements by category and stable order", () => {
     result.unassessedRequirements.map((item) => item.category),
     [
       "education",
-      "certification",
-      "language",
       "experience",
       "responsibility",
-      "soft_skill",
       "uncategorized_requirement",
     ],
   );
-  assert.equal(result.dataCompleteness.unassessedJobRequirements, 7);
+  assert.equal(result.dataCompleteness.unassessedJobRequirements, 4);
+  assert.equal(result.certifications.totalUniqueRequirements, 1);
+  assert.equal(result.languages.totalUniqueRequirements, 1);
+  assert.equal(result.softSkills.totalUniqueRequirements, 1);
+});
+
+test("explicit technologies are authoritative and do not supplement broad skills", () => {
+  const result = matchResumeToJob(
+    requirements({ requiredTechnologies: ["TypeScript", "PostgreSQL"] }),
+    profile({
+      skills: ["TypeScript", "PostgreSQL"],
+      candidateEvidence: { technologies: ["TypeScript"] },
+    }),
+  );
+
+  assert.equal(result.required.matchedCount, 1);
+  assert.deepEqual(result.required.notEvidencedItems, [
+    { category: "required_technology", requirement: "PostgreSQL" },
+  ]);
+});
+
+test("explicit empty technologies disable fallback while absence preserves it", () => {
+  const job = requirements({ requiredTechnologies: ["TypeScript"] });
+  const absent = matchResumeToJob(job, profile({ skills: ["TypeScript"] }));
+  const explicitEmpty = matchResumeToJob(
+    job,
+    profile({
+      skills: ["TypeScript"],
+      candidateEvidence: { technologies: [] },
+    }),
+  );
+
+  assert.equal(absent.required.matchedCount, 1);
+  assert.equal(explicitEmpty.required.matchedCount, 0);
+});
+
+test("technology evidence matches only technology requirements", () => {
+  const candidate = profile({
+    candidateEvidence: { technologies: ["TypeScript"] },
+  });
+  const skillResult = matchResumeToJob(
+    requirements({ requiredSkills: ["TypeScript"] }),
+    candidate,
+  );
+  const technologyResult = matchResumeToJob(
+    requirements({ requiredTechnologies: ["TypeScript"] }),
+    candidate,
+  );
+
+  assert.equal(skillResult.required.matchedCount, 0);
+  assert.deepEqual(technologyResult.required.matchedItems, [
+    {
+      category: "required_technology",
+      requirement: "TypeScript",
+      matchedCandidateTerm: "TypeScript",
+    },
+  ]);
+});
+
+test("soft skills compare only against explicit soft-skill evidence", () => {
+  const result = matchResumeToJob(
+    requirements({ softSkills: ["Communication", "Leadership"] }),
+    profile({
+      skills: ["Leadership"],
+      entries: [entry(["Communication"], true)],
+      candidateEvidence: { softSkills: ["Communication"] },
+    }),
+  );
+
+  assert.equal(result.softSkills.matchedCount, 1);
+  assert.deepEqual(result.softSkills.notEvidencedItems, [
+    { category: "soft_skill", requirement: "Leadership" },
+  ]);
+});
+
+test("certifications use explicit evidence and confirmed certification titles only", () => {
+  const confirmedCertification = {
+    ...entry([], true),
+    id: "cert-confirmed",
+    section: "certification" as const,
+    source: "Azure Fundamentals",
+    text: "PRIVATE_CERTIFICATION_PROSE",
+  };
+  const unconfirmedCertification = {
+    ...entry([], false),
+    id: "cert-unconfirmed",
+    section: "certification" as const,
+    source: "Google Cloud Associate",
+    text: "AWS Certified Developer",
+  };
+  const result = matchResumeToJob(
+    requirements({
+      certifications: [
+        "AWS Certified Developer",
+        "Azure Fundamentals",
+        "Google Cloud Associate",
+        "PRIVATE_CERTIFICATION_PROSE",
+      ],
+    }),
+    profile({
+      candidateEvidence: { certifications: ["AWS Certified Developer"] },
+      entries: [confirmedCertification, unconfirmedCertification],
+    }),
+  );
+
+  assert.equal(result.certifications.matchedCount, 2);
+  assert.deepEqual(
+    result.certifications.matchedItems.map((item) => item.requirement),
+    ["AWS Certified Developer", "Azure Fundamentals"],
+  );
+  assert.deepEqual(
+    result.certifications.notEvidencedItems.map((item) => item.requirement),
+    ["Google Cloud Associate", "PRIVATE_CERTIFICATION_PROSE"],
+  );
+});
+
+test("languages match exact names and ignore proficiency for satisfaction", () => {
+  const result = matchResumeToJob(
+    requirements({ languages: ["French", "Professional French", "Spanish"] }),
+    profile({
+      candidateEvidence: {
+        languages: [
+          { language: " french ", proficiency: "basic" },
+          { language: "Spanish", proficiency: "native" },
+        ],
+      },
+    }),
+  );
+
+  assert.equal(result.languages.matchedCount, 2);
+  assert.deepEqual(result.languages.notEvidencedItems, [
+    { category: "language", requirement: "Professional French" },
+  ]);
+  assert.equal(JSON.stringify(result.languages).includes("basic"), false);
+  assert.equal(JSON.stringify(result.languages).includes("native"), false);
+});
+
+test("duplicate categorized evidence does not inflate counts or completeness", () => {
+  const result = matchResumeToJob(
+    requirements({
+      softSkills: ["Communication", " communication "],
+      certifications: ["AWS", "aws"],
+      languages: ["French", "FRENCH"],
+    }),
+    profile({
+      candidateEvidence: {
+        softSkills: ["Communication", "COMMUNICATION"],
+        certifications: ["AWS", "aws"],
+        languages: [{ language: "French" }, { language: "FRENCH" }],
+      },
+    }),
+  );
+
+  assert.equal(result.softSkills.totalUniqueRequirements, 1);
+  assert.equal(result.certifications.totalUniqueRequirements, 1);
+  assert.equal(result.languages.totalUniqueRequirements, 1);
+  assert.equal(result.dataCompleteness.comparableJobTerms, 3);
+  assert.equal(result.dataCompleteness.uniqueCandidateTerms, 3);
+});
+
+test("additive match result contains no overall score", () => {
+  const result = matchResumeToJob(
+    requirements({ softSkills: ["Communication"] }),
+    profile({ candidateEvidence: { softSkills: ["Communication"] } }),
+  );
+
+  assert.equal("overallScore" in result, false);
+  assert.equal("matchScore" in result, false);
 });
 
 test("tolerates malformed optional arrays and ignores empty or non-string terms", () => {

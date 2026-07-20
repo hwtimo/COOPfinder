@@ -61,8 +61,7 @@ export async function saveMasterProfileAction(
     };
   }
 
-  const { data, error } = await context.supabase.rpc("save_master_profile", {
-    p_profile: {
+  const profilePayload: Record<string, unknown> = {
       fullName: validation.data.fullName,
       school: validation.data.school,
       program: validation.data.program,
@@ -71,14 +70,28 @@ export async function saveMasterProfileAction(
       workAuthorization: validation.data.workAuthorization,
       preferredLocations: validation.data.preferredLocations,
       targetRoles: validation.data.targetRoles,
-    },
+  };
+  if (validation.data.candidateEvidence !== undefined) {
+    profilePayload.candidateEvidence = validation.data.candidateEvidence;
+  }
+
+  const { data, error } = await context.supabase.rpc("save_master_profile", {
+    p_profile: profilePayload,
     p_skills: validation.data.skills,
     p_entries: validation.data.entries.map((entry) => ({
+      ...(entry.id.match(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      )
+        ? { entryId: entry.id }
+        : {}),
       section: entry.section,
       source: entry.source,
       text: entry.text,
       skills: entry.skills,
       confirmed: entry.confirmed,
+      ...(entry.resumeFragments === undefined
+        ? {}
+        : { resumeFragments: entry.resumeFragments }),
     })),
   });
 

@@ -1,3 +1,6 @@
+import type { CandidateEvidence } from "./candidate-evidence";
+import type { ResumeSourceFragmentRecord } from "./resume-source-fragments";
+
 export const MASTER_PROFILE_SECTIONS = [
   "experience",
   "project",
@@ -17,6 +20,7 @@ export type MasterProfileEntry = {
   skills: string[];
   confirmed: boolean;
   sortOrder: number;
+  resumeFragments?: ResumeSourceFragmentRecord[];
 };
 
 export type MasterProfileData = {
@@ -31,6 +35,7 @@ export type MasterProfileData = {
   targetRoles: string[];
   skills: string[];
   entries: MasterProfileEntry[];
+  candidateEvidence?: CandidateEvidence;
 };
 
 export type MasterProfileSavePayload = Omit<MasterProfileData, "email">;

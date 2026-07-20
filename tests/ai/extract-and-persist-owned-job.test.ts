@@ -34,6 +34,25 @@ const CANONICAL_EXTRACTION: JobExtractionV1 = {
   overallConfidence: 0.85,
 };
 
+const STRUCTURED_EXTRACTION: JobExtractionV1 = {
+  ...CANONICAL_EXTRACTION,
+  structuredRequirements: {
+    requiredSkills: [],
+    preferredSkills: [],
+    requiredTechnologies: ["TypeScript"],
+    preferredTechnologies: [],
+    education: [],
+    certifications: [],
+    languages: [],
+    workAuthorization: [],
+    experience: [],
+    responsibilities: [],
+    softSkills: [],
+    keywords: [],
+    uncategorizedRequirements: [],
+  },
+};
+
 const EXTRACTION_SUCCESS: ExtractOwnedJobDescriptionResult = {
   status: "success",
   extraction: CANONICAL_EXTRACTION,
@@ -75,6 +94,32 @@ test("successful extraction followed by unchanged returns already persisted", as
   assert.deepEqual(await orchestrate(JOB_ID), {
     status: "already_persisted",
   });
+});
+
+test("Analyze Again replaces a legacy extraction with the extended payload", async () => {
+  const previous = structuredClone(CANONICAL_EXTRACTION);
+  let stored: JobExtractionV1 = previous;
+  let persistenceCalls = 0;
+  const orchestrate = createExtractAndPersistOwnedJob(
+    bridgeDependencies({
+      extractOwnedJob: async () => ({
+        status: "success",
+        extraction: STRUCTURED_EXTRACTION,
+        canonicalRequirements: normalizeJobRequirements(STRUCTURED_EXTRACTION),
+        reviewClassification: "normal_review",
+      }),
+      persistExtraction: async (_jobId, extraction) => {
+        persistenceCalls += 1;
+        stored = structuredClone(extraction);
+        return { status: "updated" };
+      },
+    }),
+  );
+
+  assert.deepEqual(await orchestrate(JOB_ID), { status: "persisted" });
+  assert.equal(persistenceCalls, 1);
+  assert.deepEqual(stored, STRUCTURED_EXTRACTION);
+  assert.equal(previous.structuredRequirements, undefined);
 });
 
 test("extraction-stage failure causes no persistence call", async () => {

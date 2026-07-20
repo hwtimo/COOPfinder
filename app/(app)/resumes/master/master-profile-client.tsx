@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   BadgeCheck,
   Check,
   Loader2,
@@ -13,13 +15,23 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 
 import { CardSection } from "@/components/app/card-section";
 import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SCHOOL_OPTIONS, WORK_AUTHORIZATION_OPTIONS } from "@/lib/guest-draft/types";
+import {
+  CANDIDATE_LANGUAGE_PROFICIENCIES,
+  parseCandidateEvidence,
+  type CandidateEvidence,
+  type CandidateLanguageProficiency,
+} from "@/lib/master-profile/candidate-evidence";
+import {
+  RESUME_SOURCE_FRAGMENT_LIMITS,
+  type ResumeSourceFragmentRecord,
+} from "@/lib/master-profile/resume-source-fragments";
 import {
   INITIAL_MASTER_PROFILE_SAVE_STATE,
   type MasterProfileData,
@@ -47,6 +59,20 @@ const sectionOrder: MasterProfileSection[] = [
   "certification",
   "volunteer",
 ];
+
+const proficiencyLabels: Record<CandidateLanguageProficiency, string> = {
+  basic: "Basic",
+  conversational: "Conversational",
+  professional: "Professional",
+  fluent: "Fluent",
+  native: "Native",
+};
+
+type LanguageRow = {
+  key: string;
+  language: string;
+  proficiency: "" | CandidateLanguageProficiency;
+};
 
 function commaValues(value: string): string[] {
   const seen = new Set<string>();
@@ -82,16 +108,42 @@ function EntryCard({
   onConfirm,
   onSave,
   onDelete,
+  onFragmentsChange,
 }: {
   entry: MasterProfileEntry;
   disabled: boolean;
   onConfirm: (id: string) => void;
   onSave: (id: string, source: string, text: string) => void;
   onDelete: (id: string) => void;
+  onFragmentsChange: (
+    id: string,
+    fragments: ResumeSourceFragmentRecord[],
+  ) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [source, setSource] = useState(entry.source);
   const [text, setText] = useState(entry.text);
+  const [newFragmentText, setNewFragmentText] = useState("");
+  const [newFragmentTags, setNewFragmentTags] = useState("");
+  const fragments = entry.resumeFragments ?? [];
+
+  const replaceFragments = (next: ResumeSourceFragmentRecord[]) =>
+    onFragmentsChange(
+      entry.id,
+      next.map((fragment, order) => ({ ...fragment, order })),
+    );
+
+  const updateFragment = (
+    fragmentId: string,
+    changes: Partial<ResumeSourceFragmentRecord>,
+  ) =>
+    replaceFragments(
+      fragments.map((fragment) =>
+        fragment.fragmentId === fragmentId
+          ? { ...fragment, ...changes }
+          : fragment,
+      ),
+    );
 
   return (
     <div className="rounded-md border bg-background p-4">
@@ -206,6 +258,216 @@ function EntryCard({
           </>
         )}
       </div>
+
+      <div className="mt-4 border-t pt-4">
+        <div>
+          <h4 className="text-sm font-semibold text-foreground">
+            Resume bullets
+          </h4>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Only approved bullets may be used in generated resumes.
+          </p>
+        </div>
+
+        {!entry.confirmed ? (
+          <p className="mt-3 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            Confirm this entry before adding or approving resume bullets.
+          </p>
+        ) : (
+          <>
+            {fragments.length > 0 ? (
+              <div className="mt-3 space-y-3">
+                {fragments.map((fragment, index) => {
+                  const textId = `resume-fragment-text-${fragment.fragmentId}`;
+                  const tagsId = `resume-fragment-tags-${fragment.fragmentId}`;
+                  return (
+                    <div
+                      key={fragment.fragmentId}
+                      className="rounded-md border bg-card p-3"
+                    >
+                      <label htmlFor={textId} className="block">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Bullet {index + 1}
+                        </span>
+                        <textarea
+                          id={textId}
+                          value={fragment.text}
+                          maxLength={RESUME_SOURCE_FRAGMENT_LIMITS.textLength}
+                          rows={2}
+                          disabled={disabled}
+                          className="mt-1 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-6 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onChange={(event) =>
+                            updateFragment(fragment.fragmentId, {
+                              text: event.target.value,
+                              confirmed: false,
+                            })
+                          }
+                        />
+                      </label>
+                      <label htmlFor={tagsId} className="mt-3 block">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Evidence tags (comma-separated)
+                        </span>
+                        <Input
+                          id={tagsId}
+                          value={fragment.evidenceTags.join(", ")}
+                          disabled={disabled}
+                          className="mt-1 h-9 rounded-md bg-background"
+                          onChange={(event) =>
+                            updateFragment(fragment.fragmentId, {
+                              evidenceTags: commaValues(event.target.value),
+                              confirmed: false,
+                            })
+                          }
+                        />
+                      </label>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
+                        {fragment.confirmed ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
+                            <BadgeCheck className="size-3.5" aria-hidden />
+                            Approved for tailoring
+                          </span>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-8 rounded-md"
+                            disabled={disabled || !fragment.text.trim()}
+                            onClick={() =>
+                              updateFragment(fragment.fragmentId, {
+                                confirmed: true,
+                              })
+                            }
+                          >
+                            <BadgeCheck className="size-3.5" aria-hidden />
+                            Approve for tailoring
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="outline"
+                          className="ml-auto rounded-md"
+                          disabled={disabled || index === 0}
+                          aria-label={`Move resume bullet ${index + 1} up`}
+                          onClick={() => {
+                            const next = [...fragments];
+                            [next[index - 1], next[index]] = [
+                              next[index]!,
+                              next[index - 1]!,
+                            ];
+                            replaceFragments(next);
+                          }}
+                        >
+                          <ArrowUp className="size-4" aria-hidden />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="outline"
+                          className="rounded-md"
+                          disabled={disabled || index === fragments.length - 1}
+                          aria-label={`Move resume bullet ${index + 1} down`}
+                          onClick={() => {
+                            const next = [...fragments];
+                            [next[index], next[index + 1]] = [
+                              next[index + 1]!,
+                              next[index]!,
+                            ];
+                            replaceFragments(next);
+                          }}
+                        >
+                          <ArrowDown className="size-4" aria-hidden />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="ghost"
+                          className="rounded-md text-destructive hover:text-destructive"
+                          disabled={disabled}
+                          aria-label={`Remove resume bullet ${index + 1}`}
+                          onClick={() =>
+                            replaceFragments(
+                              fragments.filter(
+                                (item) =>
+                                  item.fragmentId !== fragment.fragmentId,
+                              ),
+                            )
+                          }
+                        >
+                          <Trash2 className="size-4" aria-hidden />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                No resume bullets added.
+              </p>
+            )}
+
+            <div className="mt-3 grid gap-3 rounded-md border border-dashed bg-card p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)_auto] sm:items-end">
+              <label className="block">
+                <span className="text-xs font-medium text-muted-foreground">
+                  New resume bullet
+                </span>
+                <textarea
+                  value={newFragmentText}
+                  maxLength={RESUME_SOURCE_FRAGMENT_LIMITS.textLength}
+                  rows={2}
+                  disabled={disabled}
+                  className="mt-1 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-6 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onChange={(event) => setNewFragmentText(event.target.value)}
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Evidence tags
+                </span>
+                <Input
+                  value={newFragmentTags}
+                  disabled={disabled}
+                  className="mt-1 h-9 rounded-md bg-background"
+                  placeholder="TypeScript, analytics"
+                  onChange={(event) => setNewFragmentTags(event.target.value)}
+                />
+              </label>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 rounded-md"
+                disabled={
+                  disabled ||
+                  !newFragmentText.trim() ||
+                  fragments.length >=
+                    RESUME_SOURCE_FRAGMENT_LIMITS.fragmentsPerEntry
+                }
+                onClick={() => {
+                  replaceFragments([
+                    ...fragments,
+                    {
+                      fragmentId: crypto.randomUUID(),
+                      text: newFragmentText,
+                      evidenceTags: commaValues(newFragmentTags),
+                      confirmed: false,
+                      order: fragments.length,
+                      provenance: "manual",
+                    },
+                  ]);
+                  setNewFragmentText("");
+                  setNewFragmentTags("");
+                }}
+              >
+                <Plus className="size-3.5" aria-hidden />
+                Add bullet
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -234,6 +496,33 @@ export function MasterProfileClient({ initialData }: { initialData: MasterProfil
     initialData.targetRoles.join(", "),
   );
   const [skillsText, setSkillsText] = useState(initialData.skills.join(", "));
+  const initialEvidence = initialData.candidateEvidence;
+  const [technologiesText, setTechnologiesText] = useState(
+    initialEvidence?.technologies?.join(", ") ?? "",
+  );
+  const [softSkillsText, setSoftSkillsText] = useState(
+    initialEvidence?.softSkills?.join(", ") ?? "",
+  );
+  const [certificationsText, setCertificationsText] = useState(
+    initialEvidence?.certifications?.join(", ") ?? "",
+  );
+  const nextLanguageKey = useRef(initialEvidence?.languages?.length ?? 0);
+  const [languageRows, setLanguageRows] = useState<LanguageRow[]>(
+    (initialEvidence?.languages ?? []).map((language, index) => ({
+      key: `stored-language-${index}`,
+      language: language.language,
+      proficiency: language.proficiency ?? "",
+    })),
+  );
+  const [evidencePresence, setEvidencePresence] = useState(() => ({
+    object: initialEvidence !== undefined,
+    technologies:
+      initialEvidence !== undefined && "technologies" in initialEvidence,
+    softSkills: initialEvidence !== undefined && "softSkills" in initialEvidence,
+    certifications:
+      initialEvidence !== undefined && "certifications" in initialEvidence,
+    languages: initialEvidence !== undefined && "languages" in initialEvidence,
+  }));
   const [editingProfile, setEditingProfile] = useState(initialData.fullName === "" && initialData.entries.length === 0);
   const [adding, setAdding] = useState(false);
   const [newSection, setNewSection] = useState<MasterProfileSection>("experience");
@@ -248,10 +537,42 @@ export function MasterProfileClient({ initialData }: { initialData: MasterProfil
   const updateProfile = (changes: Partial<MasterProfileData>) =>
     setProfile((current) => ({ ...current, ...changes }));
 
+  const markEvidencePresent = (
+    field: "technologies" | "softSkills" | "certifications" | "languages",
+  ) =>
+    setEvidencePresence((current) => ({
+      ...current,
+      object: true,
+      [field]: true,
+    }));
+
+  const currentCandidateEvidence = (): CandidateEvidence | undefined => {
+    if (!evidencePresence.object) return undefined;
+    const raw: CandidateEvidence = {};
+    if (evidencePresence.technologies) {
+      raw.technologies = commaValues(technologiesText);
+    }
+    if (evidencePresence.softSkills) {
+      raw.softSkills = commaValues(softSkillsText);
+    }
+    if (evidencePresence.certifications) {
+      raw.certifications = commaValues(certificationsText);
+    }
+    if (evidencePresence.languages) {
+      raw.languages = languageRows.map((row) => ({
+        language: row.language,
+        ...(row.proficiency ? { proficiency: row.proficiency } : {}),
+      }));
+    }
+    const parsed = parseCandidateEvidence(raw);
+    return parsed.status === "valid" ? parsed.evidence : raw;
+  };
+
   const saveProfile = () => {
     const preferredLocations = commaValues(locationsText);
     const targetRoles = commaValues(targetRolesText);
     const skills = commaValues(skillsText);
+    const candidateEvidence = currentCandidateEvidence();
     const payload: MasterProfileSavePayload = {
       fullName: profile.fullName,
       school: profile.school,
@@ -263,8 +584,14 @@ export function MasterProfileClient({ initialData }: { initialData: MasterProfil
       targetRoles,
       skills,
       entries: profile.entries,
+      ...(candidateEvidence === undefined ? {} : { candidateEvidence }),
     };
-    updateProfile({ preferredLocations, targetRoles, skills });
+    updateProfile({
+      preferredLocations,
+      targetRoles,
+      skills,
+      ...(candidateEvidence === undefined ? {} : { candidateEvidence }),
+    });
     startTransition(() => saveAction(payload));
   };
 
@@ -297,6 +624,7 @@ export function MasterProfileClient({ initialData }: { initialData: MasterProfil
           skills: commaValues(newSkills),
           confirmed: false,
           sortOrder: profile.entries.length,
+          resumeFragments: [],
         },
       ],
     });
@@ -433,6 +761,168 @@ export function MasterProfileClient({ initialData }: { initialData: MasterProfil
         </p>
       </CardSection>
 
+      <CardSection
+        title="Skills and credentials"
+        description="Add explicit evidence used for exact profile matching. General skills remain in the profile section above."
+        contentClassName="space-y-5 p-5"
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Technologies">
+            <Input
+              className="h-9 rounded-md bg-card"
+              value={technologiesText}
+              onChange={(event) => {
+                setTechnologiesText(event.target.value);
+                markEvidencePresent("technologies");
+              }}
+              placeholder="TypeScript, PostgreSQL"
+              disabled={saving}
+            />
+          </Field>
+          <Field label="Soft skills">
+            <Input
+              className="h-9 rounded-md bg-card"
+              value={softSkillsText}
+              onChange={(event) => {
+                setSoftSkillsText(event.target.value);
+                markEvidencePresent("softSkills");
+              }}
+              placeholder="Communication, collaboration"
+              disabled={saving}
+            />
+          </Field>
+          <Field label="Certifications">
+            <Input
+              className="h-9 rounded-md bg-card"
+              value={certificationsText}
+              onChange={(event) => {
+                setCertificationsText(event.target.value);
+                markEvidencePresent("certifications");
+              }}
+              placeholder="Certification names"
+              disabled={saving}
+            />
+          </Field>
+        </div>
+
+        <div className="border-t pt-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Languages</h3>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Proficiency is optional context and is not used to decide an exact match.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-md"
+              disabled={saving}
+              onClick={() => {
+                const key = `new-language-${nextLanguageKey.current++}`;
+                setLanguageRows((current) => [
+                  ...current,
+                  { key, language: "", proficiency: "" },
+                ]);
+                markEvidencePresent("languages");
+              }}
+            >
+              <Plus className="size-3.5" aria-hidden />
+              Add language
+            </Button>
+          </div>
+
+          {languageRows.length > 0 ? (
+            <div className="mt-4 space-y-3">
+              {languageRows.map((row, index) => {
+                const languageId = `candidate-language-${row.key}`;
+                const proficiencyId = `candidate-language-proficiency-${row.key}`;
+                return (
+                  <div
+                    key={row.key}
+                    className="grid gap-3 rounded-md border bg-background p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
+                  >
+                    <label htmlFor={languageId} className="block">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Language {index + 1}
+                      </span>
+                      <Input
+                        id={languageId}
+                        className="mt-1 h-9 rounded-md bg-card"
+                        value={row.language}
+                        maxLength={80}
+                        disabled={saving}
+                        onChange={(event) => {
+                          const language = event.target.value;
+                          setLanguageRows((current) =>
+                            current.map((item) =>
+                              item.key === row.key ? { ...item, language } : item,
+                            ),
+                          );
+                          markEvidencePresent("languages");
+                        }}
+                      />
+                    </label>
+                    <label htmlFor={proficiencyId} className="block">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Proficiency (optional)
+                      </span>
+                      <select
+                        id={proficiencyId}
+                        className="mt-1 h-9 w-full rounded-md border border-input bg-card px-3 text-sm"
+                        value={row.proficiency}
+                        disabled={saving}
+                        onChange={(event) => {
+                          const proficiency = event.target.value as
+                            | ""
+                            | CandidateLanguageProficiency;
+                          setLanguageRows((current) =>
+                            current.map((item) =>
+                              item.key === row.key
+                                ? { ...item, proficiency }
+                                : item,
+                            ),
+                          );
+                          markEvidencePresent("languages");
+                        }}
+                      >
+                        <option value="">Not specified</option>
+                        {CANDIDATE_LANGUAGE_PROFICIENCIES.map((proficiency) => (
+                          <option key={proficiency} value={proficiency}>
+                            {proficiencyLabels[proficiency]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      className="rounded-md text-destructive hover:text-destructive"
+                      disabled={saving}
+                      aria-label={`Remove language ${index + 1}`}
+                      onClick={() => {
+                        setLanguageRows((current) =>
+                          current.filter((item) => item.key !== row.key),
+                        );
+                        markEvidencePresent("languages");
+                      }}
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">
+              No languages added.
+            </p>
+          )}
+        </div>
+      </CardSection>
+
       {adding ? (
         <CardSection title="New entry" description="New entries stay unconfirmed until you verify their accuracy." contentClassName="space-y-4 p-5">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -479,6 +969,7 @@ export function MasterProfileClient({ initialData }: { initialData: MasterProfil
                 onConfirm={(id) => updateProfile({ entries: profile.entries.map((item) => item.id === id ? { ...item, confirmed: true } : item) })}
                 onSave={(id, source, text) => updateProfile({ entries: profile.entries.map((item) => item.id === id ? { ...item, source, text, confirmed: false } : item) })}
                 onDelete={(id) => updateProfile({ entries: profile.entries.filter((item) => item.id !== id).map((item, index) => ({ ...item, sortOrder: index })) })}
+                onFragmentsChange={(id, resumeFragments) => updateProfile({ entries: profile.entries.map((item) => item.id === id ? { ...item, resumeFragments } : item) })}
               />
             ))}
           </CardSection>

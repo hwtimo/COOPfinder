@@ -22,9 +22,12 @@ type AuthenticationResult =
   | { status: "authenticated"; user: AuthenticatedUser }
   | { status: "unauthenticated" };
 
-type OwnedJobMatchSource = {
+export type OwnedJobMatchSource = {
   id: string;
   extracted: unknown;
+  title?: string;
+  companyName?: string | null;
+  location?: string | null;
 };
 
 type OwnedJobLookupResult =
@@ -62,6 +65,19 @@ export type OwnedJobMatchResult =
   | { status: "invalid_extraction" }
   | { status: "unavailable" };
 
+export type OwnedJobMatchContextResult =
+  | {
+      status: "matched";
+      job: OwnedJobMatchSource;
+      profile: MasterProfileData;
+      canonicalRequirements: Extract<
+        ParseJobExtractionResult,
+        { status: "valid" }
+      >["canonicalRequirements"];
+      match: ResumeJobExactMatchResult;
+    }
+  | Exclude<OwnedJobMatchResult, { status: "matched" }>;
+
 function hasNoPersistedExtraction(value: unknown) {
   return (
     value === null ||
@@ -72,9 +88,9 @@ function hasNoPersistedExtraction(value: unknown) {
   );
 }
 
-export function createOwnedJobMatchCoordinator(
+export function createOwnedJobMatchContextCoordinator(
   dependencies: OwnedJobMatchDependencies,
-): (jobId: string) => Promise<OwnedJobMatchResult> {
+): (jobId: string) => Promise<OwnedJobMatchContextResult> {
   return async function coordinateOwnedJobMatch(jobId) {
     let authentication: AuthenticationResult;
     try {
@@ -129,7 +145,9 @@ export function createOwnedJobMatchCoordinator(
     try {
       return {
         status: "matched",
-        jobId: jobLookup.job.id,
+        job: jobLookup.job,
+        profile: profileLookup.profile,
+        canonicalRequirements: parsedExtraction.canonicalRequirements,
         match: dependencies.match(
           parsedExtraction.canonicalRequirements,
           profileLookup.profile,
@@ -141,6 +159,23 @@ export function createOwnedJobMatchCoordinator(
   };
 }
 
+export function createOwnedJobMatchCoordinator(
+  dependencies: OwnedJobMatchDependencies,
+): (jobId: string) => Promise<OwnedJobMatchResult> {
+  const coordinateContext = createOwnedJobMatchContextCoordinator(dependencies);
+
+  return async function coordinateOwnedJobMatch(jobId) {
+    const result = await coordinateContext(jobId);
+    if (result.status !== "matched") return result;
+
+    return {
+      status: "matched",
+      jobId: result.job.id,
+      match: result.match,
+    };
+  };
+}
+
 async function getAuthenticatedUser(): Promise<AuthenticationResult> {
   const user = await getSupabaseUser();
   return user
@@ -148,7 +183,7 @@ async function getAuthenticatedUser(): Promise<AuthenticationResult> {
     : { status: "unauthenticated" };
 }
 
-const productionCoordinator = createOwnedJobMatchCoordinator({
+const productionContextCoordinator = createOwnedJobMatchContextCoordinator({
   getAuthenticatedUser,
   async getOwnedJob({ jobId, userId }) {
     const result = await getPrivateJob(userId, jobId);
@@ -156,7 +191,13 @@ const productionCoordinator = createOwnedJobMatchCoordinator({
       ? {
           status: "ready",
           job: result.data
-            ? { id: result.data.id, extracted: result.data.extracted }
+            ? {
+                id: result.data.id,
+                extracted: result.data.extracted,
+                title: result.data.title,
+                companyName: result.data.companyName,
+                location: result.data.location,
+              }
             : null,
         }
       : { status: "unavailable" };
@@ -174,5 +215,18 @@ const productionCoordinator = createOwnedJobMatchCoordinator({
 export async function getOwnedJobMatch(
   jobId: string,
 ): Promise<OwnedJobMatchResult> {
-  return productionCoordinator(jobId);
+  const result = await productionContextCoordinator(jobId);
+  if (result.status !== "matched") return result;
+
+  return {
+    status: "matched",
+    jobId: result.job.id,
+    match: result.match,
+  };
+}
+
+export async function getOwnedJobMatchContext(
+  jobId: string,
+): Promise<OwnedJobMatchContextResult> {
+  return productionContextCoordinator(jobId);
 }

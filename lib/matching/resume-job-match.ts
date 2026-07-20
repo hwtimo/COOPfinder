@@ -1,4 +1,5 @@
 import type { CanonicalJobRequirements } from "@/lib/jobs/job-requirement-normalization";
+import { parseCandidateEvidence } from "@/lib/master-profile/candidate-evidence";
 import type { MasterProfileData } from "@/lib/master-profile/types";
 
 export const RESUME_JOB_EXACT_MATCH_VERSION =
@@ -14,15 +15,15 @@ export type ComparableRequirementCategory =
   | "required_technology"
   | "preferred_skill"
   | "preferred_technology"
-  | "keyword";
+  | "keyword"
+  | "soft_skill"
+  | "certification"
+  | "language";
 
 export type UnassessedRequirementCategory =
   | "education"
-  | "certification"
-  | "language"
   | "experience"
   | "responsibility"
-  | "soft_skill"
   | "uncategorized_requirement";
 
 export type MatchedRequirementItem = Readonly<{
@@ -78,6 +79,9 @@ export type ResumeJobExactMatchResult = Readonly<{
   required: RequirementCoverageGroup;
   preferred: RequirementCoverageGroup;
   keywords: RequirementCoverageGroup;
+  softSkills: RequirementCoverageGroup;
+  certifications: RequirementCoverageGroup;
+  languages: RequirementCoverageGroup;
   workAuthorization: WorkAuthorizationMatch;
   dataCompleteness: Readonly<{
     uniqueCandidateTerms: number;
@@ -145,6 +149,63 @@ function candidateTerms(profile: MasterProfileData): string[] {
   return normalizedUniqueTerms(orderedTerms);
 }
 
+function confirmedCertificationTitles(profile: MasterProfileData): string[] {
+  const profileValue = profile as unknown as Record<string, unknown>;
+  const entries = Array.isArray(profileValue.entries)
+    ? profileValue.entries
+    : [];
+  const titles: unknown[] = [];
+
+  for (const entry of entries) {
+    if (
+      typeof entry !== "object" ||
+      entry === null ||
+      Array.isArray(entry) ||
+      entry.confirmed !== true ||
+      entry.section !== "certification"
+    ) {
+      continue;
+    }
+    titles.push(entry.source);
+  }
+
+  return normalizedUniqueTerms(titles);
+}
+
+function categorizedCandidateTerms(profile: MasterProfileData) {
+  const profileValue = profile as unknown as Record<string, unknown>;
+  const parsed = parseCandidateEvidence(profileValue.candidateEvidence);
+  const generalSkills = candidateTerms(profile);
+
+  if (parsed.status !== "valid") {
+    return {
+      generalSkills,
+      technologies:
+        parsed.status === "absent" ? generalSkills : ([] as string[]),
+      softSkills: [] as string[],
+      certifications: confirmedCertificationTitles(profile),
+      languages: [] as string[],
+    };
+  }
+
+  const evidence = parsed.evidence;
+  return {
+    generalSkills,
+    technologies:
+      evidence.technologies === undefined
+        ? generalSkills
+        : normalizedUniqueTerms(evidence.technologies),
+    softSkills: normalizedUniqueTerms(evidence.softSkills),
+    certifications: normalizedUniqueTerms([
+      ...(evidence.certifications ?? []),
+      ...confirmedCertificationTitles(profile),
+    ]),
+    languages: normalizedUniqueTerms(
+      evidence.languages?.map((language) => language.language),
+    ),
+  };
+}
+
 function categorizedRequirements(
   sources: ReadonlyArray<{
     category: ComparableRequirementCategory;
@@ -177,15 +238,28 @@ function roundCoveragePercentage(matched: number, total: number) {
 
 function coverageGroup(
   requirements: readonly CategorizedRequirement[],
-  candidates: readonly string[],
+  candidatesForCategory: (
+    category: ComparableRequirementCategory,
+  ) => readonly string[],
 ): RequirementCoverageGroup {
-  const candidateByKey = new Map(
-    candidates.map((candidate) => [comparisonKey(candidate), candidate]),
-  );
+  const candidateMaps = new Map<
+    ComparableRequirementCategory,
+    Map<string, string>
+  >();
   const matchedItems: MatchedRequirementItem[] = [];
   const notEvidencedItems: NotEvidencedRequirementItem[] = [];
 
   for (const item of requirements) {
+    let candidateByKey = candidateMaps.get(item.category);
+    if (!candidateByKey) {
+      candidateByKey = new Map(
+        candidatesForCategory(item.category).map((candidate) => [
+          comparisonKey(candidate),
+          candidate,
+        ]),
+      );
+      candidateMaps.set(item.category, candidateByKey);
+    }
     const matchedCandidateTerm = candidateByKey.get(item.normalizedKey);
     if (matchedCandidateTerm !== undefined) {
       matchedItems.push({
@@ -267,11 +341,8 @@ function unassessedRequirements(
     values: unknown;
   }> = [
     { category: "education", values: requirementValue.education },
-    { category: "certification", values: requirementValue.certifications },
-    { category: "language", values: requirementValue.languages },
     { category: "experience", values: requirementValue.experience },
     { category: "responsibility", values: requirementValue.responsibilities },
-    { category: "soft_skill", values: requirementValue.softSkills },
     {
       category: "uncategorized_requirement",
       values: requirementValue.uncategorizedRequirements,
@@ -291,7 +362,7 @@ export function matchResumeToJob(
   profile: MasterProfileData,
 ): ResumeJobExactMatchResult {
   const requirementValue = requirements as unknown as Record<string, unknown>;
-  const candidates = candidateTerms(profile);
+  const candidates = categorizedCandidateTerms(profile);
   const requiredItems = categorizedRequirements([
     { category: "required_skill", values: requirementValue.requiredSkills },
     {
@@ -309,9 +380,42 @@ export function matchResumeToJob(
   const keywordItems = categorizedRequirements([
     { category: "keyword", values: requirementValue.keywords },
   ]);
-  const required = coverageGroup(requiredItems, candidates);
-  const preferred = coverageGroup(preferredItems, candidates);
-  const keywords = coverageGroup(keywordItems, candidates);
+  const candidatesForCategory = (category: ComparableRequirementCategory) => {
+    switch (category) {
+      case "required_technology":
+      case "preferred_technology":
+        return candidates.technologies;
+      case "soft_skill":
+        return candidates.softSkills;
+      case "certification":
+        return candidates.certifications;
+      case "language":
+        return candidates.languages;
+      default:
+        return candidates.generalSkills;
+    }
+  };
+  const required = coverageGroup(requiredItems, candidatesForCategory);
+  const preferred = coverageGroup(preferredItems, candidatesForCategory);
+  const keywords = coverageGroup(keywordItems, candidatesForCategory);
+  const softSkills = coverageGroup(
+    categorizedRequirements([
+      { category: "soft_skill", values: requirementValue.softSkills },
+    ]),
+    candidatesForCategory,
+  );
+  const certifications = coverageGroup(
+    categorizedRequirements([
+      { category: "certification", values: requirementValue.certifications },
+    ]),
+    candidatesForCategory,
+  );
+  const languages = coverageGroup(
+    categorizedRequirements([
+      { category: "language", values: requirementValue.languages },
+    ]),
+    candidatesForCategory,
+  );
   const workAuthorization = workAuthorizationMatch(
     requirementValue.workAuthorization,
     candidateWorkAuthorization(profile),
@@ -320,14 +424,24 @@ export function matchResumeToJob(
   const comparableJobTerms =
     required.totalUniqueRequirements +
     preferred.totalUniqueRequirements +
-    keywords.totalUniqueRequirements;
+    keywords.totalUniqueRequirements +
+    softSkills.totalUniqueRequirements +
+    certifications.totalUniqueRequirements +
+    languages.totalUniqueRequirements;
+  const uniqueCandidateTerms = normalizedUniqueTerms([
+    ...candidates.generalSkills,
+    ...candidates.technologies,
+    ...candidates.softSkills,
+    ...candidates.certifications,
+    ...candidates.languages,
+  ]).length;
 
   const status: ResumeJobMatchStatus =
     comparableJobTerms === 0 &&
     workAuthorization.status === "no_job_requirement"
       ? "insufficient_job_data"
       : comparableJobTerms > 0 &&
-          candidates.length === 0 &&
+          uniqueCandidateTerms === 0 &&
           workAuthorization.candidateValue === null
         ? "insufficient_candidate_data"
         : "comparable";
@@ -338,9 +452,12 @@ export function matchResumeToJob(
     required,
     preferred,
     keywords,
+    softSkills,
+    certifications,
+    languages,
     workAuthorization,
     dataCompleteness: {
-      uniqueCandidateTerms: candidates.length,
+      uniqueCandidateTerms,
       comparableJobTerms,
       unassessedJobRequirements: unassessed.length,
     },

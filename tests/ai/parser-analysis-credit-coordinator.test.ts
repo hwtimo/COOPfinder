@@ -45,7 +45,10 @@ type RpcCall = {
 function extractionBridge(
   counters: Counters,
   options: {
-    extractionStatus?: "success" | "provider_unavailable";
+    extractionStatus?:
+      | "success"
+      | "provider_unavailable"
+      | "invalid_structured_output";
     persistenceStatus?: "updated" | "unchanged" | "persistence_unavailable";
   } = {},
 ) {
@@ -57,6 +60,13 @@ function extractionBridge(
           status: "provider_unavailable" as const,
           reason: "provider_unavailable" as const,
           retryable: true,
+        };
+      }
+      if (options.extractionStatus === "invalid_structured_output") {
+        return {
+          status: "invalid_structured_output" as const,
+          reason: "invalid_structured_output" as const,
+          retryable: false,
         };
       }
       return {
@@ -206,6 +216,24 @@ test("provider failure refunds without persistence and preserves old analysis", 
 
   assert.deepEqual(await harness.coordinate(JOB_ID), {
     status: "provider_unavailable",
+  });
+  assert.deepEqual(counters, { provider: 1, persistence: 0 });
+  assert.equal(harness.calls[1]?.parameters.p_succeeded, false);
+  assert.deepEqual(savedAnalysis, oldAnalysis);
+});
+
+test("structured validation failure refunds and preserves old analysis", async () => {
+  const counters = { provider: 0, persistence: 0 };
+  const oldAnalysis = { contractVersion: "job-extraction-v1" };
+  const savedAnalysis = structuredClone(oldAnalysis);
+  const harness = coordinatorHarness({
+    runBridge: extractionBridge(counters, {
+      extractionStatus: "invalid_structured_output",
+    }),
+  });
+
+  assert.deepEqual(await harness.coordinate(JOB_ID), {
+    status: "invalid_structured_output",
   });
   assert.deepEqual(counters, { provider: 1, persistence: 0 });
   assert.equal(harness.calls[1]?.parameters.p_succeeded, false);

@@ -101,6 +101,90 @@ test("passes the pure matcher output through unchanged", async () => {
   assert.equal(result.match, expected);
 });
 
+test("extended extraction reaches the pure matcher without coordinator changes", async () => {
+  const extended = {
+    ...extraction(),
+    structuredRequirements: {
+      requiredSkills: ["TypeScript"],
+      preferredSkills: [],
+      requiredTechnologies: [],
+      preferredTechnologies: [],
+      education: [],
+      certifications: [],
+      languages: [],
+      workAuthorization: [],
+      experience: [],
+      responsibilities: ["Build product features"],
+      softSkills: [],
+      keywords: ["Git"],
+      uncategorizedRequirements: [],
+    },
+  };
+  const coordinate = createOwnedJobMatchCoordinator(
+    dependencies({
+      getOwnedJob: async () => ({
+        status: "ready",
+        job: { id: JOB_ID, extracted: extended },
+      }),
+    }),
+  );
+
+  const result = await coordinate(JOB_ID);
+  assert.equal(result.status, "matched");
+  if (result.status !== "matched") return;
+  assert.equal(result.match.required.matchedCount, 1);
+  assert.equal(result.match.keywords.notEvidencedItems.length, 1);
+});
+
+test("structured candidate evidence reaches additive matcher groups unchanged", async () => {
+  const extended = {
+    ...extraction(),
+    structuredRequirements: {
+      requiredSkills: [],
+      preferredSkills: [],
+      requiredTechnologies: ["TypeScript"],
+      preferredTechnologies: [],
+      education: [],
+      certifications: ["AWS Certified Developer"],
+      languages: ["French"],
+      workAuthorization: [],
+      experience: [],
+      responsibilities: [],
+      softSkills: ["Communication"],
+      keywords: [],
+      uncategorizedRequirements: [],
+    },
+  };
+  const coordinate = createOwnedJobMatchCoordinator(
+    dependencies({
+      getOwnedJob: async () => ({
+        status: "ready",
+        job: { id: JOB_ID, extracted: extended },
+      }),
+      getOwnedProfile: async () => ({
+        status: "ready",
+        profile: profile({
+          candidateEvidence: {
+            technologies: ["TypeScript"],
+            softSkills: ["Communication"],
+            certifications: ["AWS Certified Developer"],
+            languages: [{ language: "French", proficiency: "basic" }],
+          },
+        }),
+      }),
+    }),
+  );
+
+  const result = await coordinate(JOB_ID);
+  assert.equal(result.status, "matched");
+  if (result.status !== "matched") return;
+  assert.equal(result.match.required.matchedCount, 1);
+  assert.equal(result.match.softSkills.matchedCount, 1);
+  assert.equal(result.match.certifications.matchedCount, 1);
+  assert.equal(result.match.languages.matchedCount, 1);
+  assert.equal(JSON.stringify(result.match).includes("basic"), false);
+});
+
 test("unauthenticated caller cannot load job or profile", async () => {
   let jobCalls = 0;
   let profileCalls = 0;

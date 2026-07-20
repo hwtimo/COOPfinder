@@ -2,6 +2,8 @@ import {
   SCHOOL_OPTIONS,
   WORK_AUTHORIZATION_OPTIONS,
 } from "@/lib/guest-draft/types";
+import { parseCandidateEvidence } from "@/lib/master-profile/candidate-evidence";
+import { parseResumeSourceFragments } from "@/lib/master-profile/resume-source-fragments";
 
 import {
   MASTER_PROFILE_SECTIONS,
@@ -68,6 +70,10 @@ function entryValue(value: unknown, index: number): MasterProfileEntry {
   if (!source || !text) {
     throw new Error(`Entry ${index + 1} needs a title and description.`);
   }
+  const resumeFragments = parseResumeSourceFragments(value.resumeFragments);
+  if (resumeFragments.status === "invalid") {
+    throw new Error(`Entry ${index + 1} resume bullets are invalid.`);
+  }
 
   return {
     id: typeof value.id === "string" ? value.id.slice(0, 120) : `entry-${index}`,
@@ -77,6 +83,9 @@ function entryValue(value: unknown, index: number): MasterProfileEntry {
     skills: stringArray(value.skills, `Entry ${index + 1} skills`, 30, 80),
     confirmed: value.confirmed === true,
     sortOrder: index,
+    ...(resumeFragments.status === "valid"
+      ? { resumeFragments: resumeFragments.fragments }
+      : {}),
   };
 }
 
@@ -109,6 +118,11 @@ export function validateMasterProfilePayload(value: unknown): ValidationResult {
       throw new Error("Enter a valid four-digit graduation year.");
     }
 
+    const candidateEvidence = parseCandidateEvidence(value.candidateEvidence);
+    if (candidateEvidence.status === "invalid") {
+      throw new Error("Skills and credentials are invalid.");
+    }
+
     return {
       ok: true,
       data: {
@@ -127,6 +141,9 @@ export function validateMasterProfilePayload(value: unknown): ValidationResult {
         targetRoles: stringArray(value.targetRoles, "Target roles", 12, 80),
         skills: stringArray(value.skills, "Skills", 60, 80),
         entries: value.entries.map(entryValue),
+        ...(candidateEvidence.status === "valid"
+          ? { candidateEvidence: candidateEvidence.evidence }
+          : {}),
       },
     };
   } catch (error) {

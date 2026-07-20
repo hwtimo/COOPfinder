@@ -17,6 +17,7 @@ import { DeadlineBadge, StatusBadge } from "@/components/app/status-badge";
 import { PrivateJobControls } from "@/components/jobs/private-job-controls";
 import { JobAnalysisControl } from "@/components/jobs/job-analysis-control";
 import { ManualJobDescriptionForm } from "@/components/jobs/manual-job-description-form";
+import { ProfileMatchSummary } from "@/components/jobs/profile-match-summary";
 import { Button } from "@/components/ui/button";
 import {
   buildJobExtractionViewModel,
@@ -34,6 +35,7 @@ import {
 } from "@/lib/jobs/job-url-intake";
 import { getPrivateJob } from "@/lib/jobs/queries";
 import type { PrivateJobIntakeSource } from "@/lib/jobs/types";
+import { getOwnedJobMatch } from "@/lib/matching/get-owned-job-match";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getSupabaseUser } from "@/lib/supabase/user";
 
@@ -229,6 +231,10 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const job = result.data;
   if (!job) notFound();
 
+  const matchResult = await getOwnedJobMatch(job.id);
+  if (matchResult.status === "unauthenticated") redirect("/board");
+  if (matchResult.status === "not_found") notFound();
+
   const deadlineDays = daysUntilPrivateJobDeadline(job.deadline);
   const validSourceUrl = job.sourceUrl && isValidHttpUrl(job.sourceUrl);
   const analysis = buildJobExtractionViewModel(
@@ -337,6 +343,13 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
               ) : null}
             </div>
           </CardSection>
+
+          <CardSection
+            title="Profile match"
+            description="Exact comparison with explicit Master Profile data"
+          >
+            <ProfileMatchSummary result={matchResult} />
+          </CardSection>
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-20 xl:self-start">
@@ -375,14 +388,11 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                 </div>
               </dl>
 
-              <Button
-                type="button"
-                className="h-9 w-full rounded-md"
-                disabled
-                title="Resume tailoring is not available for persisted jobs yet"
-              >
-                <FileText className="size-4" aria-hidden />
-                Tailor resume unavailable
+              <Button asChild className="h-9 w-full rounded-md">
+                <Link href={`/resumes/tailor/${job.id}`}>
+                  <FileText className="size-4" aria-hidden />
+                  Review tailoring preflight
+                </Link>
               </Button>
             </div>
           </CardSection>

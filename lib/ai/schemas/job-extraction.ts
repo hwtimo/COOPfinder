@@ -22,6 +22,22 @@ export const JOB_EXTRACTION_LIMITS = {
   requirements: { items: 80, itemLength: 1_000 },
 } as const;
 
+export const STRUCTURED_REQUIREMENT_CATEGORIES = [
+  "requiredSkills",
+  "preferredSkills",
+  "requiredTechnologies",
+  "preferredTechnologies",
+  "education",
+  "certifications",
+  "languages",
+  "workAuthorization",
+  "experience",
+  "responsibilities",
+  "softSkills",
+  "keywords",
+  "uncategorizedRequirements",
+] as const;
+
 const confidenceSchema = z.number().finite().min(0).max(1);
 
 function nonBlankString(maxLength: number) {
@@ -73,6 +89,40 @@ const deadlineSchema = nonBlankString(10).refine(isCalendarDate, {
   message: "Deadline must be a valid calendar date in YYYY-MM-DD form.",
 });
 
+const conciseRequirementListSchema = uniqueStringArray(
+  JOB_EXTRACTION_LIMITS.namedSkills.items,
+  JOB_EXTRACTION_LIMITS.namedSkills.itemLength,
+);
+const detailedRequirementListSchema = uniqueStringArray(
+  JOB_EXTRACTION_LIMITS.requirements.items,
+  JOB_EXTRACTION_LIMITS.requirements.itemLength,
+);
+
+export const structuredJobRequirementsSchema = z
+  .object({
+    requiredSkills: conciseRequirementListSchema,
+    preferredSkills: conciseRequirementListSchema,
+    requiredTechnologies: conciseRequirementListSchema,
+    preferredTechnologies: conciseRequirementListSchema,
+    education: detailedRequirementListSchema,
+    certifications: detailedRequirementListSchema,
+    languages: detailedRequirementListSchema,
+    workAuthorization: detailedRequirementListSchema,
+    experience: detailedRequirementListSchema,
+    responsibilities: uniqueStringArray(
+      JOB_EXTRACTION_LIMITS.responsibilities.items,
+      JOB_EXTRACTION_LIMITS.responsibilities.itemLength,
+    ),
+    softSkills: detailedRequirementListSchema,
+    keywords: conciseRequirementListSchema,
+    uncategorizedRequirements: detailedRequirementListSchema,
+  })
+  .strict();
+
+export type StructuredJobRequirements = z.infer<
+  typeof structuredJobRequirementsSchema
+>;
+
 export const jobExtractionV1Schema = z
   .object({
     contractVersion: z.literal(JOB_EXTRACTION_CONTRACT_VERSION),
@@ -102,6 +152,7 @@ export const jobExtractionV1Schema = z
         JOB_EXTRACTION_LIMITS.requirements.itemLength,
       ),
     ),
+    structuredRequirements: structuredJobRequirementsSchema.optional(),
     overallConfidence: confidenceSchema,
   })
   .strict();

@@ -1,4 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseStoredCandidateEvidence } from "./candidate-evidence";
+import { parseResumeSourceFragments } from "./resume-source-fragments";
 
 import type {
   MasterProfileData,
@@ -28,6 +30,7 @@ type EntryRow = {
   skills: string[] | null;
   confirmed: boolean;
   sort_order: number;
+  resume_fragments: unknown;
 };
 
 function recordValue(value: unknown): Record<string, unknown> {
@@ -43,7 +46,9 @@ function storedSkills(value: unknown): string[] {
     : [];
 }
 
-function toEntry(row: EntryRow): MasterProfileEntry {
+function toEntry(row: EntryRow): MasterProfileEntry | null {
+  const resumeFragments = parseResumeSourceFragments(row.resume_fragments);
+  if (resumeFragments.status !== "valid") return null;
   return {
     id: row.id,
     section: row.section,
@@ -52,6 +57,7 @@ function toEntry(row: EntryRow): MasterProfileEntry {
     skills: row.skills ?? [],
     confirmed: row.confirmed,
     sortOrder: row.sort_order,
+    resumeFragments: resumeFragments.fragments,
   };
 }
 
@@ -91,7 +97,7 @@ export async function getMasterProfile(
     supabase
       .from("master_profile_entries")
       .select(
-        "id,section,source_label,title,entry_text,skills,confirmed,sort_order",
+        "id,section,source_label,title,entry_text,skills,confirmed,sort_order,resume_fragments",
       )
       .eq("user_id", userId)
       .order("sort_order", { ascending: true })
@@ -104,6 +110,14 @@ export async function getMasterProfile(
 
   const profile = profileResult.data as ProfileRow | null;
   const master = masterResult.data as MasterRow | null;
+  const candidateEvidence = parseStoredCandidateEvidence(master?.data);
+  if (candidateEvidence.status === "invalid") {
+    return { status: "error", data: empty };
+  }
+  const entries = ((entriesResult.data ?? []) as EntryRow[]).map(toEntry);
+  if (entries.some((entry) => entry === null)) {
+    return { status: "error", data: empty };
+  }
 
   return {
     status: "ready",
@@ -118,7 +132,10 @@ export async function getMasterProfile(
       preferredLocations: profile?.preferred_locations ?? [],
       targetRoles: profile?.target_roles ?? [],
       skills: storedSkills(master?.data),
-      entries: ((entriesResult.data ?? []) as EntryRow[]).map(toEntry),
+      entries: entries as MasterProfileEntry[],
+      ...(candidateEvidence.status === "valid"
+        ? { candidateEvidence: candidateEvidence.evidence }
+        : {}),
     },
   };
 }

@@ -17,6 +17,19 @@ Extract only information explicitly stated in the supplied private job-descripti
 Return only the requested structured data. Do not add prose, markdown, citations, explanations, or reasoning.
 Do not invent or infer a company, job title, location, work mode, term, deadline, skill, responsibility, or requirement.
 Use null for an unstated scalar field and null or an empty collection for unstated collection fields.
+Populate every structuredRequirements category. Use an empty array when a category is absent.
+Classify a required skill only when the text explicitly says required, mandatory, must, or places it under an explicitly required qualification heading.
+Classify a preferred skill only when the text explicitly says preferred, an asset, nice to have, a bonus, or equivalent optional language.
+Classify a concrete programming language, framework, library, tool, platform, database, cloud service, software product, or comparable named technology as required or preferred only when the corresponding modality is explicit.
+Do not duplicate a concrete technology as a general skill unless the text independently states both concepts.
+Education includes only explicit degree, enrollment, academic discipline, diploma, or academic-level conditions.
+Certifications include only explicitly named certifications or credentials. Languages include only explicit human-language or proficiency requirements.
+Work authorization includes only explicit work eligibility, permit, citizenship, sponsorship, or authorization conditions.
+Experience includes only explicit duration, seniority, or domain-experience conditions. Responsibilities include explicit duties or actions performed in the role.
+Soft skills include only explicit interpersonal or behavioral capabilities. Keywords include explicit role or domain terms useful for matching that are not represented in a more precise category.
+Place an explicit qualification that cannot be safely assigned elsewhere in uncategorizedRequirements. Never promote ambiguous language to required.
+Avoid duplicating the same requirement across categories, preserve first-seen meaning and practical source order, and never invent an unstated qualification.
+A statement inside a responsibilities section remains a responsibility unless the text independently and explicitly presents it as a candidate qualification.
 Use only Remote, Hybrid, or On-site when work mode is explicit; otherwise use null.
 Treat a deadline as present only when the text explicitly states a real calendar deadline. Do not derive it from posting dates, start dates, durations, or vague phrases.
 Set each confidence value only from how explicitly that field appears in the supplied text. Overall confidence must reflect the extraction as a whole.

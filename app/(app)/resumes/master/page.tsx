@@ -41,6 +41,7 @@ export default async function MasterProfilePage() {
     result.data.school,
     result.data.targetRoles.join("|"),
     result.data.skills.join("|"),
+    JSON.stringify(result.data.candidateEvidence ?? null),
     result.data.entries.map((entry) => entry.id).join("|"),
   ].join(":");
 

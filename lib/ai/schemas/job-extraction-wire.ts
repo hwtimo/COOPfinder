@@ -27,6 +27,36 @@ function wireStringArray(maxItems: number, maxItemLength: number) {
 
 const deadlineWireSchema = wireString(10).regex(/^\d{4}-\d{2}-\d{2}$/);
 
+const conciseRequirementListWireSchema = wireStringArray(
+  JOB_EXTRACTION_LIMITS.namedSkills.items,
+  JOB_EXTRACTION_LIMITS.namedSkills.itemLength,
+);
+const detailedRequirementListWireSchema = wireStringArray(
+  JOB_EXTRACTION_LIMITS.requirements.items,
+  JOB_EXTRACTION_LIMITS.requirements.itemLength,
+);
+
+export const structuredJobRequirementsWireSchema = z
+  .object({
+    requiredSkills: conciseRequirementListWireSchema,
+    preferredSkills: conciseRequirementListWireSchema,
+    requiredTechnologies: conciseRequirementListWireSchema,
+    preferredTechnologies: conciseRequirementListWireSchema,
+    education: detailedRequirementListWireSchema,
+    certifications: detailedRequirementListWireSchema,
+    languages: detailedRequirementListWireSchema,
+    workAuthorization: detailedRequirementListWireSchema,
+    experience: detailedRequirementListWireSchema,
+    responsibilities: wireStringArray(
+      JOB_EXTRACTION_LIMITS.responsibilities.items,
+      JOB_EXTRACTION_LIMITS.responsibilities.itemLength,
+    ),
+    softSkills: detailedRequirementListWireSchema,
+    keywords: conciseRequirementListWireSchema,
+    uncategorizedRequirements: detailedRequirementListWireSchema,
+  })
+  .strict();
+
 export const jobExtractionWireV1Schema = z
   .object({
     contractVersion: z.literal(JOB_EXTRACTION_CONTRACT_VERSION),
@@ -54,6 +84,7 @@ export const jobExtractionWireV1Schema = z
         JOB_EXTRACTION_LIMITS.requirements.itemLength,
       ),
     ),
+    structuredRequirements: structuredJobRequirementsWireSchema,
     overallConfidence: confidenceWireSchema,
   })
   .strict();

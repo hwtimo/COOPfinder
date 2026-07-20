@@ -61,9 +61,41 @@ function extractedList(extraction: unknown, fieldName: string) {
   return normalizeStringList(field.value);
 }
 
+function structuredRequirements(extraction: unknown) {
+  if (!isRecord(extraction)) return null;
+  const structured = extraction.structuredRequirements;
+  return isRecord(structured) ? structured : null;
+}
+
 export function normalizeJobRequirements(
   persistedExtraction: unknown,
 ): CanonicalJobRequirements {
+  const structured = structuredRequirements(persistedExtraction);
+  if (structured) {
+    return {
+      contractVersion: CANONICAL_JOB_REQUIREMENTS_VERSION,
+      requiredSkills: normalizeStringList(structured.requiredSkills),
+      preferredSkills: normalizeStringList(structured.preferredSkills),
+      requiredTechnologies: normalizeStringList(
+        structured.requiredTechnologies,
+      ),
+      preferredTechnologies: normalizeStringList(
+        structured.preferredTechnologies,
+      ),
+      education: normalizeStringList(structured.education),
+      certifications: normalizeStringList(structured.certifications),
+      languages: normalizeStringList(structured.languages),
+      workAuthorization: normalizeStringList(structured.workAuthorization),
+      experience: normalizeStringList(structured.experience),
+      responsibilities: normalizeStringList(structured.responsibilities),
+      softSkills: normalizeStringList(structured.softSkills),
+      keywords: normalizeStringList(structured.keywords),
+      uncategorizedRequirements: normalizeStringList(
+        structured.uncategorizedRequirements,
+      ),
+    };
+  }
+
   return {
     contractVersion: CANONICAL_JOB_REQUIREMENTS_VERSION,
     requiredSkills: [],
