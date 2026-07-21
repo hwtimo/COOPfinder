@@ -124,7 +124,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </form>
 
           <p className="mt-4 text-xs leading-5 text-muted-foreground">
-            New accounts include 2 free tailoring credits. Application tracking
+            New accounts include 1 free tailoring credit. Application tracking
             is free.
           </p>
         </section>

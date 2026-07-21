@@ -49,6 +49,28 @@ export function mapTailoringGenerationActionOutcome(
       },
     };
   }
+  if (result.status === "rate_limited") {
+    return {
+      status: "state",
+      state: {
+        status: "error",
+        message:
+          "Tailored resume generation is temporarily limited. Please try again later.",
+        retryable: false,
+      },
+    };
+  }
+  if (result.status === "configuration_unavailable") {
+    return {
+      status: "state",
+      state: {
+        status: "error",
+        message:
+          "Tailored resume generation is not available right now. Please try again later.",
+        retryable: false,
+      },
+    };
+  }
 
   const guidance = {
     extraction_unavailable:

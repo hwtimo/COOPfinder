@@ -26,7 +26,10 @@ export type ExtractJobDescriptionResult =
     }
   | {
       status: "configuration_unavailable";
-      reason: "model_not_configured" | "api_key_not_configured";
+      reason:
+        | "model_not_configured"
+        | "live_provider_disabled"
+        | "api_key_not_configured";
       retryable: false;
     }
   | {
@@ -109,7 +112,7 @@ export async function extractJobDescription(
   if (providerResult.status === "configuration_unavailable") {
     return {
       status: "configuration_unavailable",
-      reason: "api_key_not_configured",
+      reason: providerResult.reason,
       retryable: false,
     };
   }

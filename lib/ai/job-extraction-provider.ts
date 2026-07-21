@@ -2,7 +2,7 @@ export type JobExtractionProviderResult =
   | { status: "parsed"; output: unknown }
   | {
       status: "configuration_unavailable";
-      reason: "api_key_not_configured";
+      reason: "live_provider_disabled" | "api_key_not_configured";
     }
   | { status: "refusal" }
   | { status: "unavailable" };

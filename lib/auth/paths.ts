@@ -74,7 +74,7 @@ export function getLoginReasonCopy(reason?: string): string {
     case "submit_board_job":
       return "Log in to suggest a role for the public board and keep the original posting in your private workspace.";
     case "tailor_resume":
-      return "Log in to tailor this resume. New accounts include 2 free tailoring credits.";
+      return "Log in to tailor this resume. New accounts include 1 free tailoring credit.";
     case "add_job":
       return "Log in to add your own postings and track every next action.";
     case "full_analysis":

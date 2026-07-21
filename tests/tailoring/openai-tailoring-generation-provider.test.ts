@@ -8,6 +8,7 @@ import {
   TAILORING_GENERATION_PROVIDER_INSTRUCTIONS,
   TAILORING_PROVIDER_MAX_RETRIES,
   TAILORING_PROVIDER_TIMEOUT_MS,
+  TAILORING_MAX_OUTPUT_TOKENS,
 } from "../../lib/tailoring/openai-tailoring-generation-provider";
 import { buildTailoringProviderInputV2 } from "../../lib/tailoring/build-tailoring-provider-input-v2";
 import type { TailoringProviderInputV2 } from "../../lib/tailoring/tailoring-provider-contracts-v2";
@@ -41,6 +42,7 @@ test("builds one strict reference-only Responses request", () => {
   );
   assert.equal(request.model, "configured-model");
   assert.equal(request.store, false);
+  assert.equal(request.max_output_tokens, TAILORING_MAX_OUTPUT_TOKENS);
   assert.equal("tools" in request, false);
   assert.equal("stream" in request, false);
   assert.equal(request.text.format.type, "json_schema");
@@ -55,6 +57,7 @@ test("uses maxRetries zero, a bounded timeout, and exactly one parse request", a
   let requests = 0;
   let capturedOptions: unknown;
   const provider = createOpenAITailoringGenerationProvider({
+    getLiveProviderEnabled: () => "true",
     getApiKey: () => "configured-key",
     resolveModel: readyModel,
     createClient(_apiKey, options) {
@@ -91,6 +94,7 @@ test("maps refusal, malformed output, and thrown transport failures safely", asy
   ];
   let index = 0;
   const provider = createOpenAITailoringGenerationProvider({
+    getLiveProviderEnabled: () => "true",
     getApiKey: () => "configured-key",
     resolveModel: readyModel,
     createClient() {
@@ -103,6 +107,7 @@ test("maps refusal, malformed output, and thrown transport failures safely", asy
   });
 
   const unavailable = createOpenAITailoringGenerationProvider({
+    getLiveProviderEnabled: () => "true",
     getApiKey: () => "configured-key",
     resolveModel: readyModel,
     createClient() {
@@ -112,6 +117,68 @@ test("maps refusal, malformed output, and thrown transport failures safely", asy
   assert.deepEqual(await unavailable.generatePlan(input()), {
     status: "unavailable",
   });
+});
+
+test("live-provider kill switch fails closed before model, key, or client use", async () => {
+  for (const enabled of [undefined, "false", "TRUE", "1"]) {
+    let modelReads = 0;
+    let keyReads = 0;
+    let clientCreations = 0;
+    const provider = createOpenAITailoringGenerationProvider({
+      getLiveProviderEnabled: () => enabled,
+      resolveModel() {
+        modelReads += 1;
+        return readyModel();
+      },
+      getApiKey() {
+        keyReads += 1;
+        return "configured-key";
+      },
+      createClient() {
+        clientCreations += 1;
+        throw new Error("must not create client");
+      },
+    });
+    assert.deepEqual(await provider.generatePlan(input()), {
+      status: "configuration_unavailable",
+      reason: "live_provider_disabled",
+    });
+    assert.equal(modelReads, 0);
+    assert.equal(keyReads, 0);
+    assert.equal(clientCreations, 0);
+  }
+});
+
+test("task model and API key configuration fail safely without a request", async () => {
+  let clientCreations = 0;
+  const createClient = () => {
+    clientCreations += 1;
+    throw new Error("must not create client");
+  };
+  const missingModel = createOpenAITailoringGenerationProvider({
+    getLiveProviderEnabled: () => "true",
+    getApiKey: () => "configured-key",
+    resolveModel: () => ({
+      status: "configuration_unavailable",
+      reason: "model_not_configured",
+    }),
+    createClient,
+  });
+  const missingKey = createOpenAITailoringGenerationProvider({
+    getLiveProviderEnabled: () => "true",
+    getApiKey: () => " ",
+    resolveModel: readyModel,
+    createClient,
+  });
+  assert.deepEqual(await missingModel.generatePlan(input()), {
+    status: "configuration_unavailable",
+    reason: "model_not_configured",
+  });
+  assert.deepEqual(await missingKey.generatePlan(input()), {
+    status: "configuration_unavailable",
+    reason: "api_key_not_configured",
+  });
+  assert.equal(clientCreations, 0);
 });
 
 test("adapter is server-only and contains no repair, fallback, route, or UI dependency", () => {

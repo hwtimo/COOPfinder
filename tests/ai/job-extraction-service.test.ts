@@ -11,6 +11,9 @@ import type {
 } from "../../lib/ai/job-extraction-provider";
 import {
   JOB_EXTRACTION_PROVIDER_INSTRUCTIONS,
+  JOB_EXTRACTION_MAX_OUTPUT_TOKENS,
+  JOB_EXTRACTION_PROVIDER_MAX_RETRIES,
+  JOB_EXTRACTION_PROVIDER_TIMEOUT_MS,
   JOB_EXTRACTION_STRUCTURED_OUTPUT_NAME,
   createOpenAIJobExtractionProvider,
 } from "../../lib/ai/openai-job-extraction-provider";
@@ -89,11 +92,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-test("routes job extraction only through the configured Luna environment value", () => {
+test("routes job extraction only through its task-specific environment value", () => {
   assert.equal(AI_TASK_CAPABILITY_TIERS.job_extraction, "luna");
 
   const resolved = resolveAiModel("job_extraction", {
-    OPENAI_MODEL_LUNA: `  ${CONFIGURED_LUNA_MODEL}  `,
+    OPENAI_MODEL_JOB_EXTRACTION: `  ${CONFIGURED_LUNA_MODEL}  `,
   });
   assert.deepEqual(resolved, readyModel());
 
@@ -102,7 +105,30 @@ test("routes job extraction only through the configured Luna environment value",
     reason: "model_not_configured",
   });
   assert.deepEqual(
-    resolveAiModel("job_extraction", { OPENAI_MODEL_LUNA: "   " }),
+    resolveAiModel("job_extraction", {
+      OPENAI_MODEL_JOB_EXTRACTION: "   ",
+    }),
+    {
+      status: "configuration_unavailable",
+      reason: "model_not_configured",
+    },
+  );
+  assert.deepEqual(
+    resolveAiModel("tailoring_generation", {
+      OPENAI_MODEL_JOB_EXTRACTION: "extraction-model",
+      OPENAI_MODEL_TAILORING: "tailoring-model",
+    }),
+    {
+      status: "ready",
+      task: "tailoring_generation",
+      tier: "luna",
+      model: "tailoring-model",
+    },
+  );
+  assert.deepEqual(
+    resolveAiModel("tailoring_generation", {
+      OPENAI_MODEL_JOB_EXTRACTION: "extraction-model",
+    }),
     {
       status: "configuration_unavailable",
       reason: "model_not_configured",
@@ -135,6 +161,7 @@ test("evaluates API configuration and creates the client lazily", async () => {
   let clientCreations = 0;
   let parseCalls = 0;
   const provider = createOpenAIJobExtractionProvider({
+    getLiveProviderEnabled: () => "true",
     getApiKey() {
       apiKeyReads += 1;
       return "test-api-key";
@@ -168,6 +195,7 @@ test("evaluates API configuration and creates the client lazily", async () => {
 test("returns missing API-key configuration before client or network use", async () => {
   let clientCreations = 0;
   const provider = createOpenAIJobExtractionProvider({
+    getLiveProviderEnabled: () => "true",
     getApiKey: () => "  ",
     createClient() {
       clientCreations += 1;
@@ -341,6 +369,7 @@ test("production adapter strips refusal and SDK exception details", async () => 
   const refusalMarker = "PRIVATE_REFUSAL_MARKER";
   const exceptionMarker = "PRIVATE_SDK_EXCEPTION_MARKER";
   const refusalProvider = createOpenAIJobExtractionProvider({
+    getLiveProviderEnabled: () => "true",
     getApiKey: () => "test-api-key",
     createClient: () => ({
       async parse() {
@@ -357,6 +386,7 @@ test("production adapter strips refusal and SDK exception details", async () => 
     }),
   });
   const exceptionProvider = createOpenAIJobExtractionProvider({
+    getLiveProviderEnabled: () => "true",
     getApiKey: () => "test-api-key",
     createClient: () => ({
       async parse() {
@@ -414,10 +444,15 @@ test("failure results expose no raw inputs, provider payloads, or fallback data"
 
 test("production adapter uses routed structured Responses request without tools", async () => {
   let capturedRequest: unknown;
+  let capturedOptions: unknown;
+  let parseCalls = 0;
   const provider = createOpenAIJobExtractionProvider({
+    getLiveProviderEnabled: () => "true",
     getApiKey: () => "test-api-key",
-    createClient: () => ({
+    createClient: (_apiKey, options) => ({
       async parse(request) {
+        parseCalls += 1;
+        capturedOptions = options;
         capturedRequest = request;
         return { output_parsed: validExtraction(), output: [] };
       },
@@ -434,6 +469,10 @@ test("production adapter uses routed structured Responses request without tools"
   if (!isRecord(capturedRequest)) return;
   assert.equal(capturedRequest.model, CONFIGURED_LUNA_MODEL);
   assert.equal(capturedRequest.store, false);
+  assert.equal(
+    capturedRequest.max_output_tokens,
+    JOB_EXTRACTION_MAX_OUTPUT_TOKENS,
+  );
   assert.equal(capturedRequest.input, "Private JD");
   assert.equal("tools" in capturedRequest, false);
   assert.equal("include" in capturedRequest, false);
@@ -450,4 +489,35 @@ test("production adapter uses routed structured Responses request without tools"
     JOB_EXTRACTION_STRUCTURED_OUTPUT_NAME,
   );
   assert.equal(capturedRequest.text.format.strict, true);
+  assert.equal(parseCalls, 1);
+  assert.deepEqual(capturedOptions, {
+    maxRetries: JOB_EXTRACTION_PROVIDER_MAX_RETRIES,
+    timeout: JOB_EXTRACTION_PROVIDER_TIMEOUT_MS,
+  });
+  assert.equal(JOB_EXTRACTION_PROVIDER_MAX_RETRIES, 0);
+  assert.equal(JOB_EXTRACTION_PROVIDER_TIMEOUT_MS, 30_000);
+});
+
+test("live-provider kill switch fails closed before API key or client use", async () => {
+  for (const enabled of [undefined, "false", "TRUE", "1"]) {
+    let apiKeyReads = 0;
+    let clientCreations = 0;
+    const provider = createOpenAIJobExtractionProvider({
+      getLiveProviderEnabled: () => enabled,
+      getApiKey() {
+        apiKeyReads += 1;
+        return "test-api-key";
+      },
+      createClient() {
+        clientCreations += 1;
+        throw new Error("must not create client");
+      },
+    });
+    assert.deepEqual(await provider.extract({ model: "model", jobDescription: "JD" }), {
+      status: "configuration_unavailable",
+      reason: "live_provider_disabled",
+    });
+    assert.equal(apiKeyReads, 0);
+    assert.equal(clientCreations, 0);
+  }
 });

@@ -14,7 +14,11 @@ export type TailoringReservationRpcResult =
       reservationId: string;
     }>
   | Readonly<{
-      status: "insufficient_credit" | "not_found" | "invalid_input";
+      status:
+        | "insufficient_credit"
+        | "rate_limited"
+        | "not_found"
+        | "invalid_input";
     }>
   | Readonly<{ status: "unavailable" }>;
 
@@ -141,6 +145,7 @@ export function parseTailoringReservationRpcResult(
         ? { status: row.result_status, reservationId: row.reservation_id }
         : { status: "unavailable" };
     case "insufficient_credit":
+    case "rate_limited":
     case "not_found":
     case "invalid_input":
       return row.reservation_id === null &&

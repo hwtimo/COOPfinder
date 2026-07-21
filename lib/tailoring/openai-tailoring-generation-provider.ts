@@ -19,6 +19,9 @@ export const TAILORING_PLAN_STRUCTURED_OUTPUT_NAME =
   "tailoring_plan_output_v2" as const;
 export const TAILORING_PROVIDER_TIMEOUT_MS = 30_000;
 export const TAILORING_PROVIDER_MAX_RETRIES = 0;
+// The output is reference-only and current valid fixtures are well under
+// 1,000 serialized characters; 2,048 tokens leaves conservative headroom.
+export const TAILORING_MAX_OUTPUT_TOKENS = 2_048;
 
 export const TAILORING_GENERATION_PROVIDER_INSTRUCTIONS = `
 Return only the strict tailoring-plan-output-v2 object. Do not return prose, markdown, HTML, explanations, diagnostics, or reasoning.
@@ -40,6 +43,7 @@ export function buildOpenAITailoringGenerationRequest(
     instructions: TAILORING_GENERATION_PROVIDER_INSTRUCTIONS,
     input: JSON.stringify(input),
     store: false,
+    max_output_tokens: TAILORING_MAX_OUTPUT_TOKENS,
     text: {
       format: zodTextFormat(
         tailoringPlanOutputV2Schema,
@@ -58,6 +62,7 @@ type ResponsesParseClient = {
 };
 
 type OpenAITailoringDependencies = Readonly<{
+  getLiveProviderEnabled?: () => string | undefined;
   getApiKey?: () => string | undefined;
   resolveModel?: typeof resolveAiModel;
   createClient?: (
@@ -110,14 +115,33 @@ export function createOpenAITailoringGenerationProvider(
     ): Promise<TailoringGenerationProviderResult> {
       const parsedInput = tailoringProviderInputV2Schema.safeParse(input);
       if (!parsedInput.success) return { status: "unavailable" };
+      const liveProviderEnabled = (
+        dependencies.getLiveProviderEnabled ??
+        (() => process.env.OPENAI_LIVE_PROVIDER_ENABLED)
+      )()?.trim();
+      if (liveProviderEnabled !== "true") {
+        return {
+          status: "configuration_unavailable",
+          reason: "live_provider_disabled",
+        };
+      }
       const model = (dependencies.resolveModel ?? resolveAiModel)(
         "tailoring_generation",
       );
       const apiKey = (
         dependencies.getApiKey ?? (() => process.env.OPENAI_API_KEY)
       )()?.trim();
-      if (model.status !== "ready" || !apiKey) {
-        return { status: "unavailable" };
+      if (model.status !== "ready") {
+        return {
+          status: "configuration_unavailable",
+          reason: "model_not_configured",
+        };
+      }
+      if (!apiKey) {
+        return {
+          status: "configuration_unavailable",
+          reason: "api_key_not_configured",
+        };
       }
 
       try {

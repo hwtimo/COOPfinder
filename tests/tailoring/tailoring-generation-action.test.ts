@@ -22,6 +22,18 @@ test("new generation and completed replay redirect to their saved immutable vers
 test("pending, no-credit, preflight, and terminal failures use fixed safe copy", () => {
   assert.match(JSON.stringify(mapTailoringGenerationActionOutcome({ status: "generation_in_progress" })), /already in progress/);
   assert.match(JSON.stringify(mapTailoringGenerationActionOutcome({ status: "insufficient_credit" })), /enough tailoring credits/);
+  assert.match(
+    JSON.stringify(mapTailoringGenerationActionOutcome({ status: "rate_limited" })),
+    /temporarily limited/,
+  );
+  assert.match(
+    JSON.stringify(
+      mapTailoringGenerationActionOutcome({
+        status: "configuration_unavailable",
+      }),
+    ),
+    /not available right now/,
+  );
   assert.match(JSON.stringify(mapTailoringGenerationActionOutcome({ status: "insufficient_candidate_data" })), /approved bullets/);
   const failed = mapTailoringGenerationActionOutcome({ status: "provider_unavailable" });
   assert.match(JSON.stringify(failed), /could not be generated/);

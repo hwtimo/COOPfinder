@@ -60,8 +60,10 @@ export type GenerateOwnedTailoredResumeResult =
       status: "insufficient_job_data" | "insufficient_candidate_data";
     }>
   | Readonly<{ status: "insufficient_credit" }>
+  | Readonly<{ status: "rate_limited" }>
   | Readonly<{ status: "generation_in_progress" }>
   | Readonly<{ status: "attempt_terminal" }>
+  | Readonly<{ status: "configuration_unavailable" }>
   | Readonly<{ status: "provider_unavailable" }>
   | Readonly<{ status: "invalid_provider_output" }>
   | Readonly<{ status: "persistence_failed" }>
@@ -225,6 +227,8 @@ export function createGenerateOwnedTailoredResumeCoordinator(
     switch (reservation.status) {
       case "insufficient_credit":
         return { status: "insufficient_credit" };
+      case "rate_limited":
+        return { status: "rate_limited" };
       case "generation_in_progress":
         return { status: "generation_in_progress" };
       case "already_completed": {
@@ -268,6 +272,10 @@ export function createGenerateOwnedTailoredResumeCoordinator(
     ) {
       await refundIgnoringFailure(context, user.id, reservation.reservationId);
       return { status: "provider_unavailable" };
+    }
+    if (providerResult.status === "configuration_unavailable") {
+      await refundIgnoringFailure(context, user.id, reservation.reservationId);
+      return { status: "configuration_unavailable" };
     }
     if (providerResult.status === "invalid_output") {
       await refundIgnoringFailure(context, user.id, reservation.reservationId);

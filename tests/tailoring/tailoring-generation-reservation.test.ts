@@ -80,6 +80,7 @@ test("strictly parses reservation lifecycle results", () => {
   }
   for (const status of [
     "insufficient_credit",
+    "rate_limited",
     "not_found",
     "invalid_input",
   ] as const) {

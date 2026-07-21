@@ -173,6 +173,7 @@ test("authentication, invalid IDs, and non-ready source states stop before reser
 test("reservation outcomes before generation invoke the provider zero times", async () => {
   const cases = [
     ["insufficient_credit", "insufficient_credit"],
+    ["rate_limited", "rate_limited"],
     ["generation_in_progress", "generation_in_progress"],
     ["terminal_refunded", "attempt_terminal"],
     ["terminal_expired", "attempt_terminal"],

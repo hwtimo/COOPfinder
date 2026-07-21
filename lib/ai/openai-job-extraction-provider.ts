@@ -11,6 +11,12 @@ import { jobExtractionWireV1Schema } from "./schemas/job-extraction-wire";
 
 export const JOB_EXTRACTION_STRUCTURED_OUTPUT_NAME =
   "job_extraction_v1" as const;
+export const JOB_EXTRACTION_PROVIDER_TIMEOUT_MS = 30_000;
+export const JOB_EXTRACTION_PROVIDER_MAX_RETRIES = 0;
+// The strict extraction fixture is under 2,000 serialized characters. This
+// allows substantial list growth while keeping one response below a bounded,
+// cost-conscious ceiling.
+export const JOB_EXTRACTION_MAX_OUTPUT_TOKENS = 4_096;
 
 export const JOB_EXTRACTION_PROVIDER_INSTRUCTIONS = `
 Extract only information explicitly stated in the supplied private job-description text.
@@ -46,6 +52,7 @@ export function buildOpenAIJobExtractionRequest(
     instructions: JOB_EXTRACTION_PROVIDER_INSTRUCTIONS,
     input: jobDescription,
     store: false,
+    max_output_tokens: JOB_EXTRACTION_MAX_OUTPUT_TOKENS,
     text: {
       format: zodTextFormat(
         jobExtractionWireV1Schema,
@@ -64,12 +71,19 @@ type ResponsesParseClient = {
 };
 
 type OpenAIProviderDependencies = {
+  getLiveProviderEnabled?: () => string | undefined;
   getApiKey?: () => string | undefined;
-  createClient?: (apiKey: string) => ResponsesParseClient;
+  createClient?: (
+    apiKey: string,
+    options: Readonly<{ maxRetries: 0; timeout: number }>,
+  ) => ResponsesParseClient;
 };
 
-function defaultClientFactory(apiKey: string): ResponsesParseClient {
-  const client = new OpenAI({ apiKey });
+function defaultClientFactory(
+  apiKey: string,
+  options: Readonly<{ maxRetries: 0; timeout: number }>,
+): ResponsesParseClient {
+  const client = new OpenAI({ apiKey, ...options });
   return {
     parse(request) {
       return client.responses.parse(request);
@@ -108,6 +122,17 @@ export function createOpenAIJobExtractionProvider(
       model,
       jobDescription,
     }): Promise<JobExtractionProviderResult> {
+      const liveProviderEnabled = (
+        dependencies.getLiveProviderEnabled ??
+        (() => process.env.OPENAI_LIVE_PROVIDER_ENABLED)
+      )()?.trim();
+      if (liveProviderEnabled !== "true") {
+        return {
+          status: "configuration_unavailable",
+          reason: "live_provider_disabled",
+        };
+      }
+
       const getApiKey =
         dependencies.getApiKey ?? (() => process.env.OPENAI_API_KEY);
       const apiKey = getApiKey()?.trim();
@@ -122,6 +147,10 @@ export function createOpenAIJobExtractionProvider(
       try {
         const client = (dependencies.createClient ?? defaultClientFactory)(
           apiKey,
+          {
+            maxRetries: JOB_EXTRACTION_PROVIDER_MAX_RETRIES,
+            timeout: JOB_EXTRACTION_PROVIDER_TIMEOUT_MS,
+          },
         );
         const response = await client.parse(
           buildOpenAIJobExtractionRequest(model, jobDescription),

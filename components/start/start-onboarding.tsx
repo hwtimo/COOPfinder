@@ -1029,7 +1029,7 @@ export function StartOnboarding({ isAuthenticated }: StartOnboardingProps) {
                 <p className="mt-2 text-xs leading-5 text-muted-foreground">
                   Create a free account to keep jobs private, save your
                   profile, extract requirements for review, and tailor a
-                  reviewed resume. 2 free tailoring credits included, no card
+                  reviewed resume. 1 free tailoring credit included, no card
                   required. Tracking is free.
                 </p>
                 <Button className="mt-4 h-10 w-full rounded-md" asChild>
