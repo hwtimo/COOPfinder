@@ -286,7 +286,7 @@ test("returns canonical normalized output and classification from a fake provide
   });
 });
 
-test("applies canonical validation after provider parsing", async () => {
+test("normalizes valid wire output before applying canonical validation", async () => {
   const impossibleDate = validExtraction();
   impossibleDate.deadline.value = "2028-02-30";
   const duplicateRequirement = validExtraction();
@@ -301,17 +301,29 @@ test("applies canonical validation after provider parsing", async () => {
     true,
   );
 
-  for (const output of [impossibleDate, duplicateRequirement]) {
-    const result = await extractJobDescription("Private JD", {
-      resolveModel: readyModel,
-      provider: providerReturning({ status: "parsed", output }),
-    });
-    assert.deepEqual(result, {
-      status: "invalid_structured_output",
-      reason: "invalid_structured_output",
-      retryable: false,
-    });
-  }
+  const invalidDateResult = await extractJobDescription("Private JD", {
+    resolveModel: readyModel,
+    provider: providerReturning({ status: "parsed", output: impossibleDate }),
+  });
+  assert.equal(invalidDateResult.status, "success");
+  if (invalidDateResult.status !== "success") return;
+  assert.deepEqual(invalidDateResult.extraction.deadline, {
+    value: null,
+    confidence: 0,
+  });
+
+  const duplicateResult = await extractJobDescription("Private JD", {
+    resolveModel: readyModel,
+    provider: providerReturning({
+      status: "parsed",
+      output: duplicateRequirement,
+    }),
+  });
+  assert.equal(duplicateResult.status, "success");
+  if (duplicateResult.status !== "success") return;
+  assert.deepEqual(duplicateResult.extraction.requirements.value, [
+    "Experience with SQL",
+  ]);
 });
 
 test("rejects null or missing provider parsed output", async () => {

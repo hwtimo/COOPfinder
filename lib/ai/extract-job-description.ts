@@ -8,6 +8,7 @@ import type { JobExtractionReviewClassification } from "./job-extraction-confide
 import type { JobExtractionProvider } from "./job-extraction-provider";
 import type { CanonicalJobRequirements } from "../jobs/job-requirement-normalization";
 import { resolveAiModel, type AiModelResolution } from "./model-router";
+import { normalizeJobExtractionWireOutput } from "./normalize-job-extraction-wire";
 import { openAIJobExtractionProvider } from "./openai-job-extraction-provider";
 
 export const PRIVATE_JOB_DESCRIPTION_MAX_LENGTH = 100_000;
@@ -133,7 +134,15 @@ export async function extractJobDescription(
     };
   }
 
-  const canonicalResult = parseJobExtractionOutput(providerResult.output);
+  let canonicalResult = parseJobExtractionOutput(providerResult.output);
+  if (canonicalResult.status !== "valid") {
+    const normalizedWireOutput = normalizeJobExtractionWireOutput(
+      providerResult.output,
+    );
+    if (normalizedWireOutput !== null) {
+      canonicalResult = parseJobExtractionOutput(normalizedWireOutput);
+    }
+  }
   if (canonicalResult.status !== "valid") {
     return {
       status: "invalid_structured_output",
