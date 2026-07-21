@@ -7,6 +7,11 @@ import type {
   JobExtractionProvider,
   JobExtractionProviderResult,
 } from "./job-extraction-provider";
+import {
+  buildOpenAIProviderDiagnostic,
+  reportOpenAIProviderDiagnostic,
+  type OpenAIProviderDiagnostic,
+} from "./openai-provider-diagnostics";
 import { jobExtractionWireV1Schema } from "./schemas/job-extraction-wire";
 
 export const JOB_EXTRACTION_STRUCTURED_OUTPUT_NAME =
@@ -77,6 +82,7 @@ type OpenAIProviderDependencies = {
     apiKey: string,
     options: Readonly<{ maxRetries: 0; timeout: number }>,
   ) => ResponsesParseClient;
+  reportDiagnostic?: (diagnostic: OpenAIProviderDiagnostic) => void;
 };
 
 function defaultClientFactory(
@@ -158,7 +164,14 @@ export function createOpenAIJobExtractionProvider(
 
         if (containsRefusal(response)) return { status: "refusal" };
         return { status: "parsed", output: parsedOutput(response) };
-      } catch {
+      } catch (error) {
+        try {
+          (dependencies.reportDiagnostic ?? reportOpenAIProviderDiagnostic)(
+            buildOpenAIProviderDiagnostic("job_extraction", error),
+          );
+        } catch {
+          // Diagnostics must never alter the existing fail-closed response.
+        }
         return { status: "unavailable" };
       }
     },

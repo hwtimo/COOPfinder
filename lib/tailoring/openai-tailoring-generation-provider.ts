@@ -4,6 +4,11 @@ import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 
 import { resolveAiModel } from "@/lib/ai/model-router";
+import {
+  buildOpenAIProviderDiagnostic,
+  reportOpenAIProviderDiagnostic,
+  type OpenAIProviderDiagnostic,
+} from "@/lib/ai/openai-provider-diagnostics";
 
 import type {
   TailoringGenerationProvider,
@@ -69,6 +74,7 @@ type OpenAITailoringDependencies = Readonly<{
     apiKey: string,
     options: Readonly<{ maxRetries: 0; timeout: number }>,
   ) => ResponsesParseClient;
+  reportDiagnostic?: (diagnostic: OpenAIProviderDiagnostic) => void;
 }>;
 
 function defaultClientFactory(
@@ -160,7 +166,14 @@ export function createOpenAITailoringGenerationProvider(
         return output === undefined || output === null
           ? { status: "invalid_output" }
           : { status: "output", output };
-      } catch {
+      } catch (error) {
+        try {
+          (dependencies.reportDiagnostic ?? reportOpenAIProviderDiagnostic)(
+            buildOpenAIProviderDiagnostic("tailoring_generation", error),
+          );
+        } catch {
+          // Diagnostics must never alter the existing fail-closed response.
+        }
         return { status: "unavailable" };
       }
     },

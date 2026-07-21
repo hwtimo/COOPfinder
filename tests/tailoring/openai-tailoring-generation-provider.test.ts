@@ -106,6 +106,7 @@ test("maps refusal, malformed output, and thrown transport failures safely", asy
     status: "invalid_output",
   });
 
+  const diagnostics: unknown[] = [];
   const unavailable = createOpenAITailoringGenerationProvider({
     getLiveProviderEnabled: () => "true",
     getApiKey: () => "configured-key",
@@ -113,10 +114,17 @@ test("maps refusal, malformed output, and thrown transport failures safely", asy
     createClient() {
       return { async parse() { throw new Error("private transport detail"); } };
     },
+    reportDiagnostic(diagnostic) {
+      diagnostics.push(diagnostic);
+    },
   });
   assert.deepEqual(await unavailable.generatePlan(input()), {
     status: "unavailable",
   });
+  assert.deepEqual(diagnostics, [
+    { adapter: "tailoring_generation", category: "unknown" },
+  ]);
+  assert.doesNotMatch(JSON.stringify(diagnostics), /private transport detail/);
 });
 
 test("live-provider kill switch fails closed before model, key, or client use", async () => {

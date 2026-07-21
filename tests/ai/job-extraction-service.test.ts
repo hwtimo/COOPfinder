@@ -368,6 +368,7 @@ test("contains an injected provider exception at the service boundary", async ()
 test("production adapter strips refusal and SDK exception details", async () => {
   const refusalMarker = "PRIVATE_REFUSAL_MARKER";
   const exceptionMarker = "PRIVATE_SDK_EXCEPTION_MARKER";
+  const diagnostics: unknown[] = [];
   const refusalProvider = createOpenAIJobExtractionProvider({
     getLiveProviderEnabled: () => "true",
     getApiKey: () => "test-api-key",
@@ -393,6 +394,9 @@ test("production adapter strips refusal and SDK exception details", async () => 
         throw new Error(exceptionMarker);
       },
     }),
+    reportDiagnostic(diagnostic) {
+      diagnostics.push(diagnostic);
+    },
   });
 
   const refused = await extractJobDescription("Private JD", {
@@ -410,6 +414,10 @@ test("production adapter strips refusal and SDK exception details", async () => 
   assert.equal(serialized.includes(refusalMarker), false);
   assert.equal(serialized.includes(exceptionMarker), false);
   assert.equal(serialized.includes("stack"), false);
+  assert.deepEqual(diagnostics, [
+    { adapter: "job_extraction", category: "unknown" },
+  ]);
+  assert.equal(JSON.stringify(diagnostics).includes(exceptionMarker), false);
 });
 
 test("failure results expose no raw inputs, provider payloads, or fallback data", async () => {
