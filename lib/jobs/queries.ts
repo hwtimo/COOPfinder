@@ -38,6 +38,15 @@ const PRIVATE_JOB_DETAIL_COLUMNS = [
   "extraction_confidence",
 ].join(",");
 
+const PRIVATE_JOB_MATCH_COLUMNS = [
+  "id",
+  "title",
+  "location",
+  "updated_at",
+  "extracted",
+  "company:companies!job_postings_company_id_fkey(name)",
+].join(",");
+
 type CompanyRelation = { id: string; name: string };
 
 type PrivateJobRow = {
@@ -65,6 +74,27 @@ type PrivateJobRow = {
 type PrivateJobDetailRow = PrivateJobRow & {
   extracted: unknown;
   extraction_confidence: number | null;
+};
+
+type PrivateJobMatchRow = {
+  id: string;
+  title: string;
+  location: string | null;
+  updated_at: string;
+  extracted: unknown;
+  company:
+    | Pick<CompanyRelation, "name">
+    | Pick<CompanyRelation, "name">[]
+    | null;
+};
+
+export type PrivateJobMatchSource = {
+  id: string;
+  title: string;
+  companyName: string | null;
+  location: string | null;
+  updatedAt: string;
+  extracted: unknown;
 };
 
 function companyRelation(
@@ -132,6 +162,38 @@ export async function getPrivateJobs(
   return {
     status: "ready",
     data: ((data ?? []) as unknown as PrivateJobRow[]).map(toPrivateJob),
+  };
+}
+
+export async function getPrivateJobsForMatching(
+  userId: string,
+): Promise<PrivateJobsQueryResult<PrivateJobMatchSource[]>> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { status: "error", data: [] };
+
+  const { data, error } = await supabase
+    .from("job_postings")
+    .select(PRIVATE_JOB_MATCH_COLUMNS)
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false });
+
+  if (error) return { status: "error", data: [] };
+
+  return {
+    status: "ready",
+    data: ((data ?? []) as unknown as PrivateJobMatchRow[]).map((row) => {
+      const company = Array.isArray(row.company)
+        ? row.company[0] ?? null
+        : row.company;
+      return {
+        id: row.id,
+        title: row.title,
+        companyName: company?.name ?? null,
+        location: row.location,
+        updatedAt: row.updated_at,
+        extracted: row.extracted,
+      };
+    }),
   };
 }
 

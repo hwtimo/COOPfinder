@@ -1,12 +1,14 @@
 "use client";
 
 import { KeyboardEvent, ReactNode, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowRight,
   Briefcase,
   Database,
+  GitCompareArrows,
   Plus,
   Search,
   SlidersHorizontal,
@@ -199,16 +201,24 @@ export function JobsPageClient({
         title="Jobs"
         description="Your private saved job postings, ready for review and tracking."
         actions={
-          <Button
-            type="button"
-            className="h-9 rounded-md"
-            onClick={() => setIsModalOpen(true)}
-            disabled={!configured}
-            title={!configured ? "Supabase is not configured" : undefined}
-          >
-            <Plus className="size-3.5" aria-hidden />
-            Add job
-          </Button>
+          <>
+            <Button asChild variant="outline" className="h-9 rounded-md">
+              <Link href="/jobs/matches">
+                <GitCompareArrows className="size-3.5" aria-hidden />
+                Profile matches
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              className="h-9 rounded-md"
+              onClick={() => setIsModalOpen(true)}
+              disabled={!configured}
+              title={!configured ? "Supabase is not configured" : undefined}
+            >
+              <Plus className="size-3.5" aria-hidden />
+              Add job
+            </Button>
+          </>
         }
       />
 
