@@ -18,10 +18,11 @@ export const JOB_EXTRACTION_STRUCTURED_OUTPUT_NAME =
   "job_extraction_v1" as const;
 export const JOB_EXTRACTION_PROVIDER_TIMEOUT_MS = 60_000;
 export const JOB_EXTRACTION_PROVIDER_MAX_RETRIES = 0;
-// The strict extraction fixture is under 2,000 serialized characters. This
-// allows substantial list growth while keeping one response below a bounded,
-// cost-conscious ceiling.
-export const JOB_EXTRACTION_MAX_OUTPUT_TOKENS = 4_096;
+// Responses counts hidden reasoning tokens against max_output_tokens. The
+// strict extraction fixture is under 2,000 serialized characters, so 8,192
+// leaves bounded room for reasoning plus the schema while remaining far below
+// the model's maximum output window.
+export const JOB_EXTRACTION_MAX_OUTPUT_TOKENS = 8_192;
 
 export const JOB_EXTRACTION_PROVIDER_INSTRUCTIONS = `
 Extract only information explicitly stated in the supplied private job-description text.
@@ -120,6 +121,20 @@ function parsedOutput(response: unknown) {
   return response.output_parsed;
 }
 
+function incompleteResponseCategory(
+  response: unknown,
+): OpenAIProviderDiagnostic["category"] | null {
+  if (!isRecord(response) || response.status !== "incomplete") return null;
+  if (!isRecord(response.incomplete_details)) return "unknown";
+  if (response.incomplete_details.reason === "max_output_tokens") {
+    return "output_limit";
+  }
+  if (response.incomplete_details.reason === "content_filter") {
+    return "content_filter";
+  }
+  return "unknown";
+}
+
 export function createOpenAIJobExtractionProvider(
   dependencies: OpenAIProviderDependencies = {},
 ): JobExtractionProvider {
@@ -163,6 +178,18 @@ export function createOpenAIJobExtractionProvider(
         );
 
         if (containsRefusal(response)) return { status: "refusal" };
+        const incompleteCategory = incompleteResponseCategory(response);
+        if (incompleteCategory) {
+          try {
+            (dependencies.reportDiagnostic ?? reportOpenAIProviderDiagnostic)({
+              adapter: "job_extraction",
+              category: incompleteCategory,
+            });
+          } catch {
+            // Diagnostics must never alter the existing fail-closed response.
+          }
+          return { status: "unavailable" };
+        }
         return { status: "parsed", output: parsedOutput(response) };
       } catch (error) {
         try {

@@ -432,6 +432,51 @@ test("production adapter strips refusal and SDK exception details", async () => 
   assert.equal(JSON.stringify(diagnostics).includes(exceptionMarker), false);
 });
 
+test("production adapter fails closed and safely diagnoses incomplete responses", async () => {
+  const privateMarker = "PRIVATE_INCOMPLETE_PROVIDER_CONTENT";
+  const diagnostics: unknown[] = [];
+  const reasons = [
+    ["max_output_tokens", "output_limit"],
+    ["content_filter", "content_filter"],
+  ] as const;
+
+  for (const [reason, expectedCategory] of reasons) {
+    const provider = createOpenAIJobExtractionProvider({
+      getLiveProviderEnabled: () => "true",
+      getApiKey: () => "test-api-key",
+      createClient: () => ({
+        async parse() {
+          return {
+            status: "incomplete",
+            incomplete_details: { reason, privateMarker },
+            output_parsed: null,
+            output: [{ privateMarker }],
+          };
+        },
+      }),
+      reportDiagnostic(diagnostic) {
+        diagnostics.push(diagnostic);
+      },
+    });
+
+    const result = await extractJobDescription("Private JD", {
+      resolveModel: readyModel,
+      provider,
+    });
+    assert.deepEqual(result, {
+      status: "provider_unavailable",
+      reason: "provider_unavailable",
+      retryable: true,
+    });
+    assert.deepEqual(diagnostics.at(-1), {
+      adapter: "job_extraction",
+      category: expectedCategory,
+    });
+  }
+
+  assert.doesNotMatch(JSON.stringify(diagnostics), new RegExp(privateMarker));
+});
+
 test("failure results expose no raw inputs, provider payloads, or fallback data", async () => {
   const jdMarker = "PRIVATE_RAW_JD_MARKER";
   const providerMarker = "PRIVATE_PROVIDER_OUTPUT_MARKER";
@@ -516,6 +561,7 @@ test("production adapter uses routed structured Responses request without tools"
   });
   assert.equal(JOB_EXTRACTION_PROVIDER_MAX_RETRIES, 0);
   assert.equal(JOB_EXTRACTION_PROVIDER_TIMEOUT_MS, 60_000);
+  assert.equal(JOB_EXTRACTION_MAX_OUTPUT_TOKENS, 8_192);
 });
 
 test("live-provider kill switch fails closed before API key or client use", async () => {

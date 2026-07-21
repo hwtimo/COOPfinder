@@ -22,6 +22,8 @@ export const OPENAI_PROVIDER_FAILURE_CATEGORIES = [
   "model_unavailable",
   "provider_server_error",
   "network",
+  "output_limit",
+  "content_filter",
   "unknown",
 ] as const;
 
