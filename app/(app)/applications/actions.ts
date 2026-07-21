@@ -89,6 +89,7 @@ export async function createApplicationFromJobAction(
 
   revalidatePath("/applications");
   revalidatePath("/jobs");
+  revalidatePath("/jobs/matches");
   revalidatePath(`/jobs/${jobPostingId}`);
   refresh();
 

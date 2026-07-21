@@ -25,6 +25,7 @@ function summary(
     workAuthorizationStatus: "exact_match",
     notEvidencedRequiredCount: 1,
     unassessedRequirementCount: 2,
+    application: null,
     ...overrides,
   };
 }
@@ -99,7 +100,31 @@ test("cards render safe summaries and drill down to Job Detail", () => {
   assert.match(html, /Not-evidenced required/);
   assert.match(html, /Unassessed/);
   assert.match(html, /href="\/jobs\/job-a"/);
+  assert.match(html, />Start tracking</);
   assert.doesNotMatch(html, /overall score|match score|qualified|ranking/i);
+});
+
+test("tracked card shows status and links to the owned application", () => {
+  const html = renderToStaticMarkup(
+    <JobMatchList
+      jobs={[
+        summary("job-a", {
+          application: {
+            id: "application-a",
+            jobPostingId: "job-a",
+            status: "tailoring",
+          },
+        }),
+      ]}
+      sort="required_evidence"
+    />,
+  );
+
+  assert.match(html, /Application status/);
+  assert.match(html, /Tailoring/);
+  assert.match(html, /href="\/applications\/application-a"/);
+  assert.match(html, /Open application/);
+  assert.doesNotMatch(html, />Start tracking</);
 });
 
 test("sort controls expose all labels and recommendation disclaimer", () => {

@@ -44,6 +44,20 @@ export type TrackerApplication = {
   job: ApplicationJobSummary | null;
 };
 
+export type ApplicationTrackingLink = {
+  id: string;
+  jobPostingId: string;
+  status: ApplicationTrackerStatus;
+};
+
+export type ApplicationTrackingLinksQueryResult =
+  | { status: "ready"; data: ApplicationTrackingLink[] }
+  | { status: "error"; data: [] };
+
+export type ApplicationTrackingLinkQueryResult =
+  | { status: "ready"; data: ApplicationTrackingLink | null }
+  | { status: "error"; data: null };
+
 export type EligibleApplicationJob = ApplicationJobSummary;
 
 export type ApplicationTrackerData = {

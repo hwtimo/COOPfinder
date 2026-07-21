@@ -97,6 +97,22 @@ export type PrivateJobMatchSource = {
   extracted: unknown;
 };
 
+function toPrivateJobMatchSource(
+  row: PrivateJobMatchRow,
+): PrivateJobMatchSource {
+  const company = Array.isArray(row.company)
+    ? row.company[0] ?? null
+    : row.company;
+  return {
+    id: row.id,
+    title: row.title,
+    companyName: company?.name ?? null,
+    location: row.location,
+    updatedAt: row.updated_at,
+    extracted: row.extracted,
+  };
+}
+
 function companyRelation(
   relation: PrivateJobRow["company"],
 ): CompanyRelation | null {
@@ -181,19 +197,33 @@ export async function getPrivateJobsForMatching(
 
   return {
     status: "ready",
-    data: ((data ?? []) as unknown as PrivateJobMatchRow[]).map((row) => {
-      const company = Array.isArray(row.company)
-        ? row.company[0] ?? null
-        : row.company;
-      return {
-        id: row.id,
-        title: row.title,
-        companyName: company?.name ?? null,
-        location: row.location,
-        updatedAt: row.updated_at,
-        extracted: row.extracted,
-      };
-    }),
+    data: ((data ?? []) as unknown as PrivateJobMatchRow[]).map(
+      toPrivateJobMatchSource,
+    ),
+  };
+}
+
+export async function getPrivateJobForWorkflow(
+  userId: string,
+  jobId: string,
+): Promise<PrivateJobsQueryResult<PrivateJobMatchSource | null>> {
+  if (!isUuid(jobId)) return { status: "ready", data: null };
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { status: "error", data: null };
+
+  const { data, error } = await supabase
+    .from("job_postings")
+    .select(PRIVATE_JOB_MATCH_COLUMNS)
+    .eq("user_id", userId)
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (error) return { status: "error", data: null };
+  return {
+    status: "ready",
+    data: data
+      ? toPrivateJobMatchSource(data as unknown as PrivateJobMatchRow)
+      : null,
   };
 }
 

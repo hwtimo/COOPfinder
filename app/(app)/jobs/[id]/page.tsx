@@ -18,6 +18,7 @@ import { PrivateJobControls } from "@/components/jobs/private-job-controls";
 import { JobAnalysisControl } from "@/components/jobs/job-analysis-control";
 import { ManualJobDescriptionForm } from "@/components/jobs/manual-job-description-form";
 import { ProfileMatchSummary } from "@/components/jobs/profile-match-summary";
+import { ApplicationTrackingControl } from "@/components/jobs/application-tracking-control";
 import { Button } from "@/components/ui/button";
 import {
   buildJobExtractionViewModel,
@@ -38,6 +39,7 @@ import type { PrivateJobIntakeSource } from "@/lib/jobs/types";
 import { getOwnedJobMatch } from "@/lib/matching/get-owned-job-match";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getSupabaseUser } from "@/lib/supabase/user";
+import { getOwnedApplicationTrackingLinkForJob } from "@/lib/applications/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -231,7 +233,10 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const job = result.data;
   if (!job) notFound();
 
-  const matchResult = await getOwnedJobMatch(job.id);
+  const [matchResult, applicationResult] = await Promise.all([
+    getOwnedJobMatch(job.id),
+    getOwnedApplicationTrackingLinkForJob(user.id, job.id),
+  ]);
   if (matchResult.status === "unauthenticated") redirect("/board");
   if (matchResult.status === "not_found") notFound();
 
@@ -355,19 +360,14 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
         <aside className="space-y-4 xl:sticky xl:top-20 xl:self-start">
           <CardSection title="Decision panel" description="Saved-job readiness">
             <div className="space-y-5">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">
-                  Estimated match
-                </p>
-                <p className="mt-2 text-2xl font-medium text-text-secondary tabular-nums">
-                  {job.matchScore === null ? "Not analyzed" : `${job.matchScore}%`}
-                </p>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  {job.matchScore === null
-                    ? "No analysis has been generated for this record."
-                    : "This is a previously stored estimate; no new analysis was run."}
-                </p>
-              </div>
+              <ApplicationTrackingControl
+                jobId={job.id}
+                application={
+                  applicationResult.status === "ready"
+                    ? applicationResult.data
+                    : undefined
+                  }
+              />
 
               <dl className="space-y-3">
                 <div className="rounded-md border bg-background p-3">

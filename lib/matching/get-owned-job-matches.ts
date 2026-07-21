@@ -2,6 +2,8 @@ import "server-only";
 
 import type { User } from "@supabase/supabase-js";
 
+import { getOwnedApplicationTrackingLinks } from "@/lib/applications/queries";
+import type { ApplicationTrackingLink } from "@/lib/applications/types";
 import {
   parseJobExtractionOutput,
   type ParseJobExtractionResult,
@@ -37,6 +39,10 @@ type JobsLookupResult =
   | { status: "ready"; jobs: PrivateJobMatchSource[] }
   | { status: "unavailable" };
 
+type ApplicationsLookupResult =
+  | { status: "ready"; applications: ApplicationTrackingLink[] }
+  | { status: "unavailable" };
+
 export type OwnedJobMatchesResult =
   | { status: "ready"; jobs: OwnedJobMatchSummary[] }
   | { status: "unauthenticated" }
@@ -49,6 +55,9 @@ export type OwnedJobMatchesDependencies = {
     email: string;
   }) => Promise<ProfileLookupResult>;
   getOwnedJobs: (input: { userId: string }) => Promise<JobsLookupResult>;
+  getOwnedApplications: (input: {
+    userId: string;
+  }) => Promise<ApplicationsLookupResult>;
   parseExtraction: (extraction: unknown) => ParseJobExtractionResult;
   match: typeof matchResumeToJob;
 };
@@ -65,6 +74,7 @@ function hasPersistedExtraction(value: unknown) {
 
 function invalidExtractionSummary(
   job: PrivateJobMatchSource,
+  application: ApplicationTrackingLink | null,
 ): OwnedJobMatchSummary {
   return {
     jobId: job.id,
@@ -78,6 +88,7 @@ function invalidExtractionSummary(
     workAuthorizationStatus: null,
     notEvidencedRequiredCount: null,
     unassessedRequirementCount: null,
+    application,
   };
 }
 
@@ -85,6 +96,7 @@ function matchedSummary(
   job: PrivateJobMatchSource,
   match: ResumeJobExactMatchResult,
   profileIsMissing: boolean,
+  application: ApplicationTrackingLink | null,
 ): OwnedJobMatchSummary {
   const status: OwnedJobMatchSummaryStatus =
     match.status === "insufficient_job_data"
@@ -115,6 +127,7 @@ function matchedSummary(
     notEvidencedRequiredCount: match.required.notEvidencedItems.length,
     unassessedRequirementCount:
       match.dataCompleteness.unassessedJobRequirements,
+    application,
   };
 }
 
@@ -151,13 +164,17 @@ export function createOwnedJobMatchesCoordinator(
 
     let profileLookup: ProfileLookupResult;
     let jobsLookup: JobsLookupResult;
+    let applicationsLookup: ApplicationsLookupResult;
     try {
-      [profileLookup, jobsLookup] = await Promise.all([
+      [profileLookup, jobsLookup, applicationsLookup] = await Promise.all([
         dependencies.getOwnedProfile({
           userId: authentication.user.id,
           email: authentication.user.email ?? "",
         }),
         dependencies.getOwnedJobs({ userId: authentication.user.id }),
+        dependencies.getOwnedApplications({
+          userId: authentication.user.id,
+        }),
       ]);
     } catch {
       return { status: "unavailable" };
@@ -165,7 +182,8 @@ export function createOwnedJobMatchesCoordinator(
 
     if (
       profileLookup.status === "unavailable" ||
-      jobsLookup.status === "unavailable"
+      jobsLookup.status === "unavailable" ||
+      applicationsLookup.status === "unavailable"
     ) {
       return { status: "unavailable" };
     }
@@ -176,20 +194,27 @@ export function createOwnedJobMatchesCoordinator(
         ? profileLookup.profile
         : emptyProfile(authentication.user.email ?? "");
     const jobs: OwnedJobMatchSummary[] = [];
+    const applicationsByJobId = new Map(
+      applicationsLookup.applications.map((application) => [
+        application.jobPostingId,
+        application,
+      ]),
+    );
 
     for (const job of jobsLookup.jobs) {
       if (!hasPersistedExtraction(job.extracted)) continue;
+      const application = applicationsByJobId.get(job.id) ?? null;
 
       let parsed: ParseJobExtractionResult;
       try {
         parsed = dependencies.parseExtraction(job.extracted);
       } catch {
-        jobs.push(invalidExtractionSummary(job));
+        jobs.push(invalidExtractionSummary(job, application));
         continue;
       }
 
       if (parsed.status !== "valid") {
-        jobs.push(invalidExtractionSummary(job));
+        jobs.push(invalidExtractionSummary(job, application));
         continue;
       }
 
@@ -199,10 +224,11 @@ export function createOwnedJobMatchesCoordinator(
             job,
             dependencies.match(parsed.canonicalRequirements, profile),
             profileIsMissing,
+            application,
           ),
         );
       } catch {
-        jobs.push(invalidExtractionSummary(job));
+        jobs.push(invalidExtractionSummary(job, application));
       }
     }
 
@@ -229,6 +255,12 @@ const productionCoordinator = createOwnedJobMatchesCoordinator({
     const result = await getPrivateJobsForMatching(userId);
     return result.status === "ready"
       ? { status: "ready", jobs: result.data }
+      : { status: "unavailable" };
+  },
+  async getOwnedApplications({ userId }) {
+    const result = await getOwnedApplicationTrackingLinks(userId);
+    return result.status === "ready"
+      ? { status: "ready", applications: result.data }
       : { status: "unavailable" };
   },
   parseExtraction: parseJobExtractionOutput,

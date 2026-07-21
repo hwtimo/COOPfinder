@@ -8,11 +8,16 @@ import {
   type ApplicationDetailQueryResult,
   type ApplicationJobSummary,
   type ApplicationTimelineEvent,
+  type ApplicationTrackingLink,
+  type ApplicationTrackingLinkQueryResult,
+  type ApplicationTrackingLinksQueryResult,
   type ApplicationTrackerData,
   type ApplicationTrackerQueryResult,
   type ApplicationTrackerStatus,
   type TrackerApplication,
 } from "./types";
+
+const APPLICATION_TRACKING_LINK_COLUMNS = "id,job_posting_id,status";
 
 const APPLICATION_COLUMNS = [
   "id",
@@ -143,6 +148,77 @@ function toDetailJob(row: ApplicationDetailJobRow): ApplicationDetailJob {
 function timelineMetadata(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+function toTrackingLink(row: {
+  id: string;
+  job_posting_id: string;
+  status: string;
+}): ApplicationTrackingLink | null {
+  if (
+    !isUuid(row.id) ||
+    !isUuid(row.job_posting_id) ||
+    !isTrackerStatus(row.status)
+  ) {
+    return null;
+  }
+  return {
+    id: row.id,
+    jobPostingId: row.job_posting_id,
+    status: row.status,
+  };
+}
+
+export async function getOwnedApplicationTrackingLinks(
+  userId: string,
+): Promise<ApplicationTrackingLinksQueryResult> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { status: "error", data: [] };
+
+  const { data, error } = await supabase
+    .from("applications")
+    .select(APPLICATION_TRACKING_LINK_COLUMNS)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (error) return { status: "error", data: [] };
+  const links = ((data ?? []) as unknown as Array<{
+    id: string;
+    job_posting_id: string;
+    status: string;
+  }>).map(toTrackingLink);
+  if (links.some((link) => link === null)) {
+    return { status: "error", data: [] };
+  }
+  return { status: "ready", data: links as ApplicationTrackingLink[] };
+}
+
+export async function getOwnedApplicationTrackingLinkForJob(
+  userId: string,
+  jobPostingId: string,
+): Promise<ApplicationTrackingLinkQueryResult> {
+  if (!isUuid(jobPostingId)) return { status: "ready", data: null };
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { status: "error", data: null };
+
+  const { data, error } = await supabase
+    .from("applications")
+    .select(APPLICATION_TRACKING_LINK_COLUMNS)
+    .eq("user_id", userId)
+    .eq("job_posting_id", jobPostingId)
+    .maybeSingle();
+
+  if (error) return { status: "error", data: null };
+  if (!data) return { status: "ready", data: null };
+  const link = toTrackingLink(data as unknown as {
+    id: string;
+    job_posting_id: string;
+    status: string;
+  });
+  return link
+    ? { status: "ready", data: link }
+    : { status: "error", data: null };
 }
 
 export async function getApplicationTrackerData(

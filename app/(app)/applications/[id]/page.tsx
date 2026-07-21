@@ -17,6 +17,8 @@ import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
 import { DeadlineBadge, StatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
+import { ApplicationWorkflowSummary } from "@/components/app/application-workflow-summary";
+import { getOwnedApplicationWorkflow } from "@/lib/applications/get-owned-application-workflow";
 import { getApplicationDetail } from "@/lib/applications/queries";
 import { isIsoCalendarDate } from "@/lib/applications/update-deadline";
 import { isIsoTimestampWithTimezone } from "@/lib/applications/update-follow-up";
@@ -288,6 +290,11 @@ export default async function ApplicationDetailPage({
   if (!application) notFound();
 
   const { job } = application;
+  const workflowResult = await getOwnedApplicationWorkflow({
+    userId: user.id,
+    email: user.email ?? "",
+    jobId: job.id,
+  });
   const companyName = job.companyName ?? "Company not added";
   const location = job.location ?? "Location not added";
   const workMode = job.workMode ?? "Work mode not added";
@@ -369,6 +376,17 @@ export default async function ApplicationDetailPage({
                 {formatDate(application.appliedAt, "Not marked as applied")}
               </DetailItem>
             </dl>
+          </CardSection>
+
+          <CardSection
+            title="Application workflow"
+            description="Read-only context from the linked private job and saved resume records"
+          >
+            <ApplicationWorkflowSummary
+              jobId={job.id}
+              sourceUrl={sourceUrl}
+              result={workflowResult}
+            />
           </CardSection>
 
           <CardSection

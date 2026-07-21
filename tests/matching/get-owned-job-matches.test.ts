@@ -86,6 +86,10 @@ function dependencies(
         },
       ],
     }),
+    getOwnedApplications: async () => ({
+      status: "ready",
+      applications: [],
+    }),
     parseExtraction: parseJobExtractionOutput,
     match: matchResumeToJob,
     ...overrides,
@@ -123,16 +127,74 @@ test("authenticates once and loads one profile plus one owner job batch", async 
           ],
         };
       },
+      getOwnedApplications: async ({ userId }) => {
+        calls.push(`applications:${userId}`);
+        return { status: "ready", applications: [] };
+      },
     }),
   );
 
   const result = await coordinate();
   assert.equal(result.status, "ready");
   assert.deepEqual(calls.sort(), [
+    `applications:${USER_ID}`,
     "auth",
     `jobs:${USER_ID}`,
     `profile:${USER_ID}`,
   ]);
+});
+
+test("joins one owner-scoped application batch to matching summaries", async () => {
+  let applicationCalls = 0;
+  const coordinate = createOwnedJobMatchesCoordinator(
+    dependencies({
+      getOwnedApplications: async ({ userId }) => {
+        applicationCalls += 1;
+        assert.equal(userId, USER_ID);
+        return {
+          status: "ready",
+          applications: [
+            { id: JOB_B, jobPostingId: JOB_A, status: "tailoring" },
+          ],
+        };
+      },
+    }),
+  );
+
+  const result = await coordinate();
+  assert.equal(result.status, "ready");
+  if (result.status !== "ready") return;
+  assert.equal(applicationCalls, 1);
+  assert.deepEqual(result.jobs[0]?.application, {
+    id: JOB_B,
+    jobPostingId: JOB_A,
+    status: "tailoring",
+  });
+});
+
+test("does not attach application IDs or statuses for a different job", async () => {
+  const foreignApplicationId = "bbbc2464-4b46-4ef4-8daf-49f575e6fe84";
+  const coordinate = createOwnedJobMatchesCoordinator(
+    dependencies({
+      getOwnedApplications: async () => ({
+        status: "ready",
+        applications: [
+          {
+            id: foreignApplicationId,
+            jobPostingId: JOB_B,
+            status: "offer",
+          },
+        ],
+      }),
+    }),
+  );
+
+  const result = await coordinate();
+  assert.equal(result.status, "ready");
+  if (result.status !== "ready") return;
+  assert.equal(result.jobs[0]?.application, null);
+  assert.equal(JSON.stringify(result).includes(foreignApplicationId), false);
+  assert.equal(JSON.stringify(result).includes('"offer"'), false);
 });
 
 test("returns only owner-scoped UI summaries without raw inputs", async () => {
@@ -317,6 +379,7 @@ test("missing profile produces an insufficient-profile summary", async () => {
 test("unauthenticated and unavailable dependencies fail safely", async () => {
   let profileCalls = 0;
   let jobsCalls = 0;
+  let applicationCalls = 0;
   const unauthenticated = createOwnedJobMatchesCoordinator(
     dependencies({
       getAuthenticatedUser: async () => ({ status: "unauthenticated" }),
@@ -328,11 +391,16 @@ test("unauthenticated and unavailable dependencies fail safely", async () => {
         jobsCalls += 1;
         return { status: "ready", jobs: [] };
       },
+      getOwnedApplications: async () => {
+        applicationCalls += 1;
+        return { status: "ready", applications: [] };
+      },
     }),
   );
   assert.deepEqual(await unauthenticated(), { status: "unauthenticated" });
   assert.equal(profileCalls, 0);
   assert.equal(jobsCalls, 0);
+  assert.equal(applicationCalls, 0);
 
   const unavailable = createOwnedJobMatchesCoordinator(
     dependencies({
@@ -365,11 +433,21 @@ test("production query excludes raw text and legacy match score and scopes by ow
   );
   const batchQuery = querySource.slice(
     querySource.indexOf("export async function getPrivateJobsForMatching"),
-    querySource.indexOf("export async function getPrivateJob("),
+    querySource.indexOf("export async function getPrivateJobForWorkflow"),
   );
 
   assert.doesNotMatch(matchColumns, /raw_text|match_score/i);
   assert.match(matchColumns, /"extracted"/);
   assert.match(batchQuery, /\.eq\("user_id", userId\)/);
   assert.equal((batchQuery.match(/\.from\("job_postings"\)/g) ?? []).length, 1);
+
+  const applicationQueries = readFileSync("lib/applications/queries.ts", "utf8");
+  const trackingBatch = applicationQueries.slice(
+    applicationQueries.indexOf("export async function getOwnedApplicationTrackingLinks"),
+    applicationQueries.indexOf(
+      "export async function getOwnedApplicationTrackingLinkForJob",
+    ),
+  );
+  assert.equal((trackingBatch.match(/\.from\("applications"\)/g) ?? []).length, 1);
+  assert.match(trackingBatch, /\.eq\("user_id", userId\)/);
 });

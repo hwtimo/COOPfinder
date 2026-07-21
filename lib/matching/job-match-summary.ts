@@ -1,4 +1,5 @@
 import type { WorkAuthorizationMatch } from "./resume-job-match";
+import type { ApplicationTrackingLink } from "../applications/types";
 
 export type OwnedJobMatchSummaryStatus =
   | "comparable"
@@ -18,6 +19,7 @@ export type OwnedJobMatchSummary = Readonly<{
   workAuthorizationStatus: WorkAuthorizationMatch["status"] | null;
   notEvidencedRequiredCount: number | null;
   unassessedRequirementCount: number | null;
+  application: ApplicationTrackingLink | null;
 }>;
 
 export type OwnedJobMatchesSort =

@@ -3,6 +3,7 @@ import { ArrowRight, BriefcaseBusiness } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ApplicationTrackingControl } from "@/components/jobs/application-tracking-control";
 import { formatPrivateJobDate } from "@/lib/jobs/dates";
 import {
   OWNED_JOB_MATCH_SORT_OPTIONS,
@@ -99,6 +100,13 @@ function MatchCard({ job }: { job: OwnedJobMatchSummary }) {
             <ArrowRight className="size-3" aria-hidden />
           </Link>
         </Button>
+      </div>
+
+      <div className="mt-4 border-t pt-4">
+        <ApplicationTrackingControl
+          jobId={job.jobId}
+          application={job.application}
+        />
       </div>
 
       <dl className="mt-5 grid grid-cols-2 gap-3 border-t pt-4 sm:grid-cols-3 xl:grid-cols-6">
