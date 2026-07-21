@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { reportAuthFailure } from "@/lib/auth/auth-diagnostics";
 import { sanitizeNextPath } from "@/lib/auth/paths";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    reportAuthFailure("auth_callback", error);
     loginUrl.searchParams.set("error", "auth_callback_failed");
     return NextResponse.redirect(loginUrl);
   }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { GoogleSignInOption } from "@/components/auth/google-sign-in-option";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,6 +9,7 @@ import {
   getLoginReasonCopy,
   sanitizeNextPath,
 } from "@/lib/auth/paths";
+import { isGoogleAuthEnabled } from "@/lib/auth/config";
 import { getSupabaseUser } from "@/lib/supabase/user";
 
 import { signInWithEmail, signInWithGoogle } from "./actions";
@@ -39,6 +41,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const sent = getFirstSearchParam(params.sent) === "1";
   const error = getFirstSearchParam(params.error);
   const user = await getSupabaseUser();
+  const googleAuthEnabled = isGoogleAuthEnabled();
 
   if (user) {
     redirect(next);
@@ -102,26 +105,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </Button>
           </form>
 
-          <div className="my-4 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-[11px] uppercase text-muted-foreground">
-              or
-            </span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <form action={signInWithGoogle}>
-            <input type="hidden" name="next" value={next} />
-            <input type="hidden" name="reason" value={reason ?? ""} />
-            <Button
-              type="submit"
-              variant="outline"
-              size="lg"
-              className="h-10 w-full"
-            >
-              Continue with Google
-            </Button>
-          </form>
+          {googleAuthEnabled ? (
+            <form action={signInWithGoogle}>
+              <input type="hidden" name="next" value={next} />
+              <input type="hidden" name="reason" value={reason ?? ""} />
+              <GoogleSignInOption enabled />
+            </form>
+          ) : null}
 
           <p className="mt-4 text-xs leading-5 text-muted-foreground">
             New accounts include 1 free tailoring credit. Application tracking

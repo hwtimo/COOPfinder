@@ -57,6 +57,23 @@ export function sanitizeNextPath(
   }
 }
 
+export function buildAuthCallbackUrl(origin: string, next: string) {
+  let safeOrigin = "http://localhost:3000";
+
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      safeOrigin = parsed.origin;
+    }
+  } catch {
+    // Keep the local fallback when request origin metadata is malformed.
+  }
+
+  const callback = new URL("/auth/callback", safeOrigin);
+  callback.searchParams.set("next", sanitizeNextPath(next));
+  return callback.toString();
+}
+
 export function getLoginHref(next: string, reason?: string): string {
   const params = new URLSearchParams({
     next: sanitizeNextPath(next),

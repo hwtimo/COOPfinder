@@ -13,7 +13,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const publicSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+const metadataBase = publicSiteUrl ? new URL(publicSiteUrl) : undefined;
+
 export const metadata: Metadata = {
+  metadataBase,
+  alternates: metadataBase ? { canonical: "/" } : undefined,
   title: "COOPfinder",
   description:
     "Save co-op postings, tailor your resume, and track every application.",

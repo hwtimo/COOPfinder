@@ -67,6 +67,7 @@ Public browser-safe values required at build and runtime:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SITE_URL` — set to `https://internshipbc.dev`
 
 Server-only secrets required by production runtime:
 
@@ -78,6 +79,7 @@ Server-only provider controls required by production runtime:
 - `OPENAI_LIVE_PROVIDER_ENABLED` — deploy as `false` initially
 - `OPENAI_MODEL_JOB_EXTRACTION` — set to `gpt-5-mini`
 - `OPENAI_MODEL_TAILORING` — set to `gpt-5-mini`
+- `GOOGLE_AUTH_ENABLED` — keep `false` until Google OAuth is fully configured
 
 Operator/CLI-only values, not application runtime values:
 
@@ -139,23 +141,39 @@ server-only secrets unless they are explicitly trusted.
 
 ### Supabase production checklist
 
+Production site:
+`https://internshipbc.dev`
+
+Production auth callback:
+`https://internshipbc.dev/auth/callback`
+
+Temporary Vercel fallback:
+`https://coopfinder.vercel.app`
+
+Temporary Vercel auth callback:
+`https://coopfinder.vercel.app/auth/callback`
+
 - Use a dedicated production project and confirm all 32 migration timestamps
   match the repository.
-- Set Auth **Site URL** to the exact HTTPS production origin.
-- Add the exact HTTPS callback URL
-  `https://<production-domain>/auth/callback` to **Redirect URLs**. Avoid a
-  production wildcard. Keep localhost and preview URLs separate from the
-  production entry.
+- Set Auth **Site URL** to `https://internshipbc.dev`.
+- Add the exact callbacks `https://internshipbc.dev/auth/callback`,
+  `https://coopfinder.vercel.app/auth/callback`, and
+  `http://localhost:3000/auth/callback` to **Redirect URLs**. Do not use a
+  wildcard for the canonical production domain.
 - The application starts email/OAuth login with that callback and the route
   exchanges the returned authorization `code` using
   `exchangeCodeForSession`. PKCE links are single-use, expire quickly, and must
   be opened in the same browser/device context that initiated the request.
-- Configure production custom SMTP. Verify the sending domain and provider
-  requirements, disable link tracking that rewrites confirmation links, and
-  test delivery, spam placement, expiry, and one-time-use behavior. Supabase's
-  shared default sender is not a production delivery service.
-- Ensure the email template uses Supabase's confirmation/redirect variables
-  without exposing tokens and lands on the configured callback.
+- Configure Mailtrap **Email Sending**, not Email Sandbox. Verify a sending
+  domain under `internshipbc.dev`, use its production SMTP credentials in
+  Supabase Auth, and use an address on that domain as the sender. Disable link
+  tracking that rewrites confirmation links, then test delivery, spam
+  placement, expiry, and one-time-use behavior. Supabase's shared default
+  sender and Mailtrap Sandbox are not production delivery services.
+- Ensure signup and magic-link templates use Supabase's
+  `{{ .ConfirmationURL }}` (or the documented `SiteURL`, `TokenHash`, and
+  `RedirectTo` variables) rather than a hardcoded hostname. Verify the final
+  confirmation link returns to `https://internshipbc.dev/auth/callback`.
 - Configure Auth rate limits appropriate for the beta and monitor email-send,
   verification, and token-refresh failures.
 - Confirm RLS is enabled for every exposed table and that browser access uses
@@ -170,12 +188,42 @@ server-only secrets unless they are explicitly trusted.
 - Run Security Advisor after migration application and after every future
   schema release.
 
+Google OAuth remains opt-in. To enable it later, create a Google Cloud OAuth
+web client, configure its consent screen, and add the Supabase callback
+`https://<project-ref>.supabase.co/auth/v1/callback` as an authorized redirect
+URI. Then enter the client ID and client secret under Supabase Auth's Google
+provider, enable that provider, add the application callback URL to Supabase's
+redirect allow list, set `GOOGLE_AUTH_ENABLED=true` in the server hosting
+environment, and redeploy. Do not enable the application flag before the
+Supabase provider has valid credentials.
+
 References:
 
 - [Supabase redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls)
 - [Supabase PKCE flow](https://supabase.com/docs/guides/auth/sessions/pkce-flow)
 - [Supabase custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp)
 - [Supabase production checklist](https://supabase.com/docs/guides/deployment/going-into-prod)
+
+### Production-domain operations
+
+- Assign `internshipbc.dev` to the Vercel production deployment and confirm
+  Vercel has issued its HTTPS certificate before changing the Supabase Site
+  URL. Add `NEXT_PUBLIC_SITE_URL=https://internshipbc.dev` to the Vercel
+  Production environment and redeploy so canonical metadata uses the custom
+  origin.
+- Configure `www.internshipbc.dev` explicitly if it will be published. Prefer
+  a Vercel domain-level redirect from `www.internshipbc.dev` to
+  `internshipbc.dev`; do not leave both hosts serving independent canonical
+  pages.
+- Keep `coopfinder.vercel.app` attached temporarily for authentication and
+  testing. When fallback testing is no longer needed, configure its redirect
+  to `https://internshipbc.dev` at the Vercel domain layer rather than adding
+  application middleware.
+- In Supabase Dashboard, open **Authentication → URL Configuration**, set the
+  Site URL and the three exact callbacks listed above, then inspect
+  **Authentication → Email Templates** for hardcoded localhost or Vercel
+  hosts. Template links must use Supabase variables so the requested PKCE
+  redirect is preserved.
 
 ### OpenAI production checklist
 

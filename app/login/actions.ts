@@ -3,7 +3,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { sanitizeNextPath } from "@/lib/auth/paths";
+import { reportAuthFailure } from "@/lib/auth/auth-diagnostics";
+import { isGoogleAuthEnabled } from "@/lib/auth/config";
+import { buildAuthCallbackUrl, sanitizeNextPath } from "@/lib/auth/paths";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 async function getRequestOrigin(): Promise<string> {
@@ -50,9 +52,7 @@ export async function signInWithEmail(formData: FormData) {
   }
 
   const origin = await getRequestOrigin();
-  const emailRedirectTo = `${origin}/auth/callback?next=${encodeURIComponent(
-    next,
-  )}`;
+  const emailRedirectTo = buildAuthCallbackUrl(origin, next);
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
@@ -62,6 +62,7 @@ export async function signInWithEmail(formData: FormData) {
   });
 
   if (error) {
+    reportAuthFailure("email_sign_in", error);
     redirectToLogin(next, reason, { error: "email_sign_in_failed" });
   }
 
@@ -71,6 +72,11 @@ export async function signInWithEmail(formData: FormData) {
 export async function signInWithGoogle(formData: FormData) {
   const next = sanitizeNextPath(formData.get("next"));
   const reason = String(formData.get("reason") ?? "") || undefined;
+
+  if (!isGoogleAuthEnabled()) {
+    redirectToLogin(next, reason, { error: "google_sign_in_failed" });
+  }
+
   const supabase = await createSupabaseServerClient();
 
   if (!supabase) {
@@ -78,13 +84,14 @@ export async function signInWithGoogle(formData: FormData) {
   }
 
   const origin = await getRequestOrigin();
-  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+  const redirectTo = buildAuthCallbackUrl(origin, next);
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo },
   });
 
   if (error || !data.url) {
+    if (error) reportAuthFailure("google_sign_in", error);
     redirectToLogin(next, reason, { error: "google_sign_in_failed" });
   }
 
