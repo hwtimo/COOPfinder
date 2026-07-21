@@ -16,7 +16,7 @@ import { jobExtractionWireV1Schema } from "./schemas/job-extraction-wire";
 
 export const JOB_EXTRACTION_STRUCTURED_OUTPUT_NAME =
   "job_extraction_v1" as const;
-export const JOB_EXTRACTION_PROVIDER_TIMEOUT_MS = 30_000;
+export const JOB_EXTRACTION_PROVIDER_TIMEOUT_MS = 60_000;
 export const JOB_EXTRACTION_PROVIDER_MAX_RETRIES = 0;
 // The strict extraction fixture is under 2,000 serialized characters. This
 // allows substantial list growth while keeping one response below a bounded,

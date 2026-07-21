@@ -503,7 +503,7 @@ test("production adapter uses routed structured Responses request without tools"
     timeout: JOB_EXTRACTION_PROVIDER_TIMEOUT_MS,
   });
   assert.equal(JOB_EXTRACTION_PROVIDER_MAX_RETRIES, 0);
-  assert.equal(JOB_EXTRACTION_PROVIDER_TIMEOUT_MS, 30_000);
+  assert.equal(JOB_EXTRACTION_PROVIDER_TIMEOUT_MS, 60_000);
 });
 
 test("live-provider kill switch fails closed before API key or client use", async () => {
