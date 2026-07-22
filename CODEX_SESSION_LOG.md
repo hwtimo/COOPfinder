@@ -2455,6 +2455,42 @@ only when necessary to explain configuration; never record their values.
   or production configuration changed. No OpenAI request or unrelated product
   action occurred.
 
+### R1-1 reused-password reset error correction
+
+- **Date and time:** 2026-07-21 (America/Vancouver)
+- **Development phase:** ROADMAP R1-1 defect correction
+- **Classification:** CONDITIONALLY COMPLETE
+- **Production reproduction:** In a valid recovery session, submitting the
+  current password displayed the expired/unavailable message. The same session
+  then accepted a different password, proving it had not expired. The new
+  password subsequently logged in successfully.
+- **Root cause evidence:** The existing action mapped every `updateUser`
+  failure to `reset_failed`, and the page rendered every unrecognized state as
+  expired/unavailable. Sanitized Vercel diagnostics confirmed the actual
+  Supabase Auth result was operation `password_update`, code `same_password`,
+  HTTP 422. No provider message, password, email, token, cookie, or response
+  body was exposed or recorded.
+- **Implementation:** Commit
+  `cb1681b5598d3479d7fbbd1904f982d0394357c6` classifies the exact validated
+  `same_password` code and renders “Choose a different password.” The failure
+  path does not sign out, so the recovery session remains available for a
+  corrected submission. Missing, expired, invalid, and unknown reset failures
+  retain the existing unavailable/expired copy.
+- **Verification:** Focused auth tests passed 17/17. Lint, typecheck, production
+  Next.js 16 webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **Live verification:** Pending. Push was not authorized, so the fix was not
+  deployed and no post-fix production reset request was made. After deployment,
+  verify current password rejection, different-password success, old-password
+  rejection, and new-password login success through the normal user flow.
+- **ROADMAP state:** R1-1 remains unchecked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This is the same continuing,
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Push and deploy the pending documentation plus reset-fix
+  commits with explicit authorization, then run the bounded production reset
+  verification without testing later ROADMAP work.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

@@ -38,6 +38,18 @@
 > handoff, browser restart, and the ROADMAP's literal next-day persistence check
 > remain outstanding.
 >
+> **R1-1 reset-password follow-up:** Production safely logged the reproduced
+> rejection as Supabase Auth code `same_password` with HTTP 422, but the page
+> previously collapsed every update failure into the expired/unavailable copy.
+> Local implementation commit
+> `cb1681b5598d3479d7fbbd1904f982d0394357c6` now maps only the validated
+> `same_password` code to “Choose a different password.” without signing out or
+> consuming the valid reset session; truly unavailable/expired states retain
+> their existing copy. Focused tests and repository validation passed. The fix
+> is not yet pushed or deployed, so its production current-password rejection,
+> subsequent different-password success, and old/new login results remain to
+> be live-verified.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
