@@ -28,10 +28,15 @@
 > session store; callback and proxy refresh responses now preserve private
 > no-store headers. The Supabase Site URL is canonical and its redirect allow
 > list contains only the canonical callback plus localhost development; the
-> obsolete Vercel callback was removed. This item remains conditionally
-> complete until the commit is deployed and the full disposable production
-> signup/login/reset/magic-link/browser-restart flow is observed, including the
-> ROADMAP's literal next-day persistence check.
+> obsolete Vercel callback was removed. The commits are deployed. A fresh
+> controlled plus-alias account completed production password signup and email
+> confirmation, reached the canonical dashboard, remained server-authenticated
+> across direct navigation and full reload, logged out with protected-route
+> rejection, and logged back in by password successfully. The confirmation
+> email's intermediate host sequence was not directly recorded by Codex, so
+> this verification slice is conditional. Password reset, magic link, guest
+> handoff, browser restart, and the ROADMAP's literal next-day persistence check
+> remain outstanding.
 >
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit

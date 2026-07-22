@@ -2418,6 +2418,43 @@ only when necessary to explain configuration; never record their values.
   then run the fresh disposable production authentication acceptance flow and
   next-day persistence observation.
 
+### R1-1 production password signup and login verification
+
+- **Date and time:** 2026-07-21 (America/Vancouver)
+- **Development phase:** ROADMAP R1-1 production verification
+- **Classification:** CONDITIONALLY COMPLETE
+- **Deployed commits:** Production was already verified at
+  `a7bf556b3641e980615d65fbd7fb7a97529f3d57`, whose history includes
+  `8849ad202824eb0338ed1746125262e8eb5009f2`.
+- **Account:** A fresh user-controlled Gmail plus-alias was used. Its address,
+  password, confirmation URL, tokens, and cookie values are not recorded here.
+- **Observed password flow:** Password authentication rendered before the
+  secondary magic-link form. The user completed password signup and reported
+  email confirmation. The resulting canonical `/dashboard` was directly
+  observed as authenticated. A full reload remained server-authenticated, and
+  direct `/jobs` navigation succeeded without a login redirect.
+- **Observed logout and login:** Normal UI logout returned to `/start`.
+  Direct `/dashboard` navigation then redirected to
+  `/login?next=%2Fdashboard`. The same account subsequently logged in with its
+  password, landed on canonical `/dashboard`, and remained authenticated after
+  a new direct navigation and full reload.
+- **Hostname evidence:** All application pages directly observed by Codex used
+  `internshipbc.dev`; no Vercel application hostname was observed. The
+  intermediate confirmation-email verification and callback host sequence was
+  not directly recorded, so this slice is not classified PASS.
+- **Account preservation:** The disposable account remains available solely
+  for the remaining password-reset, magic-link, browser-restart, and literal
+  next-day checks. No application fixtures were created.
+- **Remaining R1-1 verification:** Password reset and old/new password checks,
+  secondary magic-link regression, immediate browser restart, guest-draft
+  handoff, and literal next-day persistence. R1-1 remains unchecked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This is the same continuing,
+  already-verified Codex session; `/feedback` was not rerun.
+- **Code and external actions:** No application code, Supabase configuration,
+  or production configuration changed. No OpenAI request or unrelated product
+  action occurred.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
