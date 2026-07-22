@@ -1,7 +1,7 @@
 # HANDOFF.md — COOPfinder Continuation Handoff
 
 > **Purpose:** Let the next coding agent continue without rediscovering the
-> current state. This reflects the codebase as of **2026-07-16**.
+> current state. This reflects the codebase as of **2026-07-21**.
 >
 > **Read before coding:** [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) (r2 —
 > current), [DESIGN.md](DESIGN.md) (esp. §22–24),
@@ -19,6 +19,19 @@
 > **As built today:** saving a URL stores only its normalized link. Automatic
 > retrieval is not implemented; the owner must paste the job description
 > before the existing Analyze path becomes available.
+>
+> **R1-1 authentication state:** Implementation commit
+> `8849ad202824eb0338ed1746125262e8eb5009f2` makes
+> `https://internshipbc.dev` the single production auth origin, adds primary
+> email/password signup and login, forgot/reset password flows, and retains
+> magic-link login as the secondary method. Supabase SSR cookies remain the
+> session store; callback and proxy refresh responses now preserve private
+> no-store headers. The Supabase Site URL is canonical and its redirect allow
+> list contains only the canonical callback plus localhost development; the
+> obsolete Vercel callback was removed. This item remains conditionally
+> complete until the commit is deployed and the full disposable production
+> signup/login/reset/magic-link/browser-restart flow is observed, including the
+> ROADMAP's literal next-day persistence check.
 >
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
@@ -120,6 +133,16 @@
     Print/PDF presentation are implemented. No raw profile or job prose is
     provider-authored or copied into generated versions.
 
+14. **Canonical password authentication implementation (R1-1, conditionally
+    complete)** - production auth URL construction cannot select a Vercel
+    deployment host; localhost remains available only in development.
+    Email/password signup and login are primary on `/login`, magic link is
+    secondary, and `/forgot-password` plus `/reset-password` implement a
+    non-enumerating PKCE reset/update flow. Safe `next` and known `reason`
+    values are preserved. Callback and Supabase proxy refresh responses carry
+    no-store headers. Automated verification passed, but the production and
+    literal next-day acceptance checks remain outstanding.
+
 Also in place since earlier phases: Supabase auth (`/login`,
 `/auth/callback`, `/auth/sign-out`), `proxy.ts` hybrid route protection,
 guest/authed shell states, and `tailoring_credit_ledger` with +2 signup grant.
@@ -130,7 +153,8 @@ transaction that persists a complete immutable resume version.
 
 Public: `/` (authed→`/dashboard`, guest→`/start`), `/start`, `/board`,
 `/board/[id]`, `/board/submit` (page is public; submitting requires auth),
-`/login`.
+`/login`, `/forgot-password`, `/reset-password`, `/auth/callback`,
+`/auth/sign-out`.
 
 Private (via `proxy.ts`): `/dashboard`, `/jobs`, `/jobs/[id]`,
 `/applications`, `/applications/[id]`, `/resumes`, `/resumes/master`,

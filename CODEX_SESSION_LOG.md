@@ -2370,6 +2370,54 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Configure SMTP or another safe PKCE-compatible authenticated
   fixture and complete the deferred browser smoke verification.
 
+### R1-1 canonical session persistence and password authentication
+
+- **Date and time:** 2026-07-21 (America/Vancouver)
+- **Development phase:** ROADMAP R1-1
+- **Classification:** CONDITIONALLY COMPLETE
+- **Session purpose:** Make `https://internshipbc.dev` the sole production
+  authentication identity domain and add complete email/password
+  authentication while retaining magic link as the secondary method.
+- **Implementation:** Commit
+  `8849ad202824eb0338ed1746125262e8eb5009f2` centralizes canonical auth URLs,
+  validates `next` and known `reason` values, adds email/password signup and
+  login plus non-enumerating forgot/reset flows, preserves Supabase SSR cookie
+  persistence, and retains Supabase no-store headers on callback and proxy
+  refresh responses. No localStorage token persistence, auth bypass, Google
+  implementation, service-role client exposure, or migration was added.
+- **Confirmed diagnosis:** Auth links previously inherited the request origin,
+  so a flow initiated on a Vercel deployment could complete and persist its
+  host-scoped session cookies there rather than on the custom domain. The SSR
+  proxy also ignored cache-control headers supplied with refreshed auth
+  cookies. Both repository-side defects are corrected.
+- **Supabase configuration:** The Site URL was confirmed as
+  `https://internshipbc.dev`; email signup, confirmation, custom SMTP, and
+  variable-based reset template configuration were confirmed; the obsolete
+  Vercel callback was removed. The remaining allow list contains the canonical
+  production callback and localhost development callback only. No secret was
+  inspected or recorded.
+- **Automated verification:** Focused auth tests passed 15/15. Lint, typecheck,
+  production Next.js 16 webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **Live verification:** Not claimed. The local implementation was not deployed
+  because this task prohibits pushing, so no fresh production signup, email
+  confirmation, password login/logout, reset email, password replacement,
+  secondary magic link, browser-close/reopen, or server-rendered restored
+  session test was performed. Literal next-day persistence was not observed.
+- **ROADMAP state:** R1-1 remains unchecked until the production and literal
+  next-day acceptance checks pass.
+- **Disposable cleanup:** No disposable account or fixture was created; no
+  cleanup was required.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session, so `/feedback` was not rerun.
+- **Known limitation:** Deploy the implementation, then complete all normal
+  user-facing production password, reset, magic-link, browser-restart, and
+  literal next-day persistence checks before marking R1-1 complete.
+- **Next action:** Deploy the two local commits without changing their content,
+  then run the fresh disposable production authentication acceptance flow and
+  next-day persistence observation.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
