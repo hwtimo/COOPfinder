@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { reportAuthFailure } from "@/lib/auth/auth-diagnostics";
 import { sanitizeNextPath } from "@/lib/auth/paths";
+import { classifyPasswordUpdateFailure } from "@/lib/auth/password-reset";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function updatePassword(formData: FormData) {
@@ -31,7 +32,7 @@ export async function updatePassword(formData: FormData) {
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
     reportAuthFailure("password_update", error);
-    query.set("error", "reset_failed");
+    query.set("error", classifyPasswordUpdateFailure(error));
     redirect(`/reset-password?${query.toString()}`);
   }
   await supabase.auth.signOut();
