@@ -41,8 +41,9 @@ npm run build
 
 The application is a standard Next.js 16 Node deployment. It has no custom
 Docker, Netlify, Fly, Render, or Vercel configuration. Vercel is the preferred
-beta target because it supplies the trusted forwarded origin used to build the
-PKCE callback and runs the repository's standard build command. A conventional
+beta target because it runs the repository's standard build command. Production
+authentication URLs use the canonical `https://internshipbc.dev` origin rather
+than forwarded request-host metadata. A conventional
 Node host is also supported if it runs behind a trusted HTTPS reverse proxy and
 preserves the original `Origin`, `Host`, `X-Forwarded-Host`, and
 `X-Forwarded-Proto` values.
@@ -147,18 +148,12 @@ Production site:
 Production auth callback:
 `https://internshipbc.dev/auth/callback`
 
-Temporary Vercel fallback:
-`https://coopfinder.vercel.app`
-
-Temporary Vercel auth callback:
-`https://coopfinder.vercel.app/auth/callback`
-
 - Use a dedicated production project and confirm all 32 migration timestamps
   match the repository.
 - Set Auth **Site URL** to `https://internshipbc.dev`.
-- Add the exact callbacks `https://internshipbc.dev/auth/callback`,
-  `https://coopfinder.vercel.app/auth/callback`, and
-  `http://localhost:3000/auth/callback` to **Redirect URLs**. Do not use a
+- Add the exact callbacks `https://internshipbc.dev/auth/callback` and
+  `http://localhost:3000/auth/callback` to **Redirect URLs**. Remove Vercel
+  deployment callbacks. Do not use a
   wildcard for the canonical production domain.
 - The application starts email/OAuth login with that callback and the route
   exchanges the returned authorization `code` using
@@ -170,7 +165,8 @@ Temporary Vercel auth callback:
   tracking that rewrites confirmation links, then test delivery, spam
   placement, expiry, and one-time-use behavior. Supabase's shared default
   sender and Mailtrap Sandbox are not production delivery services.
-- Ensure signup and magic-link templates use Supabase's
+- Enable email/password signup and email confirmation. Ensure signup,
+  magic-link, and reset-password templates use Supabase's
   `{{ .ConfirmationURL }}` (or the documented `SiteURL`, `TokenHash`, and
   `RedirectTo` variables) rather than a hardcoded hostname. Verify the final
   confirmation link returns to `https://internshipbc.dev/auth/callback`.
@@ -215,12 +211,11 @@ References:
   a Vercel domain-level redirect from `www.internshipbc.dev` to
   `internshipbc.dev`; do not leave both hosts serving independent canonical
   pages.
-- Keep `coopfinder.vercel.app` attached temporarily for authentication and
-  testing. When fallback testing is no longer needed, configure its redirect
-  to `https://internshipbc.dev` at the Vercel domain layer rather than adding
-  application middleware.
+- Configure every `*.vercel.app` deployment host to redirect to
+  `https://internshipbc.dev` at the Vercel domain layer. Do not use a Vercel
+  deployment as an alternate authentication identity domain.
 - In Supabase Dashboard, open **Authentication → URL Configuration**, set the
-  Site URL and the three exact callbacks listed above, then inspect
+  Site URL and the two exact callbacks listed above, then inspect
   **Authentication → Email Templates** for hardcoded localhost or Vercel
   hosts. Template links must use Supabase variables so the requested PKCE
   redirect is preserved.
@@ -260,9 +255,10 @@ References:
 
 Use two disposable beta users and synthetic content. Clean them up afterward.
 
-- Request passwordless links through production SMTP; verify callback, PKCE
-  exchange, refresh persistence, logout, and denial of private routes after
-  logout.
+- Create a fresh email/password account through production SMTP; verify email
+  confirmation, password login, logout, reset-email delivery, reset completion,
+  PKCE exchange, refresh persistence, and denial of private routes after logout.
+  Then verify the secondary magic-link flow independently.
 - Verify User B cannot open or infer User A's Master Profile, jobs,
   applications, matching, tailoring, or resume-version routes.
 - Save a Master Profile, candidate evidence, and one approved resume fragment.

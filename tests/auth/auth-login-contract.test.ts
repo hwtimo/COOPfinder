@@ -16,8 +16,27 @@ test("Google auth is disabled by default and requires an exact opt-in", () => {
 
 test("login UI hides Google unless the server flag is enabled", () => {
   assert.match(loginPage, /const googleAuthEnabled = isGoogleAuthEnabled\(\)/);
-  assert.match(loginPage, /\{googleAuthEnabled \? \(/);
+  assert.match(loginPage, /\{googleAuthEnabled \?/);
   assert.match(loginPage, /<GoogleSignInOption enabled \/>/);
+});
+
+test("password login and signup precede the secondary magic-link option", () => {
+  const passwordForm = loginPage.indexOf(
+    "action={signupMode ? signUpWithPassword : signInWithPassword}",
+  );
+  const magicLinkForm = loginPage.indexOf("action={signInWithEmail}");
+  assert.ok(passwordForm >= 0);
+  assert.ok(magicLinkForm > passwordForm);
+  assert.match(actions, /supabase\.auth\.signInWithPassword/);
+  assert.match(actions, /supabase\.auth\.signUp/);
+  assert.match(loginPage, /Forgot password\?/);
+});
+
+test("password errors remain fixed and provider details stay server-only", () => {
+  assert.match(loginPage, /invalid_credentials: "The email or password is incorrect\."/);
+  assert.match(actions, /reportAuthFailure\("password_sign_in", error\)/);
+  assert.match(actions, /reportAuthFailure\("password_sign_up", error\)/);
+  assert.doesNotMatch(loginPage, /error\.message|JSON\.stringify\(error\)/);
 });
 
 test("Google action fails closed before reaching Supabase OAuth", () => {

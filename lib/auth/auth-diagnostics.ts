@@ -15,6 +15,10 @@ export const AUTH_FAILURE_CATEGORIES = [
 export type AuthFailureCategory = (typeof AUTH_FAILURE_CATEGORIES)[number];
 export type AuthOperation =
   | "email_sign_in"
+  | "password_sign_in"
+  | "password_sign_up"
+  | "password_reset_request"
+  | "password_update"
   | "google_sign_in"
   | "auth_callback";
 

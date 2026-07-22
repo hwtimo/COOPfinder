@@ -10,6 +10,26 @@ export const PRIVATE_ROUTE_PREFIXES = [
 ] as const;
 
 const UNSAFE_REDIRECT_PREFIXES = ["/login", "/auth"];
+export const CANONICAL_PRODUCTION_ORIGIN = "https://internshipbc.dev";
+
+const LOGIN_REASONS = [
+  "save_job",
+  "submit_board_job",
+  "tailor_resume",
+  "add_job",
+  "full_analysis",
+  "extract_job",
+  "save_progress",
+] as const;
+
+export type LoginReason = (typeof LOGIN_REASONS)[number];
+
+export function sanitizeLoginReason(value: unknown): LoginReason | undefined {
+  return typeof value === "string" &&
+    (LOGIN_REASONS as readonly string[]).includes(value)
+    ? (value as LoginReason)
+    : undefined;
+}
 
 export function getFirstSearchParam(
   value: string | string[] | undefined,
@@ -57,21 +77,64 @@ export function sanitizeNextPath(
   }
 }
 
-export function buildAuthCallbackUrl(origin: string, next: string) {
-  let safeOrigin = "http://localhost:3000";
+export function resolveAuthOrigin(
+  requestOrigin: string,
+  environment = process.env.NODE_ENV,
+): string {
+  if (environment === "production") return CANONICAL_PRODUCTION_ORIGIN;
 
   try {
-    const parsed = new URL(origin);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      safeOrigin = parsed.origin;
+    const parsed = new URL(requestOrigin);
+    const isLoopback =
+      parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+    if (isLoopback && (parsed.protocol === "http:" || parsed.protocol === "https:")) {
+      return parsed.origin;
     }
   } catch {
-    // Keep the local fallback when request origin metadata is malformed.
+    // Fall through to the canonical origin.
   }
 
-  const callback = new URL("/auth/callback", safeOrigin);
+  return CANONICAL_PRODUCTION_ORIGIN;
+}
+
+export function buildAppUrl(
+  requestOrigin: string,
+  path: string,
+  environment = process.env.NODE_ENV,
+) {
+  return new URL(sanitizeNextPath(path), resolveAuthOrigin(requestOrigin, environment));
+}
+
+export function buildAuthCallbackUrl(
+  origin: string,
+  next: string,
+  reason?: string,
+  environment = process.env.NODE_ENV,
+) {
+  const callback = new URL(
+    "/auth/callback",
+    resolveAuthOrigin(origin, environment),
+  );
+
   callback.searchParams.set("next", sanitizeNextPath(next));
+  const safeReason = sanitizeLoginReason(reason);
+  if (safeReason) callback.searchParams.set("reason", safeReason);
   return callback.toString();
+}
+
+export function buildPasswordResetCallbackUrl(
+  origin: string,
+  next: string,
+  environment = process.env.NODE_ENV,
+) {
+  const resetPath = new URL("/reset-password", "https://coopfinder.local");
+  resetPath.searchParams.set("next", sanitizeNextPath(next));
+  return buildAuthCallbackUrl(
+    origin,
+    `${resetPath.pathname}${resetPath.search}`,
+    undefined,
+    environment,
+  );
 }
 
 export function getLoginHref(next: string, reason?: string): string {
@@ -79,7 +142,8 @@ export function getLoginHref(next: string, reason?: string): string {
     next: sanitizeNextPath(next),
   });
 
-  if (reason) params.set("reason", reason);
+  const safeReason = sanitizeLoginReason(reason);
+  if (safeReason) params.set("reason", safeReason);
 
   return `/login?${params.toString()}`;
 }
