@@ -203,7 +203,7 @@ action. Density was right for the build-out; launched students need focus.
 
 ## Checklist
 
-- [ ] R1-1 session persistence + password auth
+- [x] R1-1 session persistence + password auth
 - [ ] R1-2 Google sign-in
 - [ ] R1-3 mock data removal
 - [ ] R1-4 InternshipBC branding

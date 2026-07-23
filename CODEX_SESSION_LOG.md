@@ -2491,6 +2491,41 @@ only when necessary to explain configuration; never record their values.
   commits with explicit authorization, then run the bounded production reset
   verification without testing later ROADMAP work.
 
+### R1-1 final production authentication verification
+
+- **Date and time:** 2026-07-23 (America/Vancouver)
+- **Development phase:** ROADMAP R1-1 final production verification
+- **Classification:** PASS
+- **Deployed revision:** Production was verified with local `main` and
+  `origin/main` aligned at `a1c030c1fb51bd7d57e0e3d3b8c271a4af27c47b`.
+  Its history includes authentication implementation commit
+  `8849ad202824eb0338ed1746125262e8eb5009f2` and reset correction commit
+  `cb1681b5598d3479d7fbbd1904f982d0394357c6`.
+- **Password reset verification:** Reusing the current password produced the
+  accurate “Choose a different password.” rejection while preserving the valid
+  reset session. A different password updated successfully; the previous
+  password was rejected and the replacement password signed in successfully.
+- **Secondary authentication verification:** A fresh secondary magic link
+  completed on `internshipbc.dev` and established the authenticated dashboard
+  session. No callback or application page used a Vercel deployment hostname.
+- **Session persistence verification:** After fully closing and reopening the
+  browser, direct `/dashboard` navigation and reload remained
+  server-authenticated. On 2026-07-23, without signing in again, a later-calendar-
+  day direct visit to `https://internshipbc.dev/dashboard` and a full reload
+  again remained server-authenticated.
+- **Supabase password policy:** The production Supabase Auth minimum password
+  length was aligned from 6 to the application's existing 8-character minimum.
+  The application remains bounded at 8–128 characters; no other password,
+  CAPTCHA, lockout, or authentication policy was changed.
+- **ROADMAP state:** R1-1 is complete and checked.
+- **Privacy and scope:** No password, email link, token, cookie, or secret was
+  recorded. No application code or unrelated ROADMAP work changed, and R1-2
+  was not started.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Begin R1-2 only under a separate narrow task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

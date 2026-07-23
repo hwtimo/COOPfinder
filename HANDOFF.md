@@ -1,7 +1,7 @@
 # HANDOFF.md — COOPfinder Continuation Handoff
 
 > **Purpose:** Let the next coding agent continue without rediscovering the
-> current state. This reflects the codebase as of **2026-07-21**.
+> current state. This reflects the codebase as of **2026-07-23**.
 >
 > **Read before coding:** [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) (r2 —
 > current), [DESIGN.md](DESIGN.md) (esp. §22–24),
@@ -28,27 +28,25 @@
 > session store; callback and proxy refresh responses now preserve private
 > no-store headers. The Supabase Site URL is canonical and its redirect allow
 > list contains only the canonical callback plus localhost development; the
-> obsolete Vercel callback was removed. The commits are deployed. A fresh
-> controlled plus-alias account completed production password signup and email
-> confirmation, reached the canonical dashboard, remained server-authenticated
-> across direct navigation and full reload, logged out with protected-route
-> rejection, and logged back in by password successfully. The confirmation
-> email's intermediate host sequence was not directly recorded by Codex, so
-> this verification slice is conditional. Password reset, magic link, guest
-> handoff, browser restart, and the ROADMAP's literal next-day persistence check
-> remain outstanding.
+> obsolete Vercel callback was removed. The commits are deployed. A controlled
+> production account completed password signup and confirmation, password
+> login/logout, forgot/reset password, old/new password rejection and success,
+> secondary magic-link login, immediate browser restart, and direct canonical
+> dashboard reloads. A later-calendar-day direct `/dashboard` visit and reload
+> remained server-authenticated without another sign-in. Supabase Auth's
+> minimum password length is aligned with the application at 8 characters.
 >
 > **R1-1 reset-password follow-up:** Production safely logged the reproduced
 > rejection as Supabase Auth code `same_password` with HTTP 422, but the page
 > previously collapsed every update failure into the expired/unavailable copy.
-> Local implementation commit
+> Implementation commit
 > `cb1681b5598d3479d7fbbd1904f982d0394357c6` now maps only the validated
 > `same_password` code to “Choose a different password.” without signing out or
 > consuming the valid reset session; truly unavailable/expired states retain
 > their existing copy. Focused tests and repository validation passed. The fix
-> is not yet pushed or deployed, so its production current-password rejection,
-> subsequent different-password success, and old/new login results remain to
-> be live-verified.
+> is deployed and production-verified: current-password reuse shows the
+> accurate rejection, a different password succeeds, the previous password is
+> rejected, and the replacement password signs in successfully.
 >
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
@@ -150,15 +148,16 @@
     Print/PDF presentation are implemented. No raw profile or job prose is
     provider-authored or copied into generated versions.
 
-14. **Canonical password authentication implementation (R1-1, conditionally
-    complete)** - production auth URL construction cannot select a Vercel
+14. **Canonical password authentication implementation (R1-1, complete)** -
+    production auth URL construction cannot select a Vercel
     deployment host; localhost remains available only in development.
     Email/password signup and login are primary on `/login`, magic link is
     secondary, and `/forgot-password` plus `/reset-password` implement a
     non-enumerating PKCE reset/update flow. Safe `next` and known `reason`
     values are preserved. Callback and Supabase proxy refresh responses carry
-    no-store headers. Automated verification passed, but the production and
-    literal next-day acceptance checks remain outstanding.
+    no-store headers. Automated verification and the complete production
+    acceptance flow passed, including reset, secondary magic link, browser
+    restart, and later-calendar-day server-authenticated dashboard reload.
 
 Also in place since earlier phases: Supabase auth (`/login`,
 `/auth/callback`, `/auth/sign-out`), `proxy.ts` hybrid route protection,
