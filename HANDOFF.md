@@ -48,6 +48,20 @@
 > accurate rejection, a different password succeeds, the previous password is
 > rejected, and the replacement password signs in successfully.
 >
+> **R1-2 Google Sign-In state:** Implementation commit
+> `e6730df8c62928c90b5242b3babc1118e2059d4d` places Google first on `/login`
+> when the existing server-only feature flag is enabled, followed by
+> email/password and then magic link. The existing canonical callback, safe
+> `next` handling, Supabase SSR session persistence, and guest-draft handoff
+> remain unchanged. A production Google consent screen and Web OAuth client
+> were configured with
+> `https://jxkpdllueidclqwpxhxp.supabase.co/auth/v1/callback`, and the Google
+> provider is enabled in Supabase. Client credentials were entered directly
+> in the dashboards and are not stored in the repository. Focused auth tests,
+> lint, typecheck, the production webpack build, and diff checks passed.
+> Production deployment and fresh-account Google authentication remain
+> pending, so ROADMAP R1-2 remains unchecked.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table

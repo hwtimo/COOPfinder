@@ -2526,6 +2526,45 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Begin R1-2 only under a separate narrow task.
 
+### R1-2 Google Sign-In implementation and provider configuration
+
+- **Date and time:** 2026-07-23 (America/Vancouver)
+- **Development phase:** ROADMAP R1-2
+- **Classification:** CONDITIONALLY COMPLETE
+- **Implementation:** Commit
+  `e6730df8c62928c90b5242b3babc1118e2059d4d` moves the existing
+  server-gated Google OAuth control to the primary position on `/login`.
+  Email/password remains second and magic link remains tertiary. The existing
+  canonical callback builder, safe `next` handling, password authentication,
+  magic-link authentication, Supabase SSR cookie persistence, and guest-draft
+  handoff were preserved.
+- **External configuration:** The existing production Google consent screen
+  is external and published. One Web OAuth client was created with
+  `https://internshipbc.dev` as its application origin and
+  `https://jxkpdllueidclqwpxhxp.supabase.co/auth/v1/callback` as its only
+  authorized redirect URI. The client ID and secret were entered directly by
+  the user in the Supabase Dashboard, and the Google provider was confirmed
+  enabled. No Vercel preview domain was added.
+- **Security and privacy:** No Google client secret, client ID, provider
+  credential, token, email address, or cookie was printed, inspected, copied
+  into terminal output, committed, documented, or stored in the repository.
+  A repository scan found no Google credential patterns.
+- **Verification:** Focused authentication tests passed 19/19. Lint,
+  typecheck, production Next.js 16 webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **Live verification:** Not performed in this slice. The implementation has
+  not been pushed or deployed, and no fresh-account production Google login
+  was attempted.
+- **ROADMAP state:** R1-2 remains unchecked until the production deployment,
+  canonical callback, `/dashboard` landing, private-route reload persistence,
+  and password/magic-link regression checks pass.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session, so `/feedback` was not rerun.
+- **Next action:** Push and deploy the implementation and documentation
+  commits with explicit authorization, then run the bounded fresh-account
+  production Google authentication acceptance flow.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
