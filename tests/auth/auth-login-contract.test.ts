@@ -20,13 +20,18 @@ test("login UI hides Google unless the server flag is enabled", () => {
   assert.match(loginPage, /<GoogleSignInOption enabled \/>/);
 });
 
-test("password login and signup precede the secondary magic-link option", () => {
+test("Google precedes password auth and magic link remains tertiary", () => {
+  const googleForm = loginPage.indexOf("action={signInWithGoogle}");
   const passwordForm = loginPage.indexOf(
     "action={signupMode ? signUpWithPassword : signInWithPassword}",
   );
   const magicLinkForm = loginPage.indexOf("action={signInWithEmail}");
+  assert.ok(googleForm >= 0);
+  assert.ok(passwordForm > googleForm);
   assert.ok(passwordForm >= 0);
   assert.ok(magicLinkForm > passwordForm);
+  assert.match(loginPage, /OR CONTINUE WITH EMAIL/);
+  assert.match(loginPage, /OR USE A SIGN-IN LINK/);
   assert.match(actions, /supabase\.auth\.signInWithPassword/);
   assert.match(actions, /supabase\.auth\.signUp/);
   assert.match(loginPage, /Forgot password\?/);
@@ -44,6 +49,8 @@ test("Google action fails closed before reaching Supabase OAuth", () => {
   const oauth = actions.indexOf("supabase.auth.signInWithOAuth");
   assert.ok(gate >= 0);
   assert.ok(oauth > gate);
+  assert.match(actions, /provider: "google"/);
+  assert.match(actions, /redirectTo = buildAuthCallbackUrl\(origin, next, reason\)/);
   assert.match(actions, /error: "google_sign_in_failed"/);
 });
 

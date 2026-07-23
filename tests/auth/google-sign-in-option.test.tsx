@@ -12,4 +12,5 @@ test("Google option renders an accessible submit control when enabled", () => {
   const html = renderToStaticMarkup(<GoogleSignInOption enabled />);
   assert.match(html, /<button[^>]*type="submit"/);
   assert.match(html, />Continue with Google<\/button>/);
+  assert.doesNotMatch(html, />or</i);
 });

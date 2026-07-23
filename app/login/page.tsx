@@ -83,7 +83,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           {passwordUpdated ? <div className="mt-4 rounded-md border border-success/20 bg-success-soft px-3 py-2 text-sm">Your password was updated. Log in with the new password.</div> : null}
           {error ? <div className="mt-4 rounded-md border border-warning/20 bg-warning-soft px-3 py-2 text-sm">{errorCopy[error] ?? "Sign-in could not start. Try again."}</div> : null}
 
-          <form action={signupMode ? signUpWithPassword : signInWithPassword} className="mt-5 space-y-3">
+          {googleAuthEnabled ? (
+            <>
+              <form action={signInWithGoogle} className="mt-5">
+                <input type="hidden" name="next" value={next} />
+                <input type="hidden" name="reason" value={reason ?? ""} />
+                <GoogleSignInOption enabled />
+              </form>
+              <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" /><span>OR CONTINUE WITH EMAIL</span><span className="h-px flex-1 bg-border" /></div>
+            </>
+          ) : null}
+
+          <form action={signupMode ? signUpWithPassword : signInWithPassword} className={`${googleAuthEnabled ? "" : "mt-5"} space-y-3`}>
             <input type="hidden" name="next" value={next} />
             <input type="hidden" name="reason" value={reason ?? ""} />
             <label className="block text-xs font-medium">Email<Input name="email" type="email" required autoComplete="email" className="mt-1.5 h-10 bg-background text-sm" /></label>
@@ -104,7 +115,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <Button type="submit" variant="outline" size="lg" className="h-10 w-full">Email me a sign-in link</Button>
           </form>
 
-          {googleAuthEnabled ? <form action={signInWithGoogle}><input type="hidden" name="next" value={next} /><input type="hidden" name="reason" value={reason ?? ""} /><GoogleSignInOption enabled /></form> : null}
           <p className="mt-4 text-xs leading-5 text-muted-foreground">New accounts include 1 free tailoring credit. Application tracking is free.</p>
         </section>
       </div>
