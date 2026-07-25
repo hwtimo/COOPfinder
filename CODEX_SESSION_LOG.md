@@ -2894,6 +2894,47 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Begin R1-5 only under a separate, narrowly scoped task.
 
+### R1-5A public Privacy Policy and Terms
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-5A bounded implementation
+- **Classification:** PASS
+- **Implementation:** Commit
+  `a1ecb62b08fa9cbf630e93d9540e678326420b63` adds static public `/privacy`
+  and `/terms` routes, a shared legal-page shell, and minimal Privacy/Terms
+  links on login and public onboarding.
+- **Privacy basis:** Repository inspection confirmed that private account,
+  profile, candidate-evidence, resume-fragment, job, extraction, application,
+  credit, and tailored-resume data is persisted in Supabase under existing
+  ownership controls. Job analysis sends the private job-description text to
+  OpenAI. Tailoring sends structured job context plus profile identity,
+  education, skills, candidate evidence, and confirmed manual resume
+  fragments. Both Responses API adapters use `store:false`.
+- **Provider policy boundary:** Current OpenAI API documentation states that
+  API content is not used to train or improve models unless the API
+  organization explicitly opts in. InternshipBC implements no opt-in. The
+  policy separately discloses OpenAI's default abuse-monitoring-log retention
+  of up to 30 days instead of treating `store:false` as zero retention.
+- **Deletion boundary:** The page does not claim self-serve account deletion.
+  It states that private account data has no general automatic expiry, that
+  available per-record controls have relationship limits, and that full
+  account removal currently requires operator action.
+- **Terms boundary:** InternshipBC does not apply automatically. Users review
+  AI output, apply through the original service, remain responsible for input
+  accuracy, and receive no eligibility, interview, offer, or hiring guarantee.
+- **Verification:** Focused legal/auth tests passed 12/12. Lint, typecheck,
+  production Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed. The build emitted `/privacy` and `/terms`
+  as static routes, and a logged-out localhost browser opened both directly
+  without an authentication redirect.
+- **ROADMAP state:** R1-5 remains incomplete and unchecked. Account deletion
+  was not implemented.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Continue R1-5 only with a separately scoped account-deletion
+  task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

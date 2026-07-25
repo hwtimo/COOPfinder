@@ -188,6 +188,20 @@
 > name. One email of each type was delivered and inspected without exposing
 > credentials, tokens, or full authentication links. ROADMAP R1-4 is complete.
 >
+> **R1-5A public legal pages:** Implementation commit
+> `a1ecb62b08fa9cbf630e93d9540e678326420b63` adds public `/privacy` and
+> `/terms` pages plus minimal links from login and public onboarding. The
+> Privacy Policy reflects the implemented Supabase storage and owner-scoping,
+> names the exact job-analysis and tailoring content sent to OpenAI, records
+> `store:false`, distinguishes OpenAI's default no-training-without-opt-in
+> policy from its default abuse-monitoring retention, and states that
+> self-serve account deletion is not yet available. The Terms keep application
+> submission and content accuracy with the user and make no eligibility,
+> interview, offer, or hiring guarantee. Focused tests passed 12/12; lint,
+> typecheck, production webpack build, logged-out route checks, and both diff
+> checks passed. ROADMAP R1-5 remains incomplete and unchecked pending the
+> separately scoped account-deletion work.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
