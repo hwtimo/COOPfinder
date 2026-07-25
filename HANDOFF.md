@@ -109,6 +109,19 @@
 > passed. ROADMAP R1-3 remains incomplete and unchecked while other production
 > screens still use mock fixtures.
 >
+> **R1-3D placeholder-route state:** Implementation commit
+> `7e484bf0a43a5710fbd0561b56ac6ac3f4090f4c` removes fabricated or
+> forward-looking event, analytics, performance, document-storage, and
+> activity assumptions from the production `/calendar`, `/insights`, and
+> `/documents` routes. Each route remains an intentionally unimplemented,
+> honest placeholder with exactly one existing-product CTA: Calendar to
+> Applications, Insights to My Jobs, and Documents to Resumes. No data query,
+> persistence, upload, analytics, calendar, or document-management behavior
+> was added, and no route falls back to mock data. Focused tests passed 4/4;
+> scoped grep, lint, typecheck, production webpack build, and diff checks
+> passed. ROADMAP R1-3 remains incomplete and unchecked while other
+> production screens still use mock fixtures.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
@@ -691,5 +704,6 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   `lib/mock/applications.ts` remains as a compatibility fixture but production
   Applications routes do not import it. R1-3A removed mock identity from the
   app shell, R1-3B removed Dashboard mock data, and R1-3C removed Resumes hub
-  mock assumptions. The remaining screens must still be converted in bounded
-  phases. Do not delete `lib/mock/` wholesale.
+  mock assumptions. R1-3D replaced Calendar, Insights, and Documents fixture
+  assumptions with honest one-action placeholders. The remaining screens must
+  still be converted in bounded phases. Do not delete `lib/mock/` wholesale.

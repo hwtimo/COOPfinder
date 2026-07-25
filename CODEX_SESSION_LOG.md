@@ -2681,6 +2681,41 @@ only when necessary to explain configuration; never record their values.
   mock-removal slice; do not implement upload/editing, change tailoring or
   version persistence, or start R1-4 branding.
 
+### R1-3D production placeholder-route mock-data removal
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-3D bounded implementation
+- **Classification:** PASS
+- **Implementation:** Commit
+  `7e484bf0a43a5710fbd0561b56ac6ac3f4090f4c` removes fabricated and
+  forward-looking event, analytics, performance, document-storage, count,
+  name, and activity assumptions from the production `/calendar`,
+  `/insights`, and `/documents` routes.
+- **Honest route behavior:** Calendar states that its tools are unavailable
+  and links once to Applications. Insights states that it is unavailable and
+  links once to My Jobs. Documents states that document management is
+  unavailable and links once to Resumes.
+- **No mock fallback:** None of the three production routes imports
+  `lib/mock`, renders fixture identity or values, or substitutes fabricated
+  data. The pages make no data request and therefore need no unavailable-data
+  fallback beyond their explicit unimplemented state.
+- **Scope preservation:** No calendar, analytics, upload, or document-
+  management behavior was implemented. Other routes, persistence, schema,
+  authentication, AI, credits, dependencies, layout, and branding were
+  unchanged.
+- **Verification:** Focused placeholder-route tests passed 4/4. A scoped grep
+  found no `lib/mock` import, mock identity, fixture copy, automatic-event
+  promise, response/performance claim, activity-analysis claim, or
+  document-storage promise. Lint, typecheck, the production Next.js 16 webpack
+  build, `git diff --check`, and `git diff --cached --check` passed.
+- **ROADMAP state:** R1-3 remains incomplete and unchecked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Continue R1-3 with one separately bounded remaining-screen
+  mock-removal slice; do not implement placeholder features or start R1-4
+  branding.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
