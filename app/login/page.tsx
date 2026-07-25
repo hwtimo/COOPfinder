@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { GoogleSignInOption } from "@/components/auth/google-sign-in-option";
+import { PublicLegalLinks } from "@/components/legal/public-legal-links";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isGoogleAuthEnabled } from "@/lib/auth/config";
@@ -117,6 +118,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <p className="mt-4 text-xs leading-5 text-muted-foreground">New accounts include 1 free tailoring credit. Application tracking is free.</p>
         </section>
+        <PublicLegalLinks className="mt-5" />
       </div>
     </main>
   );

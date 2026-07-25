@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PublicLegalLinks } from "@/components/legal/public-legal-links";
 import { getLoginHref } from "@/lib/auth/paths";
 import type { PublicBoardJob } from "@/lib/board/types";
 import {
@@ -1072,6 +1073,9 @@ export function StartOnboarding({
           </aside>
         </div>
       </div>
+      <footer className="border-t px-4 py-5 sm:px-6">
+        <PublicLegalLinks />
+      </footer>
     </main>
   );
 }
