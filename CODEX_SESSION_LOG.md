@@ -2799,6 +2799,34 @@ only when necessary to explain configuration; never record their values.
   production account sees no fabricated data before checking R1-3; do not
   begin R1-4 branding.
 
+### R1-3 production deployment and fresh-account verification
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-3 completion verification
+- **Classification:** PASS
+- **Deployment:** The approved twelve-commit R1-3 series was pushed without
+  force to `origin/main`. Local and remote `main` aligned at
+  `bf7ac11a8ffdeda86ea3f122c8bc21b89408a9df`, and GitHub reported the Vercel
+  production status for that exact revision as successful.
+- **Fresh-account verification:** A brand-new empty production account was
+  confirmed through the canonical `internshipbc.dev` callback. Its app shell
+  used the real email and email initial only. Dashboard and Resumes showed
+  honest empty states; Calendar, Insights, and Documents showed honest
+  unavailable placeholders; Settings showed the real email and neutral
+  `Not provided` values.
+- **Public and legacy routes:** `/start` and `/board` used the persisted
+  reviewed public-board rows and did not fall back to fixtures.
+  `/resumes/tailor/j11` returned the safe production 404 path rather than the
+  legacy mock workspace.
+- **Fixture audit:** No Maya Chen or known Dashboard, resume, project, or
+  tailoring fixture copy appeared anywhere checked. Genuine persisted
+  reviewed public-board rows were not treated as mock data.
+- **ROADMAP state:** R1-3 is complete and checked. R1-4 was not started.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Begin R1-4 only under a separate, narrowly scoped task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

@@ -151,6 +151,17 @@
 > remains. ROADMAP R1-3 remains incomplete and unchecked pending deployment
 > and fresh-account production verification.
 >
+> **R1-3 production verification:** The complete R1-3A through R1-3F series
+> was pushed and Vercel reported a successful production deployment for
+> revision `bf7ac11a8ffdeda86ea3f122c8bc21b89408a9df`. A brand-new empty
+> production account showed only its real email identity and neutral missing
+> profile values. Dashboard and Resumes rendered honest empty states;
+> Calendar, Insights, and Documents rendered honest unavailable placeholders;
+> `/start` and `/board` used the persisted reviewed public-board rows without
+> fixture fallback; and `/resumes/tailor/j11` returned the safe 404 path.
+> No Maya Chen or known fixture copy appeared in the checked production
+> routes. ROADMAP R1-3 is complete.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
@@ -731,6 +742,6 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   `components.json` saying Phosphor.
 - `lib/mock/` remains available for tests/development only; no production
   route, route-used component, or production helper imports it after R1-3A
-  through R1-3F. R1-3 remains unchecked until deployment and fresh-account
-  production verification confirm the audited state. Do not delete
+  through R1-3F. The complete series is deployed and fresh-account production
+  verification confirmed the audited state; R1-3 is complete. Do not delete
   `lib/mock/` wholesale.
