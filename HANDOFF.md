@@ -1,7 +1,7 @@
 # HANDOFF.md — COOPfinder Continuation Handoff
 
 > **Purpose:** Let the next coding agent continue without rediscovering the
-> current state. This reflects the codebase as of **2026-07-23**.
+> current state. This reflects the codebase as of **2026-07-25**.
 >
 > **Read before coding:** [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) (r2 —
 > current), [DESIGN.md](DESIGN.md) (esp. §22–24),
@@ -66,6 +66,20 @@
 > magic link third, successful signup, canonical `internshipbc.dev` callback
 > and dashboard landing, reload persistence, and direct authenticated `/jobs`
 > navigation. ROADMAP R1-2 is complete and checked.
+>
+> **R1-3A app-shell identity state:** Implementation commit
+> `9323dad4d0b93a7591f1d8d1f5c77f337efcd370` removes `currentUser` and all
+> fabricated name, program, term, initials, and profile fallback values from
+> the production app shell. The force-dynamic server layout now authenticates
+> through the request-bound Supabase client, reads only the authenticated
+> owner's existing `profiles` identity fields, and passes a serializable shell
+> identity to the existing client sidebar and topbar. Missing optional profile
+> values use the authenticated email/email initial or neutral `Account` and
+> `Workspace` labels. Navigation, logout, guest-draft handoff, and layout
+> structure are unchanged. Focused tests, the shell grep guard, lint,
+> typecheck, production build, and diff checks passed. This is only R1-3A;
+> ROADMAP R1-3 remains incomplete and unchecked while other production screens
+> still use mock fixtures.
 >
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
@@ -647,6 +661,6 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   `components.json` saying Phosphor.
 - Residual mock data (`lib/mock/`) still powers Dashboard, Resumes hub, and the
   Tailoring Workspace; `lib/mock/applications.ts` remains as a compatibility
-  fixture but production Applications routes do not import it. The app shell
-  uses mock `currentUser` only as cosmetic fallback strings. Replace these per
-  phase — do not delete `lib/mock/` wholesale.
+  fixture but production Applications routes do not import it. R1-3A removed
+  mock identity from the app shell, but the remaining screens must still be
+  converted in bounded phases. Do not delete `lib/mock/` wholesale.

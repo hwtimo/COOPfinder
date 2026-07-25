@@ -2568,6 +2568,39 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** R1-2 is complete; do not begin R1-3 without a separate
   narrow task.
 
+### R1-3A production app-shell identity cleanup
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-3A bounded implementation
+- **Classification:** PASS
+- **Implementation:** Commit
+  `9323dad4d0b93a7591f1d8d1f5c77f337efcd370` removes the production shell's
+  `lib/mock` dependency and all fabricated `currentUser` name, school,
+  program, term, initials, and profile fallback values.
+- **Authenticated data path:** The force-dynamic server layout uses one
+  request-bound Supabase client to authenticate and read the owner's existing
+  `profiles.full_name`, `school`, `program`, and `coop_term` fields. The
+  existing authenticated email and Supabase metadata name remain real-data
+  fallbacks.
+- **Missing-data behavior:** Optional profile gaps use only the authenticated
+  email, its initial, or neutral `Account` and `Workspace` labels. No
+  fabricated avatar or student detail is rendered.
+- **Scope preservation:** Existing navigation, logout, guest-draft handoff,
+  responsive layout, and branding are unchanged. Dashboard and all other
+  production screens were intentionally left for later bounded R1-3 slices;
+  no migration or dependency was added.
+- **Verification:** Focused app-shell identity tests passed 5/5. A scoped grep
+  found no `lib/mock`, `currentUser`, `Maya Chen`, fake Fall 2026 term, or
+  mock-build copy in the three shell production files. Lint, typecheck, the
+  production Next.js 16 webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **ROADMAP state:** R1-3 remains incomplete and unchecked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Continue R1-3 with one separately bounded production-screen
+  mock-removal slice; do not start R1-4 branding.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
