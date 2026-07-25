@@ -80,7 +80,7 @@ export function PublicJobCard({ job }: { job: PublicBoardJob }) {
 
           <div className="mt-4 rounded-md border bg-background p-3">
             <p className="text-[11px] font-medium uppercase text-muted-foreground">
-              Summary by COOPfinder
+              Summary by InternshipBC
             </p>
             <p className="mt-1.5 text-sm leading-6 text-text-secondary">
               {job.summary}

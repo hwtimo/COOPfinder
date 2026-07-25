@@ -58,10 +58,10 @@ export function AppSidebar({ user }: { user: AppShellUser | null }) {
       {/* Logo */}
       <div className="flex h-14 items-center gap-2.5 px-4">
         <div className="flex size-7 items-center justify-center rounded-md bg-sidebar-primary text-[13px] font-semibold text-sidebar-primary-foreground">
-          C
+          I
         </div>
         <span className="text-sm font-semibold tracking-tight text-white">
-          COOPfinder
+          InternshipBC
         </span>
       </div>
 

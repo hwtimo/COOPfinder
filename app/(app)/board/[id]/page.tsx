@@ -136,7 +136,7 @@ export default async function BoardDetailPage({ params }: BoardDetailPageProps) 
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <span className="inline-flex rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-medium text-brand">
-                  Summary by COOPfinder
+                  Summary by InternshipBC
                 </span>
                 <h2 className="mt-3 text-base font-semibold">Reviewed role summary</h2>
               </div>
@@ -236,7 +236,7 @@ export default async function BoardDetailPage({ params }: BoardDetailPageProps) 
               savedJob?.status === "error" ? (
                 <>
                   <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                    COOPfinder could not verify whether this role is already in
+                    InternshipBC could not verify whether this role is already in
                     your private jobs. Nothing was written.
                   </p>
                   <Button
@@ -277,7 +277,7 @@ export default async function BoardDetailPage({ params }: BoardDetailPageProps) 
           <section className="rounded-lg border bg-card p-5">
             <h2 className="text-sm font-semibold">Original source</h2>
             <p className="mt-2 text-xs leading-5 text-muted-foreground">
-              COOPfinder does not submit applications. Review and apply on the
+              InternshipBC does not submit applications. Review and apply on the
               employer&apos;s site.
             </p>
             <Button asChild variant="outline" className="mt-4 h-9 w-full rounded-md">

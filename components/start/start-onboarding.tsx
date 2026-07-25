@@ -483,9 +483,9 @@ export function StartOnboarding({
             className="inline-flex items-center gap-2.5 text-sm font-semibold tracking-tight"
           >
             <span className="flex size-7 items-center justify-center rounded-md bg-brand text-[13px] text-white">
-              C
+              I
             </span>
-            COOPfinder
+            InternshipBC
           </Link>
           <div className="ml-auto flex items-center gap-2">
             {isAuthenticated ? (

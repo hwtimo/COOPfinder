@@ -68,11 +68,11 @@ export default async function BoardSubmitPage() {
                 person reviews it.
               </p>
               <p>
-                Approved board entries use a short COOPfinder summary, never
+                Approved board entries use a short InternshipBC summary, never
                 your pasted full description.
               </p>
               <p>
-                COOPfinder does not apply for you. You use the original source
+                InternshipBC does not apply for you. You use the original source
                 to verify details and submit your application.
               </p>
             </div>
@@ -166,7 +166,7 @@ export default async function BoardSubmitPage() {
                   </h2>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     {configured
-                      ? "You can review the form now. Sign in is required before COOPfinder saves a private copy or submits the role for review."
+                      ? "You can review the form now. Sign in is required before InternshipBC saves a private copy or submits the role for review."
                       : "Supabase is not configured for this build, so no role can be submitted."}
                   </p>
                   {configured ? (

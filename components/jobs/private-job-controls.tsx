@@ -58,7 +58,7 @@ function DeletePrivateJobDialog({
 
         <form action={formAction} className="space-y-4 p-5">
           <p className="text-sm leading-6 text-text-secondary">
-            This removes the saved job. COOPfinder will refuse the deletion if
+            This removes the saved job. InternshipBC will refuse the deletion if
             a linked application exists, protecting its application history.
           </p>
 

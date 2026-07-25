@@ -257,7 +257,7 @@ export function BoardSubmissionForm({ configured }: { configured: boolean }) {
 
       <div className="mt-5 border-t pt-4">
         <p className="text-xs leading-5 text-muted-foreground">
-          COOPfinder may publish an in-house summary after review. You still
+          InternshipBC may publish an in-house summary after review. You still
           verify the details and apply yourself on the original site.
         </p>
         <Button

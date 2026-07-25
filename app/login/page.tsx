@@ -67,14 +67,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <main className="min-h-dvh bg-background px-4 py-8 text-foreground sm:px-6">
       <div className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-[420px] flex-col justify-center">
         <Link href="/start" className="mb-5 inline-flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground">
-          <span className="flex size-7 items-center justify-center rounded-md bg-brand text-[13px] text-white">C</span>
-          COOPfinder
+          <span className="flex size-7 items-center justify-center rounded-md bg-brand text-[13px] text-white">I</span>
+          InternshipBC
         </Link>
 
         <section className="rounded-md border bg-card p-5 shadow-sm">
           <p className="text-xs font-medium uppercase text-muted-foreground">Save your progress</p>
           <h1 className="mt-2 text-xl font-semibold tracking-tight">
-            {signupMode ? "Create your COOPfinder account" : "Log in to COOPfinder"}
+            {signupMode ? "Create your InternshipBC account" : "Log in to InternshipBC"}
           </h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">{getLoginReasonCopy(reason)}</p>
 

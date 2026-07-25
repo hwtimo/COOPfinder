@@ -19,7 +19,7 @@ const metadataBase = publicSiteUrl ? new URL(publicSiteUrl) : undefined;
 export const metadata: Metadata = {
   metadataBase,
   alternates: metadataBase ? { canonical: "/" } : undefined,
-  title: "COOPfinder",
+  title: "InternshipBC",
   description:
     "Save co-op postings, tailor your resume, and track every application.",
 };

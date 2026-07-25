@@ -385,7 +385,7 @@ function DialogFrame({
               {title}
             </h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Save the posting details in your private COOPfinder workspace.
+              Save the posting details in your private InternshipBC workspace.
             </p>
           </div>
           <Button
