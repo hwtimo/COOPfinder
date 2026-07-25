@@ -2530,7 +2530,7 @@ only when necessary to explain configuration; never record their values.
 
 - **Date and time:** 2026-07-23 (America/Vancouver)
 - **Development phase:** ROADMAP R1-2
-- **Classification:** CONDITIONALLY COMPLETE
+- **Classification:** PASS
 - **Implementation:** Commit
   `e6730df8c62928c90b5242b3babc1118e2059d4d` moves the existing
   server-gated Google OAuth control to the primary position on `/login`.
@@ -2552,18 +2552,21 @@ only when necessary to explain configuration; never record their values.
 - **Verification:** Focused authentication tests passed 19/19. Lint,
   typecheck, production Next.js 16 webpack build, `git diff --check`, and
   `git diff --cached --check` passed.
-- **Live verification:** Not performed in this slice. The implementation has
-  not been pushed or deployed, and no fresh-account production Google login
-  was attempted.
-- **ROADMAP state:** R1-2 remains unchecked until the production deployment,
-  canonical callback, `/dashboard` landing, private-route reload persistence,
-  and password/magic-link regression checks pass.
+- **Production completion (2026-07-25):** Vercel Production was configured
+  with the exact server-side gate `GOOGLE_AUTH_ENABLED=true`, and existing
+  revision `22ca4687bdf7f633da842f23bcc32b21a81022b2` was redeployed without an
+  application-code change.
+- **Live verification:** A Google account not previously used for
+  InternshipBC completed production signup. `/login` displayed Google first,
+  email/password second, and magic link third. The OAuth return remained on
+  `internshipbc.dev`, landed on `/dashboard`, remained authenticated after a
+  reload, and allowed direct authenticated navigation to `/jobs`.
+- **ROADMAP state:** R1-2 is complete and checked.
 - **Real `/feedback` Session ID:**
   `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
   already-verified Codex session, so `/feedback` was not rerun.
-- **Next action:** Push and deploy the implementation and documentation
-  commits with explicit authorization, then run the bounded fresh-account
-  production Google authentication acceptance flow.
+- **Next action:** R1-2 is complete; do not begin R1-3 without a separate
+  narrow task.
 
 Use the reusable template below for the next qualifying session.
 

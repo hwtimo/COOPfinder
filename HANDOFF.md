@@ -59,8 +59,13 @@
 > provider is enabled in Supabase. Client credentials were entered directly
 > in the dashboards and are not stored in the repository. Focused auth tests,
 > lint, typecheck, the production webpack build, and diff checks passed.
-> Production deployment and fresh-account Google authentication remain
-> pending, so ROADMAP R1-2 remains unchecked.
+> Vercel Production now sets `GOOGLE_AUTH_ENABLED=true`, and revision
+> `22ca4687bdf7f633da842f23bcc32b21a81022b2` was redeployed without changing
+> application code. Production verification with a Google account not
+> previously used for InternshipBC confirmed Google first, password second,
+> magic link third, successful signup, canonical `internshipbc.dev` callback
+> and dashboard landing, reload persistence, and direct authenticated `/jobs`
+> navigation. ROADMAP R1-2 is complete and checked.
 >
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
