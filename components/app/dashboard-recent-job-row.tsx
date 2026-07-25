@@ -1,77 +1,47 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import type { KeyboardEvent } from "react";
-import { ArrowRight } from "lucide-react";
-import { StatusBadge } from "@/components/app/status-badge";
-import type { MockJob } from "@/lib/mock";
 
-interface DashboardRecentJobRowProps {
-  job: MockJob;
-}
+import { formatPrivateJobDate } from "@/lib/jobs/dates";
 
-function nextActionHref(job: MockJob) {
-  if (job.status === "tailoring" || job.nextAction.includes("Tailor")) {
-    return `/resumes/tailor/${job.id}`;
-  }
-  return "/applications";
-}
+import type { DashboardJob } from "@/lib/dashboard/types";
+import type { PrivateJobStatus } from "@/lib/jobs/types";
 
-export function DashboardRecentJobRow({ job }: DashboardRecentJobRowProps) {
-  const router = useRouter();
-  const jobHref = `/jobs/${job.id}`;
+const statusLabels: Record<PrivateJobStatus, string> = {
+  saved: "Saved",
+  tailoring: "Tailoring",
+  ready: "Ready",
+  applied: "Applied",
+  oa: "Online assessment",
+  interview: "Interview",
+  offer: "Offer",
+  rejected: "Rejected",
+};
 
-  const openJob = () => {
-    router.push(jobHref);
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      openJob();
-    }
-  };
-
+export function DashboardRecentJobRow({ job }: { job: DashboardJob }) {
   return (
-    <tr
-      role="link"
-      tabIndex={0}
-      aria-label={`Open job detail for ${job.company} ${job.role}`}
-      onClick={openJob}
-      onKeyDown={handleKeyDown}
-      className="cursor-pointer transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-    >
+    <tr className="transition-colors hover:bg-muted/50">
       <td className="px-5 py-3">
         <Link
-          href={jobHref}
-          onClick={(event) => event.stopPropagation()}
+          href={`/jobs/${job.id}`}
+          aria-label={`Open job detail for ${job.title}`}
           className="rounded-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {job.role}
+          {job.title}
         </Link>
-        <p className="mt-0.5 text-xs text-muted-foreground">{job.term}</p>
-      </td>
-      <td className="px-5 py-3 text-text-secondary">{job.company}</td>
-      <td className="px-5 py-3 text-text-secondary">{job.location}</td>
-      <td className="px-5 py-3">
-        <StatusBadge status={job.status} />
       </td>
       <td className="px-5 py-3 text-text-secondary">
-        {job.resumeVersion ?? "Not tailored"}
+        {job.companyName ?? "Company not added"}
       </td>
-      <td className="px-5 py-3 text-right text-text-secondary tabular-nums">
-        {job.match === null ? "Not analyzed" : `${job.match}%`}
+      <td className="px-5 py-3 text-text-secondary">
+        {job.location ?? "Location not added"}
       </td>
-      <td className="px-5 py-3 text-right">
-        <Link
-          href={nextActionHref(job)}
-          onClick={(event) => event.stopPropagation()}
-          className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-brand hover:text-brand/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {job.nextAction}
-          <ArrowRight className="size-3" aria-hidden />
-        </Link>
+      <td className="px-5 py-3 text-text-secondary">
+        {statusLabels[job.status]}
+      </td>
+      <td className="px-5 py-3 text-text-secondary">
+        {formatPrivateJobDate(job.deadline)}
+      </td>
+      <td className="px-5 py-3 text-right text-text-secondary">
+        {formatPrivateJobDate(job.updatedAt)}
       </td>
     </tr>
   );
