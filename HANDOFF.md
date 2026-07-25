@@ -81,6 +81,20 @@
 > ROADMAP R1-3 remains incomplete and unchecked while other production screens
 > still use mock fixtures.
 >
+> **R1-3B Dashboard state:** Implementation commit
+> `43ef738b3b3b9fcbd77232be89fc25882a785e4d` removes all Dashboard mock
+> imports and fabricated identity, jobs, applications, deadlines, metrics,
+> percentages, recommendations, resume performance, and next actions. The
+> force-dynamic page authenticates normally and uses a server-only,
+> owner-scoped query returning only private job display summaries and
+> application statuses. Counts, pipeline state, recent ordering, and upcoming
+> deadlines are derived deterministically from those persisted rows. A new
+> account sees one honest `Add first job` CTA; unconfigured or failed data
+> access shows an unavailable state with no mock fallback. Focused tests,
+> scoped grep, lint, typecheck, production build, and diff checks passed.
+> ROADMAP R1-3 remains incomplete and unchecked because other production
+> screens still use mock fixtures.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
@@ -659,8 +673,9 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   `node_modules/next/dist/docs/` per AGENTS.md). Build uses
   `next build --webpack`. Icons: keep `lucide-react` despite
   `components.json` saying Phosphor.
-- Residual mock data (`lib/mock/`) still powers Dashboard, Resumes hub, and the
-  Tailoring Workspace; `lib/mock/applications.ts` remains as a compatibility
-  fixture but production Applications routes do not import it. R1-3A removed
-  mock identity from the app shell, but the remaining screens must still be
-  converted in bounded phases. Do not delete `lib/mock/` wholesale.
+- Residual mock data (`lib/mock/`) still powers the Resumes hub and Tailoring
+  Workspace; `lib/mock/applications.ts` remains as a compatibility fixture but
+  production Applications routes do not import it. R1-3A removed mock identity
+  from the app shell, and R1-3B removed mock data from the Dashboard. The
+  remaining screens must still be converted in bounded phases. Do not delete
+  `lib/mock/` wholesale.

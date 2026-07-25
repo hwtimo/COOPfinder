@@ -2601,6 +2601,47 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Continue R1-3 with one separately bounded production-screen
   mock-removal slice; do not start R1-4 branding.
 
+### R1-3B production Dashboard mock-data removal
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-3B bounded implementation
+- **Classification:** PASS
+- **Implementation:** Commit
+  `43ef738b3b3b9fcbd77232be89fc25882a785e4d` removes every Dashboard
+  production dependency on `lib/mock` and eliminates fabricated user
+  greetings, jobs, application stages, deadlines, metrics, percentages,
+  resume performance, recommendations, and per-job next actions.
+- **Authenticated data path:** A server-only Dashboard data-access helper uses
+  the request-bound Supabase client and applies the authenticated user ID to
+  both the `job_postings` and `applications` queries. It returns only
+  UI-required job summaries and application statuses; raw job text,
+  extraction payloads, notes, profile prose, owner identifiers, and legacy
+  match scores are not selected.
+- **Derived display behavior:** A pure deterministic view model calculates
+  real job/application counts, pipeline counts, recent-job ordering, and open
+  upcoming deadlines from persisted rows. The Dashboard retains its existing
+  card/table structure but removes mock-only AI next-action and estimated
+  resume-performance panels.
+- **Honest states:** A new account with no jobs or applications sees one
+  primary `Add first job` CTA. Missing Supabase configuration and query
+  failures render explicit unavailable states and never substitute mock data.
+  The loading skeleton was aligned to the bounded real-data layout.
+- **Scope preservation:** App-shell navigation, authentication, guest-draft
+  handoff, other screens, schema, AI/provider behavior, credits, dependencies,
+  and branding were unchanged.
+- **Verification:** Focused Dashboard tests passed 6/6. A scoped grep found no
+  Dashboard production `lib/mock` import, mock fixture symbol, fabricated user
+  or employer name, estimated-match copy, AI next-action panel, or resume
+  performance panel. Lint, typecheck, the production Next.js 16 webpack build,
+  `git diff --check`, and `git diff --cached --check` passed.
+- **ROADMAP state:** R1-3 remains incomplete and unchecked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Continue R1-3 with one separately bounded remaining-screen
+  mock-removal slice; do not start the R2-1 Dashboard redesign or R1-4
+  branding.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
