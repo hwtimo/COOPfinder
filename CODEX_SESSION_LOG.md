@@ -2642,6 +2642,45 @@ only when necessary to explain configuration; never record their values.
   mock-removal slice; do not start the R2-1 Dashboard redesign or R1-4
   branding.
 
+### R1-3C production Resumes hub mock-data removal
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-3C bounded implementation
+- **Classification:** PASS
+- **Implementation:** Commit
+  `c8cdfbfd72f08a11fac6d88fbd8022fb9c611725` removes mock-build copy and all
+  fabricated resume-version, performance, name, and activity assumptions from
+  the production `/resumes` hub.
+- **Authenticated data path:** A server-only helper reads
+  `resume_versions` through the request-bound Supabase client, scopes the query
+  to the authenticated user, and returns only version ID, canonical name,
+  linked job ID/title, and creation date. Resume content, keyword reports,
+  notes, profile prose, owner identifiers, and other private payloads are not
+  selected.
+- **Safe version behavior:** Only safe, job-linked persisted summaries become
+  links to the unchanged `/resumes/versions/[versionId]` review route.
+  Unlinked rows are not presented as broken review links, and malformed or
+  non-canonical persisted summaries fail closed as unavailable.
+- **Honest states:** A user with no reviewable persisted versions sees an
+  explicit empty state leading to the real Master Profile. Missing Supabase
+  configuration or query failure renders an unavailable state with no mock
+  fallback. Resume upload remains disabled with explicit unimplemented copy.
+- **Scope preservation:** Master Profile, tailoring, immutable resume-version
+  persistence/review routes, schema, authentication, AI, credits, other
+  screens, dependencies, and branding were unchanged.
+- **Verification:** Focused Resumes hub tests passed 8/8. A scoped grep found
+  no production `lib/mock` import, mock fixture symbol, fabricated user name,
+  performance/activity copy, or mock-build tooltip. Lint, typecheck, the
+  production Next.js 16 webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **ROADMAP state:** R1-3 remains incomplete and unchecked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Continue R1-3 with one separately bounded remaining-screen
+  mock-removal slice; do not implement upload/editing, change tailoring or
+  version persistence, or start R1-4 branding.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
