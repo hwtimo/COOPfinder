@@ -202,6 +202,23 @@
 > checks passed. ROADMAP R1-5 remains incomplete and unchecked pending the
 > separately scoped account-deletion work.
 >
+> **R1-5B self-serve account deletion:** Implementation commit
+> `bf872f0b7294cf816c3b32a31913a90baf324276` adds an authenticated Settings
+> danger-zone control that requires the exact destructive confirmation
+> `DELETE`. The server action derives the
+> target only from the request-bound Supabase session, crosses the existing
+> server-only admin boundary for a hard Auth user deletion, clears the local
+> session, and redirects to public `/start`. Repository inspection found no
+> Supabase Storage buckets or object paths, so the explicit storage-cleanup
+> boundary performs no guessed bucket operation. All private user-owned tables
+> reference `auth.users` with `ON DELETE CASCADE`; only shared company creator
+> and moderated public-board submitter attribution use `SET NULL`. Failures
+> return fixed sanitized states without claiming deletion. The Privacy Policy
+> now points authenticated users to Settings. Focused Settings/legal tests
+> passed 21/21; lint, typecheck, production webpack build, and both diff checks
+> passed. ROADMAP R1-5 remains incomplete and unchecked pending production
+> account-deletion verification.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table

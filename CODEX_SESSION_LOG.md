@@ -2935,6 +2935,46 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Continue R1-5 only with a separately scoped account-deletion
   task.
 
+### R1-5B self-serve account deletion
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-5B bounded implementation
+- **Classification:** PASS
+- **Implementation:** Commit `bf872f0b7294cf816c3b32a31913a90baf324276`
+  adds an authenticated Settings delete-account form requiring the exact
+  `DELETE` confirmation, a typed
+  deletion orchestrator, and a server action that derives the target only from
+  `auth.getUser()`.
+- **Storage and admin boundary:** The repository contains no Supabase Storage
+  bucket or object path, so the explicit pre-deletion storage boundary is an
+  honest no-op and invents no bucket. Hard deletion uses the existing
+  `server-only` Supabase admin client; no user ID or service credential crosses
+  the browser boundary.
+- **Database behavior:** Repository migration inspection verified that private
+  profiles, jobs, applications and timeline rows, Master Profile data, resume
+  versions, usage, credits, reservations, events, and guest-import records
+  cascade from `auth.users`. Shared company creator and moderated public-board
+  submitter attribution use `SET NULL`.
+- **Failure and session behavior:** Storage and Auth deletion failures return
+  fixed browser-safe results and never claim success. Successful Auth deletion
+  clears the local Supabase session and redirects to `/start`; a session-clear
+  failure has its own sanitized terminal state.
+- **Policy update:** The existing Privacy Policy deletion paragraph now
+  accurately directs authenticated users to Settings and describes permanent
+  account/private-data deletion.
+- **Verification:** Focused Settings and legal tests passed 21/21. Anonymous
+  rejection, authenticated owner derivation, cross-user target exclusion,
+  operation ordering, failure short-circuiting, cascade coverage, accessible
+  confirmation, lint, typecheck, production webpack build, and both diff
+  checks passed.
+- **ROADMAP state:** R1-5 remains incomplete and unchecked pending a separately
+  authorized production deletion verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Deploy R1-5B and verify one disposable production account is
+  permanently deleted before checking R1-5.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
