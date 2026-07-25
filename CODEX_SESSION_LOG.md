@@ -2865,6 +2865,35 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Complete external authentication-email branding and deploy
   the two R1-4A commits for production verification before checking R1-4.
 
+### R1-4 production and external-auth branding verification
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-4 completion verification
+- **Classification:** PASS
+- **Deployment:** The clean `main` branch contained only approved commits
+  `98a0d8c5d4fd44afbb90c1d8fc86378da78215c8` and
+  `bbe8f065eb0994756d1e14ef0e7b1762f798b101` ahead of `origin/main`. They were
+  pushed without force, and Vercel successfully deployed revision
+  `bbe8f065eb0994756d1e14ef0e7b1762f798b101` to `internshipbc.dev`.
+- **Production verification:** A fresh production navigation confirmed the
+  InternshipBC browser title/metadata, login and password-reset screens,
+  authenticated sidebar/topbar, public onboarding, and public board. No
+  visible COOPfinder branding remained on those surfaces.
+- **Supabase email branding:** The sender display name and confirmation,
+  password-reset, and magic-link subjects and visible bodies use InternshipBC.
+  Existing template variables were preserved. One message of each type was
+  delivered and inspected; all returned to `internshipbc.dev`, and no token,
+  full authentication link, cookie, credential, or secret was recorded.
+- **Google OAuth branding:** The live OAuth client project identifies the
+  consent-screen app as InternshipBC and retains the existing production and
+  Supabase authorized domains. No OAuth credential was read, copied, or
+  recorded.
+- **ROADMAP state:** R1-4 is complete and checked. R1-5 was not started.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Begin R1-5 only under a separate, narrowly scoped task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

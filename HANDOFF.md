@@ -175,6 +175,19 @@
 > passed. ROADMAP R1-4 remains incomplete and unchecked pending external
 > auth-email branding and production verification.
 >
+> **R1-4 production and external-auth verification:** Commits
+> `98a0d8c5d4fd44afbb90c1d8fc86378da78215c8` and
+> `bbe8f065eb0994756d1e14ef0e7b1762f798b101` are deployed to
+> `internshipbc.dev`. Production metadata, login and password-reset screens,
+> the authenticated sidebar/topbar, onboarding, and the public board display
+> InternshipBC with no visible legacy brand. Supabase confirmation,
+> password-reset, and magic-link templates now use the InternshipBC sender
+> display name, subjects, and visible body copy while preserving their
+> existing template variables and returning to `internshipbc.dev`. The live
+> Google OAuth client is configured with the InternshipBC consent-screen app
+> name. One email of each type was delivered and inspected without exposing
+> credentials, tokens, or full authentication links. ROADMAP R1-4 is complete.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
