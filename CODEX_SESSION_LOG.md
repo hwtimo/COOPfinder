@@ -2716,6 +2716,44 @@ only when necessary to explain configuration; never record their values.
   mock-removal slice; do not implement placeholder features or start R1-4
   branding.
 
+### R1-3E production Settings mock-data removal
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-3E bounded implementation
+- **Classification:** PASS
+- **Implementation:** Commit
+  `d4c88e5f5fa3f0d9f589d0d97414894a071a5cbb` removes the production
+  Settings route's `lib/mock`/`currentUser` dependency and all fabricated
+  name, school, program, co-op term, avatar, email, and preference
+  assumptions.
+- **Authenticated data path:** A server-only helper uses the request-bound
+  Supabase client, authenticates with `getUser()`, and reads only
+  `full_name`, `school`, `program`, and `coop_term` from the authenticated
+  owner's `profiles` row. The UI receives a minimal normalized DTO containing
+  those fields plus the authenticated account email; no user or owner ID is
+  returned to the page.
+- **Honest states:** Missing optional values render `Not provided`, while an
+  unavailable account email renders `Not available`. Authentication redirects
+  to the existing safe login path. Missing configuration or query failure
+  renders a fixed unavailable state with no mock fallback.
+- **Unavailable controls:** Settings remains read-only and explicitly states
+  that profile editing is not available there. No profile-edit persistence,
+  preferences, account deletion, legal page, or other Settings feature was
+  added.
+- **Scope preservation:** Other routes, schema, RLS, authentication behavior,
+  AI, credits, dependencies, layout, and branding were unchanged.
+- **Verification:** Focused Settings tests passed 6/6. A scoped grep found no
+  production `lib/mock`, `currentUser`, fabricated identity, avatar, or
+  preference copy. Lint, typecheck, the production Next.js 16 webpack build,
+  `git diff --check`, and `git diff --cached --check` passed.
+- **ROADMAP state:** R1-3 remains incomplete and unchecked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Continue R1-3 with one separately bounded remaining-screen
+  mock-removal slice; do not add Settings persistence, legal/account-deletion
+  work, or R1-4 branding.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

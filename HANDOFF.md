@@ -122,6 +122,19 @@
 > passed. ROADMAP R1-3 remains incomplete and unchecked while other
 > production screens still use mock fixtures.
 >
+> **R1-3E Settings state:** Implementation commit
+> `d4c88e5f5fa3f0d9f589d0d97414894a071a5cbb` removes the production
+> Settings route's `currentUser` mock dependency and fabricated identity,
+> school, program, term, email, avatar, and preference assumptions. A
+> server-only helper authenticates through the request-bound Supabase client,
+> reads only the owner's `profiles` display fields, and returns a minimal
+> read-only account DTO. Missing optional fields render neutral values;
+> authentication redirects normally, and unavailable data never falls back
+> to fixtures. Settings editing remains explicitly unavailable. Focused tests
+> passed 6/6; scoped grep, lint, typecheck, production webpack build, and diff
+> checks passed. ROADMAP R1-3 remains incomplete and unchecked while other
+> production screens still use mock fixtures.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
@@ -705,5 +718,6 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   Applications routes do not import it. R1-3A removed mock identity from the
   app shell, R1-3B removed Dashboard mock data, and R1-3C removed Resumes hub
   mock assumptions. R1-3D replaced Calendar, Insights, and Documents fixture
-  assumptions with honest one-action placeholders. The remaining screens must
-  still be converted in bounded phases. Do not delete `lib/mock/` wholesale.
+  assumptions with honest one-action placeholders, and R1-3E removed mock
+  identity from Settings. The remaining screens must still be converted in
+  bounded phases. Do not delete `lib/mock/` wholesale.
