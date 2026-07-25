@@ -1,6 +1,5 @@
-import { getIsoToday, isBoardJobUnexpired } from "./dates";
+import { getIsoToday } from "./dates";
 import type { BoardQueryResult, BoardWorkMode, PublicBoardJob } from "./types";
-import { publicStarterJobs } from "@/lib/mock/board-jobs";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const PUBLIC_BOARD_COLUMNS = [
@@ -66,20 +65,6 @@ function toPublicBoardJob(row: BoardJobRow): PublicBoardJob {
   };
 }
 
-function publicFixtureJobs(today: string): PublicBoardJob[] {
-  return publicStarterJobs
-    .filter(
-      (job) =>
-        job.status === "approved" &&
-        job.isActive &&
-        isBoardJobUnexpired(job.deadline, today),
-    )
-    .map((job) => ({
-      ...job,
-      summary: normalizeSummary(job.summary),
-    }));
-}
-
 export async function getPublicBoardJobs(): Promise<
   BoardQueryResult<PublicBoardJob[]>
 > {
@@ -87,7 +72,7 @@ export async function getPublicBoardJobs(): Promise<
   const supabase = await createSupabaseServerClient();
 
   if (!supabase) {
-    return { status: "ready", source: "fixture", data: publicFixtureJobs(today) };
+    return { status: "error", data: [] };
   }
 
   const { data, error } = await supabase
@@ -115,8 +100,7 @@ export async function getPublicBoardJob(
   const supabase = await createSupabaseServerClient();
 
   if (!supabase) {
-    const job = publicFixtureJobs(today).find((item) => item.id === id) ?? null;
-    return { status: "ready", source: "fixture", data: job };
+    return { status: "error", data: null };
   }
 
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {

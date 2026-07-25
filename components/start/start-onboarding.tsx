@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getLoginHref } from "@/lib/auth/paths";
+import type { PublicBoardJob } from "@/lib/board/types";
 import {
   createStashedGuestJob,
   loadGuestDraft,
@@ -35,7 +36,6 @@ import {
   type GuestDraftV1,
   type JobIntakeType,
 } from "@/lib/guest-draft/types";
-import { publicStarterJobs } from "@/lib/mock/board-jobs";
 import { rankStarterJobs } from "@/lib/start/matching";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +63,8 @@ type StorageStatus = "loading" | "available" | "unavailable" | "recovered";
 
 type StartOnboardingProps = {
   isAuthenticated: boolean;
+  boardJobs: PublicBoardJob[];
+  boardAvailable: boolean;
 };
 
 function validateIntake(
@@ -338,7 +340,11 @@ function EntryComposer({ onAdd }: { onAdd: (entry: GuestDraftEntry) => void }) {
   );
 }
 
-export function StartOnboarding({ isAuthenticated }: StartOnboardingProps) {
+export function StartOnboarding({
+  isAuthenticated,
+  boardJobs,
+  boardAvailable,
+}: StartOnboardingProps) {
   const [draft, setDraft] = useState<GuestDraftV1>(() =>
     createEmptyGuestDraft(),
   );
@@ -381,8 +387,8 @@ export function StartOnboarding({ isAuthenticated }: StartOnboardingProps) {
   }, [draft, hydrated]);
 
   const matches = useMemo(
-    () => rankStarterJobs(draft, publicStarterJobs),
-    [draft],
+    () => rankStarterJobs(draft, boardJobs),
+    [boardJobs, draft],
   );
   const hasValue =
     draft.stashedJobs.length > 0 ||
@@ -926,7 +932,9 @@ export function StartOnboarding({ isAuthenticated }: StartOnboardingProps) {
                     Directional preview
                   </p>
                   <h2 className="mt-1 text-lg font-semibold">
-                    {matches.length > 0
+                    {!boardAvailable
+                      ? "Public board unavailable"
+                      : matches.length > 0
                       ? `${matches.length} roles match your profile so far`
                       : "Add profile details to see matches"}
                   </h2>
@@ -937,7 +945,8 @@ export function StartOnboarding({ isAuthenticated }: StartOnboardingProps) {
               </div>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
                 Based on skill overlap, target role, term, and work
-                authorization in the current starter set. No AI is used.
+                authorization in the current reviewed board roles. No AI is
+                used.
               </p>
 
               {matches.length > 0 ? (
@@ -990,9 +999,9 @@ export function StartOnboarding({ isAuthenticated }: StartOnboardingProps) {
               )}
 
               <p className="mt-4 text-xs leading-5 text-muted-foreground">
-                Review the original posting before applying. This preview is
-                limited to {publicStarterJobs.length} starter roles and does
-                not analyze your newly saved posting.
+                {boardAvailable
+                  ? `Review the original posting before applying. This preview compares ${boardJobs.length} currently reviewed board roles and does not analyze your newly saved posting.`
+                  : "Public board data is temporarily unavailable. No fallback roles are shown."}
               </p>
             </section>
 
@@ -1023,7 +1032,7 @@ export function StartOnboarding({ isAuthenticated }: StartOnboardingProps) {
                 </div>
                 <h2 className="mt-2 text-base font-semibold text-foreground">
                   {matches.length > 0
-                    ? `Your profile matches ${matches.length} starter roles`
+                    ? `Your profile matches ${matches.length} reviewed roles`
                     : "Your device draft is ready"}
                 </h2>
                 <p className="mt-2 text-xs leading-5 text-muted-foreground">

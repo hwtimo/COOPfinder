@@ -172,7 +172,7 @@ test("presentation uses semantic headings, lists, and mobile-first responsive gr
   assert.match(html, /grid gap-5 lg:grid-cols-2/);
 });
 
-test("route strictly separates recognized mock IDs, persisted UUIDs, and malformed IDs", () => {
+test("route accepts only persisted UUIDs and fails legacy or malformed IDs closed", () => {
   const route = readFileSync(
     "app/(app)/resumes/tailor/[jobId]/page.tsx",
     "utf8",
@@ -180,12 +180,13 @@ test("route strictly separates recognized mock IDs, persisted UUIDs, and malform
   const jobDetail = readFileSync("app/(app)/jobs/[id]/page.tsx", "utf8");
   const publicJob = readFileSync("app/(app)/board/[id]/page.tsx", "utf8");
 
-  assert.match(route, /mockJobs\.find\(\(item\) => item\.id === jobId\)/);
   assert.match(route, /if \(!isUuid\(jobId\)\) notFound\(\)/);
   assert.match(route, /getOwnedTailoringPreflight\(jobId\)/);
   assert.match(route, /<TailoringPreflightSummary result=\{result\}/);
-  assert.match(route, /<TailoringWorkspace/);
-  assert.match(route, /mockTailoringSessions\[job\.id\]/);
+  assert.doesNotMatch(
+    route,
+    /mockJobs|mockTailoringSessions|TailoringWorkspace|generateStaticParams/,
+  );
   assert.match(route, /if \(result\.status === "not_found"\) notFound\(\)/);
   assert.match(jobDetail, /href=\{`\/resumes\/tailor\/\$\{job\.id\}`\}/);
   assert.match(jobDetail, />\s*Review tailoring preflight\s*</);

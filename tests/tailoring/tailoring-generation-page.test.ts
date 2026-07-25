@@ -16,13 +16,11 @@ test("persisted UUID route shows preflight, available balance, exact cost, and G
   assert.match(control, />\s*Generate tailored resume\s*</);
 });
 
-test("non-ready preflight hides Generate and recognized mocks remain on the unchanged workspace branch", () => {
-  const mockLookup = route.indexOf("mockJobs.find");
+test("non-ready preflight hides Generate and legacy mock IDs fail closed", () => {
+  const idGuard = route.indexOf("if (!isUuid(jobId)) notFound()");
   const productionBalance = route.indexOf("getCurrentTailoringCreditBalance()");
-  assert.ok(mockLookup >= 0 && productionBalance > mockLookup);
-  assert.match(route, /if \(!job\) \{/);
-  assert.match(route, /<TailoringWorkspace/);
-  assert.match(route, /mockTailoringSessions\[job\.id\]/);
+  assert.ok(idGuard >= 0 && productionBalance > idGuard);
+  assert.doesNotMatch(route, /mockJobs|mockTailoringSessions|TailoringWorkspace/);
   assert.match(control, /\{canGenerate \? \(/);
   assert.match(control, /Generation becomes available when the tailoring preflight is ready/);
   assert.doesNotMatch(control, /mockJobs|TailoringWorkspace/);

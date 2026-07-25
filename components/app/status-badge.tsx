@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
-import type { ApplicationStatus } from "@/lib/mock";
+import type { PrivateJobStatus } from "@/lib/jobs/types";
 
 /* DESIGN.md §9.5 status colors — dot + tinted pill, never color alone */
 const statusConfig: Record<
-  ApplicationStatus,
+  PrivateJobStatus,
   { label: string; className: string; dotClassName: string }
 > = {
   saved: {
@@ -49,7 +49,7 @@ const statusConfig: Record<
 };
 
 interface StatusBadgeProps {
-  status: ApplicationStatus;
+  status: PrivateJobStatus;
   className?: string;
 }
 

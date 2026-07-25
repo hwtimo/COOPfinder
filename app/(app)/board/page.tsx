@@ -50,13 +50,6 @@ export default async function BoardPage({ searchParams }: BoardPageProps) {
         }
       />
 
-      {result.status === "ready" && result.source === "fixture" ? (
-        <div className="rounded-md border border-info/20 bg-info-soft px-3 py-2 text-xs leading-5 text-foreground">
-          Supabase is not configured for this local build. Showing the isolated,
-          public-safe starter set used by onboarding.
-        </div>
-      ) : null}
-
       <section className="rounded-lg border bg-card p-4 sm:p-5">
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="size-4 text-muted-foreground" aria-hidden />

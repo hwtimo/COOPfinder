@@ -19,8 +19,6 @@ export type PublicBoardJob = {
   isActive: true;
 };
 
-export type BoardDataSource = "supabase" | "fixture";
-
 export type BoardQueryResult<T> =
-  | { status: "ready"; source: BoardDataSource; data: T }
+  | { status: "ready"; source: "supabase"; data: T }
   | { status: "error"; data: T };

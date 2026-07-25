@@ -45,7 +45,7 @@ export function EmptyState({
             size="sm"
             className="mt-5 h-9"
             disabled
-            title="This action is not available in the mock build"
+            title="This action is not available yet"
           >
             {actionLabel}
           </Button>
