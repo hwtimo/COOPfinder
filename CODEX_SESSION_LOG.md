@@ -2754,6 +2754,51 @@ only when necessary to explain configuration; never record their values.
   mock-removal slice; do not add Settings persistence, legal/account-deletion
   work, or R1-4 branding.
 
+### R1-3F complete production mock-data audit
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-3F bounded implementation
+- **Classification:** PASS
+- **Implementation:** Commit
+  `5954e7f5154bab472e457438c033a9d4c4ea3971` removes every remaining
+  production dependency on `lib/mock` found by the route/component audit.
+- **Remaining areas found:** The legacy tailoring workspace routed known mock
+  job/session IDs to fabricated jobs, analysis, profile, resume, suggestions,
+  deadlines, counts, and readiness state. Public board queries substituted a
+  fixed starter-role set when Supabase was unavailable, `/start` ranked that
+  fixed set directly, the shared status badge imported a mock-only type, and
+  the shared disabled EmptyState tooltip still referred to a mock build.
+- **Tailoring boundary:** The mock-only workspace and its suggestion/trust
+  components were removed. Non-UUID legacy and malformed job IDs now use the
+  existing safe not-found path before any data or credit load. Persisted UUIDs
+  continue through the unchanged owner-scoped tailoring preflight, current
+  credit display, and production generation control.
+- **Board and onboarding boundary:** Missing Supabase configuration now
+  returns the existing honest board unavailable state rather than fixture
+  roles. `/start` receives current reviewed public board rows from its server
+  page, ranks only those rows, and shows explicit unavailable/no-fallback copy
+  when they cannot load.
+- **Production contracts:** Status badges use the production private-job
+  status contract. The shared disabled-action tooltip uses neutral unavailable
+  copy. No fabricated user, employer, job, application, metric, resume,
+  deadline, activity, or count remains in route-used production rendering.
+- **Automated guard:** A focused test recursively scans production
+  TypeScript/TSX under `app`, `components`, and `lib` (excluding the retained
+  `lib/mock` fixture directory) and fails on mock-library imports or known
+  fixture copy.
+- **Verification:** Focused audit/tailoring tests passed 16/16. Repo-wide
+  production import and fixture grep returned no matches. Lint, typecheck, the
+  production Next.js 16 webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **ROADMAP state:** R1-3 remains incomplete and unchecked pending deployment
+  and fresh-account production verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Deploy the complete R1-3 commit series and verify a fresh
+  production account sees no fabricated data before checking R1-3; do not
+  begin R1-4 branding.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

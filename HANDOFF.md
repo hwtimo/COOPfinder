@@ -135,6 +135,22 @@
 > checks passed. ROADMAP R1-3 remains incomplete and unchecked while other
 > production screens still use mock fixtures.
 >
+> **R1-3F production mock audit state:** Implementation commit
+> `5954e7f5154bab472e457438c033a9d4c4ea3971` completes the repository-wide
+> production route/component mock audit. It removes the legacy mock tailoring
+> workspace and mock-only suggestion/trust components; non-UUID legacy IDs now
+> fail closed while persisted UUID jobs retain the existing owner-scoped
+> preflight, credit display, and generation path. The public board no longer
+> substitutes starter fixtures when Supabase is unavailable, and `/start`
+> ranks only real reviewed board rows supplied by its server page. The shared
+> status badge now uses the production job-status contract, and the final
+> mock-build tooltip was neutralized. A cheap automated guard scans production
+> TypeScript/TSX sources and rejects `lib/mock` imports. Focused tests passed
+> 16/16; repo-wide production import/fixture grep, lint, typecheck, production
+> webpack build, and diff checks passed. No production `lib/mock` import
+> remains. ROADMAP R1-3 remains incomplete and unchecked pending deployment
+> and fresh-account production verification.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
@@ -713,11 +729,8 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   `node_modules/next/dist/docs/` per AGENTS.md). Build uses
   `next build --webpack`. Icons: keep `lucide-react` despite
   `components.json` saying Phosphor.
-- Residual mock data (`lib/mock/`) still powers the Tailoring Workspace;
-  `lib/mock/applications.ts` remains as a compatibility fixture but production
-  Applications routes do not import it. R1-3A removed mock identity from the
-  app shell, R1-3B removed Dashboard mock data, and R1-3C removed Resumes hub
-  mock assumptions. R1-3D replaced Calendar, Insights, and Documents fixture
-  assumptions with honest one-action placeholders, and R1-3E removed mock
-  identity from Settings. The remaining screens must still be converted in
-  bounded phases. Do not delete `lib/mock/` wholesale.
+- `lib/mock/` remains available for tests/development only; no production
+  route, route-used component, or production helper imports it after R1-3A
+  through R1-3F. R1-3 remains unchecked until deployment and fresh-account
+  production verification confirm the audited state. Do not delete
+  `lib/mock/` wholesale.
