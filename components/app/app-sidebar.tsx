@@ -11,7 +11,6 @@ import {
   BarChart3,
   Folder,
   Settings,
-  GraduationCap,
   Star,
   Layers,
   Lock,
@@ -21,12 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getLoginHref } from "@/lib/auth/paths";
 
-type ShellUser = {
-  name: string;
-  email: string;
-  initials: string;
-  meta: string;
-};
+import type { AppShellUser } from "@/lib/auth/app-shell-identity";
 
 const mainNav = [
   { label: "Home", href: "/dashboard", icon: Home, private: true },
@@ -45,7 +39,7 @@ const mainNav = [
 ];
 
 const savedViews = [
-  { label: "Fall 2026 term", href: "/jobs", icon: GraduationCap, private: true },
+  { label: "Saved jobs", href: "/jobs", icon: Briefcase, private: true },
   { label: "Favorite companies", href: "/jobs", icon: Star, private: true },
   { label: "Resume versions", href: "/resumes", icon: Layers, private: true },
 ];
@@ -54,7 +48,7 @@ const guestViews = [
   { label: "Start your profile", href: "/start", icon: UserRoundPlus },
 ];
 
-export function AppSidebar({ user }: { user: ShellUser | null }) {
+export function AppSidebar({ user }: { user: AppShellUser | null }) {
   const pathname = usePathname();
   const isAuthenticated = Boolean(user);
   const secondaryViews = isAuthenticated ? savedViews : guestViews;

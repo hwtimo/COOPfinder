@@ -12,15 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { currentUser } from "@/lib/mock";
 import { getLoginHref } from "@/lib/auth/paths";
 
-type ShellUser = {
-  name: string;
-  email: string;
-  initials: string;
-  meta: string;
-};
+import type { AppShellUser } from "@/lib/auth/app-shell-identity";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Home",
@@ -34,7 +28,7 @@ const pageTitles: Record<string, string> = {
   "/settings": "Settings",
 };
 
-export function AppTopbar({ user }: { user: ShellUser | null }) {
+export function AppTopbar({ user }: { user: AppShellUser | null }) {
   const pathname = usePathname();
   const isAuthenticated = Boolean(user);
   const title =
@@ -50,7 +44,7 @@ export function AppTopbar({ user }: { user: ShellUser | null }) {
         className="flex min-w-0 items-center gap-1.5 text-sm"
       >
         <span className="hidden truncate text-muted-foreground sm:inline">
-          {currentUser.term}
+          {user?.context ?? "Workspace"}
         </span>
         <span className="hidden text-border-strong sm:inline" aria-hidden>
           /
@@ -100,7 +94,7 @@ export function AppTopbar({ user }: { user: ShellUser | null }) {
               className="size-9 text-muted-foreground"
               aria-label="Notifications"
               disabled
-              title="Notifications are not available in this mock build"
+              title="Notifications are not available yet"
             >
               <Bell className="size-4" aria-hidden />
             </Button>
@@ -109,19 +103,19 @@ export function AppTopbar({ user }: { user: ShellUser | null }) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  aria-label={`Account: ${user?.name ?? currentUser.name}`}
+                  aria-label={`Account: ${user?.name ?? "Account"}`}
                   className="flex size-8 items-center justify-center rounded-full bg-brand-soft text-xs font-medium text-brand transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {user?.initials ?? currentUser.initials}
+                  {user?.initials ?? "A"}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
                   <p className="text-sm font-medium text-foreground">
-                    {user?.name ?? currentUser.name}
+                    {user?.name ?? "Account"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {user?.meta ?? `${currentUser.school} · ${currentUser.program}`}
+                    {user?.meta ?? "Account"}
                   </p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

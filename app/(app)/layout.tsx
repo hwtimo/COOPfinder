@@ -1,45 +1,38 @@
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppTopbar } from "@/components/app/app-topbar";
 import { GuestDraftImportHandoff } from "@/components/app/guest-draft-import-handoff";
-import { currentUser } from "@/lib/mock";
-import { getSupabaseUser } from "@/lib/supabase/user";
+import {
+  buildAppShellUser,
+  type AppShellProfile,
+} from "@/lib/auth/app-shell-identity";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-function getInitials(label: string): string {
-  const parts = label
-    .split(/[\s@._-]+/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length === 0) return "U";
-
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
 
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const user = await getSupabaseUser();
-  const email = user?.email ?? "";
-  const metadataName = user?.user_metadata?.full_name;
-  const name =
-    typeof metadataName === "string" && metadataName.trim()
-      ? metadataName
-      : email
-        ? email.split("@")[0]
-        : currentUser.name;
-  const shellUser = user
-    ? {
-        name,
-        email,
-        initials: getInitials(name || email),
-        meta: email || `${currentUser.school} · ${currentUser.program}`,
-      }
-    : null;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = supabase
+    ? await supabase.auth.getUser()
+    : { data: { user: null } };
+  let profile: AppShellProfile | null = null;
+
+  if (supabase && user) {
+    const profileResult = await supabase
+      .from("profiles")
+      .select("full_name,school,program,coop_term")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!profileResult.error) {
+      profile = profileResult.data as AppShellProfile | null;
+    }
+  }
+
+  const shellUser = buildAppShellUser(user, profile);
 
   return (
     <div className="min-h-dvh bg-background">
