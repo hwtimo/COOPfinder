@@ -7,13 +7,13 @@ export default function CalendarPage() {
     <div className="space-y-6">
       <PageHeader
         title="Calendar"
-        description="Deadlines, interviews, and follow-ups in one view."
+        description="Calendar tools are not available yet."
       />
       <EmptyState
         icon={Calendar}
-        title="Nothing scheduled"
-        description="Deadlines and interviews from your applications will show up here automatically."
-        actionLabel="View applications"
+        title="Calendar is not available yet"
+        description="Manage application deadlines and follow-ups from Applications."
+        actionLabel="Open Applications"
         onActionHref="/applications"
       />
     </div>

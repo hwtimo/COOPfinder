@@ -7,13 +7,13 @@ export default function InsightsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Insights"
-        description="How your search is going — response rates, resume performance, activity."
+        description="Insights are not available yet."
       />
       <EmptyState
         icon={BarChart3}
-        title="Not enough data yet"
-        description="Apply to a few jobs first. Insights unlock once you have application activity to analyze."
-        actionLabel="View saved jobs"
+        title="Insights are not available yet"
+        description="Review your saved jobs and explainable Profile Match details in My Jobs."
+        actionLabel="Open My Jobs"
         onActionHref="/jobs"
       />
     </div>

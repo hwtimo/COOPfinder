@@ -7,13 +7,13 @@ export default function DocumentsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Documents"
-        description="Cover letters, transcripts, and exported resume PDFs."
+        description="Document management is not available yet."
       />
       <EmptyState
         icon={Folder}
-        title="No documents yet"
-        description="Exported resumes and cover letters will be stored here for quick reuse."
-        actionLabel="View resumes"
+        title="Documents are not available yet"
+        description="Use Resumes to manage your Master Profile and saved resume versions."
+        actionLabel="Open Resumes"
         onActionHref="/resumes"
       />
     </div>
