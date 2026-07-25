@@ -1,11 +1,12 @@
-# CHATGPT_DIRECTOR_CONTEXT.md - COOPfinder
+# CHATGPT_DIRECTOR_CONTEXT.md - InternshipBC
 
 Use this file as context for a future temporary ChatGPT chat where ChatGPT should act as a product and engineering director. Its job should be to tell the user exactly what to do next and provide precise prompts to give coding agents such as Codex or Fable.
 
-Last reviewed: 2026-07-25 (R1-3 production mock-data removal is
-production-verified and complete through deployed revision
-`bf7ac11a8ffdeda86ea3f122c8bc21b89408a9df`; linked-development migrations
-remain current through
+Last reviewed: 2026-07-25 (R1-4A repository-facing InternshipBC branding is
+implemented through commit
+`98a0d8c5d4fd44afbb90c1d8fc86378da78215c8`; external auth-email branding and
+production verification remain pending, so R1-4 is unchecked;
+linked-development migrations remain current through
 `20260720205747_finalize_tailored_resume_documents_v2.sql`).
 
 Working method: drive implementation with **one narrow Codex prompt at a time**, drafted when a phase actually starts. Do not stockpile prompts for future phases in the docs. Record meaningful core sessions in `CODEX_SESSION_LOG.md`, including their verified commit range and real `/feedback` Session ID when available; never fabricate either verification or an ID.
@@ -20,7 +21,7 @@ Important note: `TASKS.md` is not present in this repo. Existing handoff docs st
 
 ## 1. Product Summary
 
-COOPfinder is a productivity-first web app for Canadian university students managing co-op, internship, and early-career job applications.
+InternshipBC is a productivity-first web app for Canadian university students managing co-op, internship, and early-career job applications.
 
 Target users:
 - Canadian co-op and internship students, especially SFU / UBC / Waterloo Engineering and Computer Science students.
@@ -29,7 +30,7 @@ Target users:
 
 Main problem:
 - Students manage many saved postings, deadlines, resume versions, and application statuses across disconnected tools.
-- COOPfinder acts as an application command center: save jobs, analyze requirements, tailor resumes, track applications, and decide the next action.
+- InternshipBC acts as an application command center: save jobs, analyze requirements, tailor resumes, track applications, and decide the next action.
 
 Current positioning:
 - Not a job board and not a flashy AI SaaS landing page.
@@ -37,7 +38,7 @@ Current positioning:
 - The UI should feel like an Asana-inspired productivity app with Linear clarity, Notion structure, and Grammarly-like reviewable AI assistance.
 
 Adopted strategy (2026-07-09, **revision 2**) — see `PRODUCT_STRATEGY.md`:
-- **Core selling point:** "Found a role? Paste the link. COOPfinder extracts the requirements, compares them to your profile, helps you tailor a reviewed resume, exports a clean PDF, and sends you back to the original site to apply yourself."
+- **Core selling point:** "Found a role? Paste the link. InternshipBC extracts the requirements, compares them to your profile, helps you tailor a reviewed resume, exports a clean PDF, and sends you back to the original site to apply yourself."
 - **Two job surfaces:** public moderated **job board** at `/board` (approved entries only; in-house summaries + `source_url` link-outs; user submissions enter `pending_review` and need founder approval) and private **My saved jobs** at `/jobs` (auth required; full raw text, matching, tailoring, tracking). A submitted job is always immediately usable privately; moderation gates public visibility only.
 - **Product-led onboarding stays:** `/start` = paste-link hero (guests stash the link in the device draft; no AI, no server writes) + draft profile builder + deterministic match preview vs. approved board jobs + gate after the value moment. Login = "save your progress".
 - Hybrid auth: public `/`, `/start`, `/board`, `/board/[id]`, `/board/submit` (submitting requires auth), `/login`; everything else private; guests hitting `/jobs` redirect to `/board`.

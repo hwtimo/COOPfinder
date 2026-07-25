@@ -1,4 +1,4 @@
-# COOPfinder — V1 기술 설계 문서
+# InternshipBC — V1 기술 설계 문서
 
 > **포지셔닝:** SFU/UBC/Waterloo engineering & CS 학생용 co-op application OS
 > **V1 범위:** Job save · Resume upload → master profile · AI resume tailor · Application tracker

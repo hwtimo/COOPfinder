@@ -73,8 +73,8 @@ or another brand name. **Exit gate:** item R1-7.
 ### R1-4. Brand unification → **InternshipBC**
 - One name everywhere: app metadata/titles, login screen, sidebar logo,
   auth emails, README, package name where visible, and the living docs.
-- Accept: `grep -ri "coopfinder"` in user-facing strings returns nothing
-  (repo/directory name may lag; that's cosmetic and optional).
+- Accept: a case-insensitive grep for the legacy brand in user-facing strings
+  returns nothing (repo/directory name may lag; that's cosmetic and optional).
 
 ### R1-5. Privacy Policy + Terms + Delete account  *(promoted from P2 — legal)*
 - The product is live and processing real students' personal data, and JD /

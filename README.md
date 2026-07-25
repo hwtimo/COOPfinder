@@ -1,6 +1,6 @@
-# COOPfinder
+# InternshipBC
 
-COOPfinder is a Canadian co-op application command center that turns private
+InternshipBC is a Canadian co-op application command center that turns private
 job requirements and confirmed student evidence into reviewable, job-specific
 application materials without fabricating experience.
 
@@ -222,7 +222,7 @@ References:
 
 ### OpenAI production checklist
 
-- Use a dedicated COOPfinder production project and a project-scoped key; do
+- Use a dedicated InternshipBC production project and a project-scoped key; do
   not reuse a personal or unrelated-project key.
 - Restrict the key and project to the API/model access required by the two
   Responses API adapters where the dashboard permits it.

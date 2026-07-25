@@ -1179,7 +1179,7 @@ now step 0 of `/start`).
   reviewed before posting. Save one to analyze it against your profile."
 - Every entry shows a **"View original posting"** link-out (external-link
   icon). Board detail shows: in-house summary (labeled "Summary by
-  COOPfinder"), required / nice-to-have skills, term/deadline/work-auth
+  InternshipBC"), required / nice-to-have skills, term/deadline/work-auth
   facts, and for guests with a draft: the deterministic match note.
 - Gated actions on board detail (guest): **Save to my jobs**, **Analyze
   against my profile** — inline gates per §22.3. Authed: Save works

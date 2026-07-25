@@ -2827,6 +2827,44 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Begin R1-4 only under a separate, narrowly scoped task.
 
+### R1-4A repository-facing InternshipBC branding
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-4A bounded implementation
+- **Classification:** PASS
+- **Implementation:** Commit
+  `98a0d8c5d4fd44afbb90c1d8fc86378da78215c8` unifies visible production
+  metadata and UI branding under InternshipBC without changing behavior or
+  layout.
+- **User-facing surfaces:** Login, password reset, app shell, onboarding,
+  private-job controls, public-board summaries/submission copy, and root
+  metadata now use InternshipBC. The existing initial mark changes from `C`
+  to `I` where it accompanies the product name.
+- **Living documentation:** README, product strategy, design,
+  technical design, roadmap wording, director context, and handoff current
+  state now use InternshipBC.
+- **Automated guard:** A focused security test scans `app` and `components`
+  TypeScript/TSX production sources and rejects legacy brand strings while
+  allowing established non-visible storage-key identifiers.
+- **Intentionally retained identifiers:** The private npm package/lockfile
+  name, `coopfinder.*` local-storage keys, `coopfinder.local` URL-sanitization
+  sentinel, repository/folder references, historical test origins, migrations,
+  commit history, and prior session records remain unchanged to avoid unsafe
+  migration or inaccurate history.
+- **Verification:** Focused branding, auth, shell, Dashboard, and production
+  mock-boundary tests passed 28/28 after the TSX suite was run under its
+  required runtime conditions. Brand grep found no visible legacy branding in
+  production code or current-state documentation. Lint, typecheck, production
+  Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **ROADMAP state:** R1-4 remains incomplete and unchecked pending external
+  authentication-email branding and fresh production verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Complete external authentication-email branding and deploy
+  the two R1-4A commits for production verification before checking R1-4.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

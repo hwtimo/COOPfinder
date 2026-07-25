@@ -21,12 +21,12 @@
 
 ## 1. The selling point
 
-> **Found a role? Paste the link.** COOPfinder extracts the requirements,
+> **Found a role? Paste the link.** InternshipBC extracts the requirements,
 > compares them to your profile, helps you tailor a reviewed resume, exports a
 > clean PDF, and sends you back to the original application site to submit it
 > yourself.
 
-COOPfinder remains a **Canadian co-op application command center** — not a job
+InternshipBC remains a **Canadian co-op application command center** — not a job
 board, not an auto-apply bot, not a scraper. The paste-a-link loop is the core
 motion; the tracker is where the work lives; the public board is a discovery
 aid and top-of-funnel surface, never the identity of the product.

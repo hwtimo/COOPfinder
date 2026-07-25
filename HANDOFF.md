@@ -1,4 +1,4 @@
-# HANDOFF.md — COOPfinder Continuation Handoff
+# HANDOFF.md — InternshipBC Continuation Handoff
 
 > **Purpose:** Let the next coding agent continue without rediscovering the
 > current state. This reflects the codebase as of **2026-07-25**.
@@ -11,7 +11,7 @@
 > this file.
 >
 > **Product direction (unchanged):** Canadian co-op application command
-> center. "Found a role? Paste the link. COOPfinder extracts the
+> center. "Found a role? Paste the link. InternshipBC extracts the
 > requirements, compares them to your profile, helps you tailor a reviewed
 > resume, exports a clean PDF, and sends you back to the original site to
 > apply yourself."
@@ -161,6 +161,19 @@
 > fixture fallback; and `/resumes/tailor/j11` returned the safe 404 path.
 > No Maya Chen or known fixture copy appeared in the checked production
 > routes. ROADMAP R1-3 is complete.
+>
+> **R1-4A repository-facing branding state:** Implementation commit
+> `98a0d8c5d4fd44afbb90c1d8fc86378da78215c8` replaces visible legacy product
+> naming with InternshipBC across production metadata, login and reset
+> surfaces, the app shell, onboarding, private-job controls, and public-board
+> copy. Current README, strategy, design, technical-design, roadmap, director,
+> and handoff text use InternshipBC. A focused automated guard rejects legacy
+> brand strings in user-facing production code. Technical package identifiers,
+> stable local-storage keys, internal URL sentinels, repository paths,
+> migrations, and historical session records remain unchanged. Focused tests,
+> the brand audit, lint, typecheck, production webpack build, and diff checks
+> passed. ROADMAP R1-4 remains incomplete and unchecked pending external
+> auth-email branding and production verification.
 >
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
