@@ -29,7 +29,7 @@ test("privacy and terms are public routes with page metadata", () => {
   assert.doesNotMatch(terms, /getSupabaseUser|redirect\(|getLoginHref/);
 });
 
-test("privacy copy matches the implemented storage and AI boundaries", () => {
+test("privacy copy matches implemented storage, deletion, and AI boundaries", () => {
   assert.match(privacy, /raw job-description text stays private to your account/i);
   assert.match(privacy, /not published to the\s+public job board/i);
   assert.match(privacy, /sends the private job-description text to OpenAI/i);
@@ -41,7 +41,12 @@ test("privacy copy matches the implemented storage and AI boundaries", () => {
   assert.match(privacy, /API data is not used to train or improve its models unless/i);
   assert.match(privacy, /store: false/);
   assert.match(privacy, /up to 30 days by default/i);
-  assert.match(privacy, /Self-serve account deletion is not currently available/i);
+  assert.match(privacy, /delete your account from Settings/i);
+  assert.match(
+    privacy,
+    /permanently removes your authenticated\s+account and its private application data/i,
+  );
+  assert.doesNotMatch(privacy, /Self-serve account deletion is not currently available/i);
 
   assert.match(extractionProvider, /input: jobDescription/);
   assert.match(extractionProvider, /store: false/);

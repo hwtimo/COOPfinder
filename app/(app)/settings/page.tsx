@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import { CardSection } from "@/components/app/card-section";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
+import { DeleteAccountForm } from "@/components/settings/delete-account-form";
 import { getLoginHref } from "@/lib/auth/paths";
 import { getSettingsAccount } from "@/lib/settings/get-settings-account";
 
@@ -81,6 +82,12 @@ export default async function SettingsPage() {
             </dd>
           </div>
         </dl>
+      </CardSection>
+      <CardSection
+        title="Delete account"
+        description="Permanently remove your account and private application data."
+      >
+        <DeleteAccountForm />
       </CardSection>
     </div>
   );

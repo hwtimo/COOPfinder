@@ -90,13 +90,14 @@ export default function PrivacyPage() {
         <p>
           Private account data has no general automatic expiry today. It
           remains until you remove a record through an available product
-          control or an operator removes the account and associated data. Some
-          records cannot be removed while linked history must be preserved.
+          control or delete your account from Settings. Some individual records
+          cannot be removed while linked history must be preserved.
         </p>
         <p>
-          Self-serve account deletion is not currently available. Deleting an
-          individual application or saved job, where permitted, does not delete
-          your account or every related record.
+          Self-serve account deletion permanently removes your authenticated
+          account and its private application data. Deleting an individual
+          application or saved job, where permitted, does not delete your
+          account or every related record.
         </p>
       </LegalSection>
 
