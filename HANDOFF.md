@@ -232,6 +232,20 @@
 > lint, typecheck, production webpack build, and both diff checks passed.
 > ROADMAP R1-5 is complete.
 >
+> **R1-6A privacy-safe monitoring foundation:** Implementation commit
+> `11128701f575ca9d568c538976a96b9f649757c2` adds pinned
+> `@sentry/nextjs` client, Node, and Edge initialization plus Next.js
+> `onRequestError` and a global client error boundary. Monitoring remains
+> disabled unless `NEXT_PUBLIC_SENTRY_DSN` is configured. The SDK sends no
+> replay, profiles, traces, logs, console breadcrumbs, request data, headers,
+> cookies, query strings, bodies, user identity, local variables, source
+> context, or AI inputs/outputs. A final outbound allowlist retains only
+> normalized route/runtime/status metadata, exception type, and sanitized code
+> locations. Focused tests passed 5/5; lint, typecheck, production webpack
+> build, and both diff checks passed. R1-6 remains incomplete and unchecked
+> pending focused server-action/RPC failure instrumentation and production
+> dashboard verification.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table

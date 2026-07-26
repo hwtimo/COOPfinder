@@ -3007,6 +3007,40 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Begin R1-6 only under a separate, narrowly scoped task.
 
+### R1-6A privacy-safe error monitoring foundation
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-6A bounded implementation
+- **Classification:** PASS
+- **Implementation:** Commit
+  `11128701f575ca9d568c538976a96b9f649757c2` adds pinned
+  `@sentry/nextjs` 10.68.0 integration for unhandled browser, Node, and Edge
+  errors through `instrumentation-client.ts`, Next.js `onRequestError`, and a
+  global client error boundary. It adds no public test route.
+- **Configuration boundary:** `NEXT_PUBLIC_SENTRY_DSN` is the only new
+  environment-variable name. Monitoring is disabled when it is absent; no DSN
+  or monitoring credential is committed.
+- **Privacy boundary:** `sendDefaultPii` and every SDK data-collection category
+  are disabled. Replay, profiling, tracing, logs, console breadcrumbs, request
+  metadata, headers, cookies, query strings, bodies, user identity, source
+  context, local variables, database values, and AI inputs/outputs are not
+  sent. The final `beforeSend` allowlist retains only normalized
+  route/runtime/status tags, exception type, and sanitized code-location
+  frames; raw exception messages are removed.
+- **Verification:** Focused monitoring tests passed 5/5. Lint, typecheck,
+  production Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed. Tests prove sensitive request, Auth,
+  profile, job-description, resume, prompt, and identity fields are absent
+  from the outbound event.
+- **ROADMAP state:** R1-6 remains incomplete and unchecked. Per-action/RPC
+  instrumentation and production Sentry dashboard verification are deferred
+  to the next narrow R1-6 slice.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Continue R1-6 only with narrowly scoped server-action/RPC
+  failure capture and production event verification.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

@@ -299,18 +299,22 @@ After the disabled smoke and dashboard checks pass:
 
 Already available:
 
+- privacy-safe Sentry error aggregation for unhandled client/server errors when
+  `NEXT_PUBLIC_SENTRY_DSN` is configured; replay, profiling, tracing, logs,
+  console capture, request bodies, identity, and AI payload capture are
+  disabled;
 - hosting stdout/stderr for safe server-action and provider diagnostics;
 - Supabase Auth, API, and Postgres logs plus Security Advisor;
 - append-only parser/tailoring reservation and lifecycle event tables;
 - OpenAI project Usage dashboard, model limits, and budget alerts;
 - SMTP provider delivery/bounce dashboards.
 
-Before enabling live providers, configure the hosting platform to retain and
-alert on repeated `[openai-provider]` categories, server-action failures, and
-unexpected process crashes. Configure OpenAI budget alerts and SMTP delivery
-alerts. This MVP has no integrated APM or error-aggregation service; platform
-log retention and dashboard alerts are the minimum beta requirement. Do not
-send private job/profile/resume content to monitoring systems.
+Before enabling live providers, configure `NEXT_PUBLIC_SENTRY_DSN`, verify the
+privacy-scrubbed error event in Sentry, and configure alerts for server-action
+failures and unexpected process crashes. Keep hosting logs for repeated
+`[openai-provider]` categories, and configure OpenAI budget alerts and SMTP
+delivery alerts. Do not send private job/profile/resume content to monitoring
+systems.
 
 ### Emergency shutdown and rollback
 
