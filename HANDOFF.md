@@ -219,6 +219,19 @@
 > passed. ROADMAP R1-5 remains incomplete and unchecked pending production
 > account-deletion verification.
 >
+> **R1-5 production account-deletion verification:** Production initially
+> rejected the Settings Server Action module before authentication because its
+> file-level `"use server"` module exported a runtime initial-state object.
+> Fix commit `b695d637881d633b80404baf4867919c73c2cbfe` moves that object to the
+> client form while preserving session-derived identity, the server-only admin
+> boundary, sanitized failures, and database cascades. The deployed fix was
+> verified with the existing disposable account: exact `DELETE` confirmation
+> redirected to `/start`, private routes required login, the Auth user and all
+> schema-derived owned rows were removed, Storage remained empty, and the
+> deleted credentials were rejected. Focused Settings tests passed 17/17;
+> lint, typecheck, production webpack build, and both diff checks passed.
+> ROADMAP R1-5 is complete.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table

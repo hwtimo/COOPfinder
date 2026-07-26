@@ -2,10 +2,11 @@
 
 Use this file as context for a future temporary ChatGPT chat where ChatGPT should act as a product and engineering director. Its job should be to tell the user exactly what to do next and provide precise prompts to give coding agents such as Codex or Fable.
 
-Last reviewed: 2026-07-25 (R1-4 InternshipBC branding is complete through
-deployed commit `bbe8f065eb0994756d1e14ef0e7b1762f798b101`; production surfaces,
-Supabase authentication emails, and the Google OAuth consent-screen app name
-were verified under InternshipBC, so R1-4 is checked;
+Last reviewed: 2026-07-25 (R1-5 legal and account deletion are complete through
+deployed fix commit `b695d637881d633b80404baf4867919c73c2cbfe`; public Privacy and
+Terms routes plus production hard account deletion, cascade cleanup, session
+removal, route protection, and deleted-credential rejection were verified, so
+R1-5 is checked;
 linked-development migrations remain current through
 `20260720205747_finalize_tailored_resume_documents_v2.sql`).
 

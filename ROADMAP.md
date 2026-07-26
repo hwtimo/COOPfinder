@@ -207,7 +207,7 @@ action. Density was right for the build-out; launched students need focus.
 - [x] R1-2 Google sign-in
 - [x] R1-3 mock data removal
 - [x] R1-4 InternshipBC branding
-- [ ] R1-5 privacy / terms / delete account
+- [x] R1-5 privacy / terms / delete account
 - [ ] R1-6 error monitoring
 - [ ] R1-7 full-flow exit gate
 - [ ] R2-1 next-action dashboard

@@ -2975,6 +2975,38 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Deploy R1-5B and verify one disposable production account is
   permanently deleted before checking R1-5.
 
+### R1-5 production account-deletion fix and verification
+
+- **Date and time:** 2026-07-25 (America/Vancouver)
+- **Development phase:** ROADMAP R1-5 production acceptance
+- **Classification:** PASS
+- **Confirmed root cause:** Vercel production log reference
+  `1531432711@E352` showed that Next.js rejected the Settings action module
+  because a file-level `"use server"` module exported a runtime object. The
+  request failed before authentication, Storage cleanup, or Auth deletion.
+- **Implementation:** Fix commit
+  `b695d637881d633b80404baf4867919c73c2cbfe` moves the initial action state
+  into the client form. The Server Action file now exports only its async
+  action at runtime; session-derived identity, the server-only Supabase admin
+  boundary, sanitized outcomes, and cascade behavior are unchanged.
+- **Automated verification:** Focused Settings tests passed 17/17, including a
+  regression guard against runtime-value exports from the file-level
+  `"use server"` module. Lint, typecheck, production Next.js webpack build,
+  `git diff --check`, and `git diff --cached --check` passed.
+- **Production verification:** The deployed fix accepted the exact `DELETE`
+  confirmation and redirected to `/start`. A direct private-route request
+  redirected to login. The disposable Auth user and every schema-derived
+  owner relation returned zero rows, Storage objects remained zero, and the
+  deleted password credentials returned the generic invalid-credentials state.
+- **Security and privacy:** No client-supplied user identifier, admin
+  credential, token, personal content, or raw database error crossed the
+  browser boundary. No application data was retained for the deleted user.
+- **ROADMAP state:** R1-5 is complete and checked. R1-6 was not started.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Begin R1-6 only under a separate, narrowly scoped task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
