@@ -62,8 +62,14 @@ test("session clearing failure returns a safe terminal state", async () => {
 
 test("action target is server-derived and admin-only", () => {
   const action = readFileSync("app/(app)/settings/actions.ts", "utf8");
+  const form = readFileSync(
+    "components/settings/delete-account-form.tsx",
+    "utf8",
+  );
   const admin = readFileSync("lib/supabase/admin.ts", "utf8");
   assert.match(action, /^"use server"/);
+  assert.doesNotMatch(action, /export\s+(?:const|let|var)\s+/);
+  assert.match(form, /const INITIAL_DELETE_ACCOUNT_STATE/);
   assert.match(action, /supabase\.auth\.getUser\(\)/);
   assert.match(action, /admin\.auth\.admin\.deleteUser\(userId, false\)/);
   assert.match(action, /supabase\.auth\.signOut\(\{ scope: "local" \}\)/);

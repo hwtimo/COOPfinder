@@ -5,11 +5,16 @@ import { useActionState } from "react";
 
 import {
   deleteAccountAction,
-  INITIAL_DELETE_ACCOUNT_STATE,
+  type DeleteAccountActionState,
 } from "@/app/(app)/settings/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ACCOUNT_DELETE_CONFIRMATION } from "@/lib/account/delete-current-account";
+
+const INITIAL_DELETE_ACCOUNT_STATE: DeleteAccountActionState = {
+  status: "idle",
+  message: "",
+};
 
 export function DeleteAccountForm() {
   const [state, formAction, pending] = useActionState(

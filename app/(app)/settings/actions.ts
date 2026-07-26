@@ -15,11 +15,6 @@ export type DeleteAccountActionState = Readonly<{
   message: string;
 }>;
 
-export const INITIAL_DELETE_ACCOUNT_STATE: DeleteAccountActionState = {
-  status: "idle",
-  message: "",
-};
-
 const MESSAGES: Record<
   Exclude<DeleteCurrentAccountResult["status"], "deleted">,
   string
