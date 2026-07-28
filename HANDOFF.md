@@ -900,3 +900,23 @@ Focused Dashboard tests passed 8/8. Lint, typecheck, the production Next.js
 webpack build, and both diff checks passed. R2-1 remains unchecked because this
 slice establishes the data/view-model foundation only; no broader Dashboard
 redesign or later R2 work was performed.
+
+## R2-1B Dashboard next-action UI
+
+Implementation commit `2016caf08e14ab64faa57e564d92a44f614005c7`
+connects the R2-1A persisted-data view model to the production Dashboard. New
+users see the four ordered Profile, first job, first analysis, and first
+tailored-resume milestones. The first incomplete milestone is highlighted as
+the current step with `aria-current="step"`, and the onboarding state exposes
+one primary Continue action.
+
+Active users see one dominant next action and at most three queued actions from
+the existing deterministic priority model. The former metrics, application
+pipeline, recent-jobs table, deadline panel, percentage-width presentation, and
+their competing actions are no longer rendered. Authentication, unavailable
+states, existing routes, shell, tokens, queries, and action semantics remain
+unchanged.
+
+Focused Dashboard tests passed 8/8. Lint, typecheck, the production Next.js
+webpack build, scoped legacy-presentation grep, and both diff checks passed.
+R2-1 remains unchecked pending deployment and production verification.

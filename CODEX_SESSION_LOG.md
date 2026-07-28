@@ -3207,6 +3207,39 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Continue only the next separately authorized R2-1 slice.
 
+### R2-1B production Dashboard next-action UI
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-1B Dashboard UI
+- **Classification:** PASS for this bounded implementation slice
+- **Implementation:** Commit
+  `2016caf08e14ab64faa57e564d92a44f614005c7` connects the existing R2-1A
+  owner-scoped persisted-data view model to the production Dashboard without
+  changing its query or deterministic priority rules.
+- **New-user UI:** The Dashboard renders the ordered Profile, first job, first
+  analysis, and first tailored-resume checklist. The first incomplete item is
+  visually highlighted, carries `aria-current="step"`, and is paired with the
+  only primary onboarding CTA.
+- **Active-user UI:** The Dashboard renders one dominant next action and at
+  most three queued actions. The analytics-style metric cards, application
+  pipeline, recent-jobs table, deadline panel, percentage-width display, and
+  competing navigation actions were removed from this route.
+- **Safety boundary:** UI content comes only from the existing persisted-data
+  view model. No fabricated metric, percentage, eligibility or outcome claim,
+  mock fallback, schema change, AI call, route change, shell redesign, or R3
+  work was introduced. Existing honest configuration and load-error states
+  remain.
+- **Verification:** Focused Dashboard tests passed 8/8. Lint, typecheck,
+  production Next.js webpack build, scoped legacy-presentation grep,
+  `git diff --check`, and `git diff --cached --check` passed.
+- **ROADMAP state:** R2-1 remains incomplete and unchecked pending deployment
+  and production verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Deploy and verify R2-1A/R2-1B only when separately
+  authorized.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
