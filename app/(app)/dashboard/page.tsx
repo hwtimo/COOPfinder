@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import {
   AlertTriangle,
   ArrowRight,
-  Briefcase,
   CalendarClock,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 
 import { CardSection } from "@/components/app/card-section";
@@ -84,8 +85,6 @@ export default async function DashboardPage() {
 
   const now = new Date();
   const dashboard = buildDashboardViewModel(result.data, now);
-  const isNewAccount =
-    dashboard.totalJobs === 0 && dashboard.totalApplications === 0;
   const pipelineTotal = dashboard.totalApplications;
 
   return (
@@ -95,16 +94,96 @@ export default async function DashboardPage() {
         description="Your saved jobs and application activity."
       />
 
-      {isNewAccount ? (
-        <EmptyState
-          icon={Briefcase}
-          title="Start with your first saved job"
-          description="Save a co-op role to analyze its requirements, compare it with your profile, and track your application."
-          actionLabel="Add first job"
-          onActionHref="/jobs"
-        />
+      {dashboard.mode === "onboarding" ? (
+        <CardSection
+          title="Getting started"
+          description="Complete these persisted workspace milestones in order"
+          action={
+            <Button asChild size="sm">
+              <Link href={dashboard.primaryAction.href}>
+                {dashboard.primaryAction.title}
+                <ArrowRight className="size-3.5" aria-hidden />
+              </Link>
+            </Button>
+          }
+        >
+          <ol className="grid gap-3 sm:grid-cols-2">
+            {dashboard.onboardingMilestones.map((milestone) => (
+              <li
+                key={milestone.id}
+                className="flex items-center gap-3 border border-border p-3"
+              >
+                {milestone.complete ? (
+                  <CheckCircle2
+                    className="size-4 shrink-0 text-success"
+                    aria-hidden
+                  />
+                ) : (
+                  <Circle
+                    className="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {milestone.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {milestone.complete ? "Complete" : "Not complete"}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-4 text-sm text-muted-foreground">
+            {dashboard.primaryAction.description}
+          </p>
+        </CardSection>
       ) : (
         <>
+          <CardSection
+            title="Next action"
+            description="Deterministic from your persisted workspace state"
+            action={
+              <Button asChild size="sm">
+                <Link href={dashboard.primaryAction.href}>
+                  Open
+                  <ArrowRight className="size-3.5" aria-hidden />
+                </Link>
+              </Button>
+            }
+          >
+            <h2 className="text-base font-semibold text-foreground">
+              {dashboard.primaryAction.title}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {dashboard.primaryAction.description}
+            </p>
+            {dashboard.queuedActions.length > 0 ? (
+              <div className="mt-4 border-t pt-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Queued
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {dashboard.queuedActions.map((action) => (
+                    <li key={action.id}>
+                      <Link
+                        href={action.href}
+                        className="flex items-center justify-between gap-3 text-sm text-foreground hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span>{action.title}</span>
+                        <ArrowRight
+                          className="size-3.5 shrink-0"
+                          aria-hidden
+                        />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </CardSection>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <MetricCard
               label="Saved jobs"

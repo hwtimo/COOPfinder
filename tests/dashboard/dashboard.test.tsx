@@ -24,6 +24,9 @@ const jobs: DashboardJob[] = [
     location: "Vancouver",
     deadline: "2026-07-30",
     status: "saved",
+    intakeSource: "pasted_url",
+    hasRawText: false,
+    hasAnalysis: false,
     updatedAt: "2026-07-24T12:00:00.000Z",
   },
   {
@@ -33,6 +36,9 @@ const jobs: DashboardJob[] = [
     location: "Burnaby",
     deadline: "2026-07-28",
     status: "ready",
+    intakeSource: "pasted_text",
+    hasRawText: true,
+    hasAnalysis: true,
     updatedAt: "2026-07-25T12:00:00.000Z",
   },
   {
@@ -42,6 +48,9 @@ const jobs: DashboardJob[] = [
     location: null,
     deadline: "2026-07-28",
     status: "rejected",
+    intakeSource: "manual",
+    hasRawText: true,
+    hasAnalysis: true,
     updatedAt: "2026-07-25T12:00:00.000Z",
   },
   {
@@ -51,17 +60,43 @@ const jobs: DashboardJob[] = [
     location: null,
     deadline: "2026-07-24",
     status: "applied",
+    intakeSource: "pasted_text",
+    hasRawText: true,
+    hasAnalysis: true,
     updatedAt: "2026-07-23T12:00:00.000Z",
   },
 ];
 
 test("Dashboard view model derives counts and stable ordering from persisted rows", () => {
   const data: DashboardData = {
+    hasMasterProfile: true,
     jobs,
     applications: [
-      { id: "application-1", status: "saved" },
-      { id: "application-2", status: "saved" },
-      { id: "application-3", status: "interview" },
+      {
+        id: "application-1",
+        jobPostingId: "a",
+        status: "saved",
+        updatedAt: "2026-07-24T13:00:00.000Z",
+      },
+      {
+        id: "application-2",
+        jobPostingId: "b",
+        status: "saved",
+        updatedAt: "2026-07-25T13:00:00.000Z",
+      },
+      {
+        id: "application-3",
+        jobPostingId: "c",
+        status: "interview",
+        updatedAt: "2026-07-25T14:00:00.000Z",
+      },
+    ],
+    resumeVersions: [
+      {
+        id: "version-1",
+        jobPostingId: "b",
+        createdAt: "2026-07-25T13:30:00.000Z",
+      },
     ],
   };
 
@@ -73,6 +108,9 @@ test("Dashboard view model derives counts and stable ordering from persisted row
   assert.equal(result.totalJobs, 4);
   assert.equal(result.totalApplications, 3);
   assert.equal(result.upcomingDeadlineCount, 2);
+  assert.equal(result.mode, "active");
+  assert.equal(result.primaryAction.kind, "add_job_text");
+  assert.ok(result.queuedActions.length <= 3);
   assert.deepEqual(
     result.recentJobs.map((job) => job.id),
     ["b", "c", "a", "d"],
@@ -97,7 +135,12 @@ test("Dashboard view model derives counts and stable ordering from persisted row
 
 test("empty persisted rows produce an honest zero-data model", () => {
   const result = buildDashboardViewModel(
-    { jobs: [], applications: [] },
+    {
+      hasMasterProfile: false,
+      jobs: [],
+      applications: [],
+      resumeVersions: [],
+    },
     new Date("2026-07-25T15:00:00.000Z"),
   );
 
@@ -107,20 +150,117 @@ test("empty persisted rows produce an honest zero-data model", () => {
   assert.deepEqual(result.recentJobs, []);
   assert.deepEqual(result.upcomingJobs, []);
   assert.ok(result.pipeline.every((stage) => stage.count === 0));
+  assert.equal(result.mode, "onboarding");
+  assert.equal(result.primaryAction.kind, "complete_profile");
+  assert.deepEqual(
+    result.onboardingMilestones.map((milestone) => [
+      milestone.id,
+      milestone.complete,
+    ]),
+    [
+      ["profile", false],
+      ["first_job", false],
+      ["first_analysis", false],
+      ["first_tailored_resume", false],
+    ],
+  );
+});
+
+test("onboarding advances in persisted milestone order", () => {
+  const result = buildDashboardViewModel(
+    {
+      hasMasterProfile: true,
+      jobs: [jobs[0]],
+      applications: [],
+      resumeVersions: [],
+    },
+    new Date("2026-07-25T15:00:00.000Z"),
+  );
+
+  assert.equal(result.mode, "onboarding");
+  assert.equal(result.primaryAction.kind, "analyze_job");
+  assert.equal(result.primaryAction.href, "/jobs/a");
+  assert.deepEqual(
+    result.onboardingMilestones.map((milestone) => milestone.complete),
+    [true, true, false, false],
+  );
+  assert.deepEqual(result.queuedActions, []);
+});
+
+test("active actions use fixed priority and stable deadline, update, and id tie-breakers", () => {
+  const actionJobs: DashboardJob[] = [
+    {
+      ...jobs[0],
+      id: "url-b",
+      title: "URL B",
+      deadline: "2026-08-02",
+      updatedAt: "2026-07-21T00:00:00.000Z",
+    },
+    {
+      ...jobs[0],
+      id: "url-a",
+      title: "URL A",
+      deadline: "2026-08-01",
+      updatedAt: "2026-07-22T00:00:00.000Z",
+    },
+    {
+      ...jobs[1],
+      id: "analyze",
+      title: "Analyze",
+      hasAnalysis: false,
+    },
+    {
+      ...jobs[1],
+      id: "tailor",
+      title: "Tailor",
+    },
+    {
+      ...jobs[1],
+      id: "track",
+      title: "Track",
+    },
+  ];
+  const result = buildDashboardViewModel({
+    hasMasterProfile: true,
+    jobs: actionJobs,
+    applications: [],
+    resumeVersions: [
+      {
+        id: "track-version",
+        jobPostingId: "track",
+        createdAt: "2026-07-25T00:00:00.000Z",
+      },
+    ],
+  });
+
+  assert.equal(result.mode, "active");
+  assert.equal(result.primaryAction.id, "add-job-text:url-a");
+  assert.deepEqual(
+    result.queuedActions.map((action) => action.id),
+    [
+      "add-job-text:url-b",
+      "analyze-job:analyze",
+      "tailor-resume:tailor",
+    ],
+  );
+  assert.equal(result.queuedActions.length, 3);
 });
 
 test("Dashboard query returns only owner-scoped display summaries", () => {
   assert.match(query, /import "server-only"/);
+  assert.match(query, /\.from\("master_profiles"\)/);
   assert.match(query, /\.from\("job_postings"\)/);
   assert.match(query, /\.from\("applications"\)/);
+  assert.match(query, /\.from\("resume_versions"\)/);
   assert.equal(
     [...query.matchAll(/\.eq\("user_id", userId\)/g)].length,
-    2,
+    4,
   );
-  assert.doesNotMatch(
-    query,
-    /raw_text|extracted|match_score|notes|user_id,|owner_id|profile/,
-  );
+  assert.match(query, /hasRawText:/);
+  assert.match(query, /hasAnalysis:/);
+  assert.match(query, /parseJobExtractionOutput/);
+  assert.match(query, /parseTailoredResumeVersionContent/);
+  assert.doesNotMatch(page, /raw_text|extracted|profile prose|match_score/);
 });
 
 test("Dashboard production code contains no mock data dependency or fabricated panels", () => {
@@ -133,15 +273,15 @@ test("Dashboard production code contains no mock data dependency or fabricated p
   );
 });
 
-test("Dashboard has explicit configuration, load-error, and one-CTA new-account states", () => {
+test("Dashboard has explicit unavailable, onboarding, and active next-action states", () => {
   assert.match(page, /if \(!getSupabaseEnv\(\)\)/);
   assert.match(page, /if \(result\.status === "error"\)/);
   assert.match(page, /No fallback data is shown\./);
-  assert.match(page, /const isNewAccount =/);
-  assert.match(page, /title="Start with your first saved job"/);
-  assert.match(page, /actionLabel="Add first job"/);
-  assert.match(page, /onActionHref="\/jobs"/);
-  assert.equal([...page.matchAll(/actionLabel="Add first job"/g)].length, 1);
+  assert.match(page, /dashboard\.mode === "onboarding"/);
+  assert.match(page, /title="Getting started"/);
+  assert.match(page, /title="Next action"/);
+  assert.match(page, /dashboard\.primaryAction\.href/);
+  assert.match(page, /dashboard\.queuedActions\.map/);
 });
 
 test("recent job row renders only persisted summary fields and a safe detail link", () => {
