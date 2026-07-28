@@ -1,7 +1,7 @@
 # HANDOFF.md — InternshipBC Continuation Handoff
 
 > **Purpose:** Let the next coding agent continue without rediscovering the
-> current state. This reflects the codebase as of **2026-07-25**.
+> current state. This reflects the codebase as of **2026-07-28**.
 >
 > **Read before coding:** [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) (r2 —
 > current), [DESIGN.md](DESIGN.md) (esp. §22–24),
@@ -232,7 +232,7 @@
 > lint, typecheck, production webpack build, and both diff checks passed.
 > ROADMAP R1-5 is complete.
 >
-> **R1-6A privacy-safe monitoring foundation:** Implementation commit
+> **R1-6 privacy-safe monitoring:** Foundation commit
 > `11128701f575ca9d568c538976a96b9f649757c2` adds pinned
 > `@sentry/nextjs` client, Node, and Edge initialization plus Next.js
 > `onRequestError` and a global client error boundary. Monitoring remains
@@ -242,9 +242,16 @@
 > context, or AI inputs/outputs. A final outbound allowlist retains only
 > normalized route/runtime/status metadata, exception type, and sanitized code
 > locations. Focused tests passed 5/5; lint, typecheck, production webpack
-> build, and both diff checks passed. R1-6 remains incomplete and unchecked
-> pending focused server-action/RPC failure instrumentation and production
-> dashboard verification.
+> build, and both diff checks passed. Production verification confirmed the
+> existing `onRequestError` hook captures a harmless Server Action failure, so
+> no extra per-action instrumentation was needed. Fix commit
+> `26b0cc597e7999c13dc02729fb437d3fe2fd803b` removes the invalid top-level
+> `type: "error"` value (Sentry error events require an undefined type), with a
+> regression assertion. Vercel deployed that clean revision successfully;
+> Sentry showed normalized route/runtime/status, exception type, and sanitized
+> stack locations without the synthetic email, token, request content, job,
+> profile, resume, or prompt sentinels used by the local canary. No permanent
+> trigger or test route remains. ROADMAP R1-6 is complete.
 >
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit

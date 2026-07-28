@@ -3041,6 +3041,37 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Continue R1-6 only with narrowly scoped server-action/RPC
   failure capture and production event verification.
 
+### R1-6 production monitoring completion
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R1-6 production acceptance
+- **Classification:** PASS
+- **Implementation:** The existing Next.js `onRequestError` hook was confirmed
+  to capture thrown Server Action failures, so no permanent per-action helper
+  was added. Fix commit
+  `26b0cc597e7999c13dc02729fb437d3fe2fd803b` removes the invalid top-level
+  `type: "error"` field from scrubbed Sentry error events; the installed Sentry
+  contract requires error-event type to remain undefined.
+- **Temporary verification code:** The local canary action, forced throw,
+  synthetic sentinels, debug output, generated pnpm files, and temporary route
+  UI were completely removed before the final commit and deployment.
+- **Automated verification:** Focused monitoring tests passed 5/5. Lint,
+  typecheck, production Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed. A production-code grep found no canary,
+  debug, or synthetic-sentinel text.
+- **Production verification:** Vercel deployed the clean fix revision
+  successfully and `https://internshipbc.dev/start` initialized without a
+  Sentry/DSN browser error. The harmless Server Action canary appeared in
+  Sentry with normalized route/runtime/status metadata, exception type, and
+  sanitized stack locations. Synthetic email, token, job, profile, resume, and
+  prompt sentinels were absent; no request body, headers, cookies, user
+  identity, database value, or raw exception message was displayed.
+- **ROADMAP state:** R1-6 is complete and checked. R1-7 was not started.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Begin R1-7 only under a separate, narrowly scoped task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
