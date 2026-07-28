@@ -3101,6 +3101,35 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Resume only the remaining R1-7 production full-flow
   verification.
 
+### R1-7 Profile Match percentage blocker
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R1-7 production exit-gate blocker
+- **Classification:** PASS for this blocker-only slice
+- **Implementation:** Commit
+  `0446f8d837a3b8107a6c37dbbd386b0731aa895d` removes the visible coverage
+  percentage suffix from every Profile Match requirement group. Deterministic
+  matched/not-evidenced counts, matching logic, persisted data, requirement
+  classification, and the additive matcher result contract remain unchanged.
+- **Automated verification:** Focused Profile Match rendering and pure matcher
+  tests passed 44/44. The scoped production-source grep found no user-facing
+  coverage percentage. Lint, typecheck, production Next.js webpack build,
+  `git diff --check`, and `git diff --cached --check` passed.
+- **Production verification:** Vercel reported the exact implementation commit
+  Ready in Production. A disposable production account with a synthetic
+  analyzed job showed `1 of 2 found` and `0 of 1 found` in the required and
+  preferred Profile Match regions, with no percentage or coverage label in
+  visible or accessibility text. The account and its owned data were deleted
+  through Settings afterward, and private access was revoked.
+- **ROADMAP state:** R1-7 remains incomplete and unchecked because this task
+  fixed and verified only the Profile Match percentage blocker, not the
+  remaining full-flow exit gate.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Resume only the remaining R1-7 production full-flow
+  verification.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

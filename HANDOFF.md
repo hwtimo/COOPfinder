@@ -266,6 +266,20 @@
 > account was deleted afterward. ROADMAP R1-7 remains incomplete and unchecked
 > pending the rest of the full-flow exit gate.
 >
+> **R1-7 Profile Match percentage blocker fix:** Implementation commit
+> `0446f8d837a3b8107a6c37dbbd386b0731aa895d` removes the user-facing coverage
+> percentage suffix from every explainable Profile Match requirement group
+> while preserving the deterministic matched/not-evidenced counts and the
+> matcher result contract. Focused Profile Match and pure matcher tests passed
+> 44/44; the scoped production-source grep found no user-facing coverage
+> percentage, and lint, typecheck, production webpack build, and both diff
+> checks passed. Vercel deployed the exact commit successfully. A disposable
+> production account with a synthetic analyzed job confirmed the required and
+> preferred groups render `1 of 2 found` and `0 of 1 found` with no percentage
+> or coverage label, including the accessible region text. The disposable
+> account was deleted afterward. ROADMAP R1-7 remains incomplete and unchecked
+> pending the rest of the full-flow exit gate.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
