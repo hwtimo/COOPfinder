@@ -878,3 +878,25 @@ One-week MVP execution priorities: PRODUCT_STRATEGY.md §12.
   through R1-3F. The complete series is deployed and fresh-account production
   verification confirmed the audited state; R1-3 is complete. Do not delete
   `lib/mock/` wholesale.
+
+## R2-1A Dashboard next-action foundation
+
+Implementation commit `c779f5b1c42f1c154553c59401b0976cfaff109a`
+replaces the Dashboard's basic aggregation with a deterministic view model
+derived only from the authenticated user's persisted Master Profile, private
+jobs, applications, valid job extractions, and complete immutable v2 resume
+versions. Raw job text and extraction or resume payloads stay server-side and
+are reduced to booleans or UI-safe identifiers before rendering.
+
+New users progress through four ordered milestones: Master Profile, first saved
+job, first valid analysis, and first complete tailored resume. Once all four
+exist, the Dashboard presents one primary action and at most three queued
+actions. Active priorities are fixed as: add manual text to a URL-only job,
+analyze a job with usable text, review tailoring preflight, start application
+tracking, then review a nonterminal tracked application. Equal-priority actions
+sort by earliest deadline, oldest update time, then stable action ID.
+
+Focused Dashboard tests passed 8/8. Lint, typecheck, the production Next.js
+webpack build, and both diff checks passed. R2-1 remains unchecked because this
+slice establishes the data/view-model foundation only; no broader Dashboard
+redesign or later R2 work was performed.

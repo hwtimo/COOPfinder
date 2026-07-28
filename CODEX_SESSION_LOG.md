@@ -3176,6 +3176,37 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await a separately authorized R2 task.
 
+### R2-1A deterministic Dashboard next-action foundation
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-1A Dashboard foundation
+- **Classification:** PASS for this bounded implementation slice
+- **Implementation:** Commit
+  `c779f5b1c42f1c154553c59401b0976cfaff109a` adds an authenticated,
+  owner-scoped Dashboard data model and deterministic next-action view model.
+  The query loads the user's Master Profile, private jobs, applications, and
+  immutable resume versions once in parallel, validates persisted extraction
+  and complete v2 resume content, and returns only UI-safe summaries.
+- **Priority rules:** New users follow persisted milestones in order: Master
+  Profile, first job, first valid analysis, then first complete tailored
+  resume. Active users receive one primary action and at most three queued
+  actions, ordered by manual URL-job text, analysis, tailoring preflight,
+  application creation, and nonterminal application review. Ties use earliest
+  deadline, oldest update time, then stable action ID.
+- **Safety boundary:** The slice uses no mock data, AI call, schema change,
+  persisted derived recommendation, match percentage, eligibility language,
+  or outcome prediction. Raw job text, extraction payloads, profile prose, and
+  resume document payloads are not returned to the Dashboard UI.
+- **Verification:** Focused Dashboard tests passed 8/8. Lint, typecheck,
+  production Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **ROADMAP state:** R2-1 remains incomplete and unchecked because this slice
+  implements only the deterministic data and next-action foundation.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Continue only the next separately authorized R2-1 slice.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
