@@ -1,20 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { renderToStaticMarkup } from "react-dom/server";
 
-import { DashboardRecentJobRow } from "../../components/app/dashboard-recent-job-row";
 import { buildDashboardViewModel } from "../../lib/dashboard/view-model";
 
 import type { DashboardData, DashboardJob } from "../../lib/dashboard/types";
 
 const page = readFileSync("app/(app)/dashboard/page.tsx", "utf8");
-const row = readFileSync(
-  "components/app/dashboard-recent-job-row.tsx",
-  "utf8",
-);
 const query = readFileSync("lib/dashboard/queries.ts", "utf8");
-const dashboardProductionSources = [page, row, query].join("\n");
+const dashboardProductionSources = [page, query].join("\n");
 
 const jobs: DashboardJob[] = [
   {
@@ -280,23 +274,22 @@ test("Dashboard has explicit unavailable, onboarding, and active next-action sta
   assert.match(page, /dashboard\.mode === "onboarding"/);
   assert.match(page, /title="Getting started"/);
   assert.match(page, /title="Next action"/);
+  assert.match(page, /aria-current=\{isCurrent \? "step" : undefined\}/);
+  assert.match(page, /isCurrent\s*\?\s*"Current step"/);
+  assert.match(page, />\s*Continue\s*</);
+  assert.match(page, />\s*Open next action\s*</);
   assert.match(page, /dashboard\.primaryAction\.href/);
   assert.match(page, /dashboard\.queuedActions\.map/);
 });
 
-test("recent job row renders only persisted summary fields and a safe detail link", () => {
-  const markup = renderToStaticMarkup(
-    <table>
-      <tbody>
-        <DashboardRecentJobRow job={jobs[1]} />
-      </tbody>
-    </table>,
+test("Dashboard removes analytics cards and competing persisted-data panels", () => {
+  assert.doesNotMatch(
+    page,
+    /MetricCard|DashboardRecentJobRow|pipelineTone|pipelineTotal/,
   );
-
-  assert.match(markup, /Web Intern/);
-  assert.match(markup, /Beta/);
-  assert.match(markup, /Burnaby/);
-  assert.match(markup, /Ready/);
-  assert.match(markup, /href="\/jobs\/b"/);
-  assert.doesNotMatch(markup, /match|next action|resume version/i);
+  assert.doesNotMatch(
+    page,
+    /Application pipeline|Recent jobs|Upcoming deadlines|Tracked applications/,
+  );
+  assert.doesNotMatch(page, /Math\.round|style=\{\{ width|%/);
 });
