@@ -136,7 +136,8 @@ test("comparable result renders required, preferred, and keyword groups", () => 
   assert.match(html, />Required requirements</);
   assert.match(html, />Preferred requirements</);
   assert.match(html, />Keywords</);
-  assert.match(html, /1 of 2 found · 50% coverage/);
+  assert.match(html, /1 of 2 found/);
+  assert.doesNotMatch(html, /\d+%|coverage/);
 });
 
 test("renders soft-skill, certification, and language coverage groups", () => {
@@ -192,7 +193,7 @@ test("does not render an overall score or qualification label", () => {
   assert.doesNotMatch(html, /overall score|match score|qualified|ranking/i);
 });
 
-test("null coverage renders no misleading percentage", () => {
+test("requirement groups render counts without percentages", () => {
   const html = render(
     matchedResult({
       required: group({
@@ -207,7 +208,7 @@ test("null coverage renders no misleading percentage", () => {
 
   assert.match(html, /0 of 0 found/);
   assert.match(html, /No comparable requirements extracted/);
-  assert.doesNotMatch(html, /0 of 0 found ·/);
+  assert.doesNotMatch(html, /\d+%|coverage/);
 });
 
 test("renders exact work-authorization match separately", () => {

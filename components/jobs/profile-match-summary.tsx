@@ -90,9 +90,6 @@ function CoverageGroup({
         </h3>
         <p className="text-xs text-muted-foreground">
           {group.matchedCount} of {group.totalUniqueRequirements} found
-          {group.coveragePercentage === null
-            ? null
-            : ` · ${group.coveragePercentage}% coverage`}
         </p>
       </div>
 
