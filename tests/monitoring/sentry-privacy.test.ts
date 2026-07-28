@@ -97,6 +97,7 @@ test("scrubs personal, authentication, request, AI, and content fields", () => {
     status: "500",
   });
   assert.equal(event.transaction, "/jobs/[id]");
+  assert.equal(event.type, undefined);
   assert.deepEqual(event.exception, {
     values: [
       {

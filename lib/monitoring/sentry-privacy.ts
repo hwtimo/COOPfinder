@@ -165,7 +165,6 @@ export function scrubSentryEvent<T extends SentryEventLike>(
   const values = event.exception?.values?.slice(0, 8).map(sanitizeException);
 
   return {
-    type: "error",
     event_id: safeText(event.event_id, 64),
     timestamp:
       typeof event.timestamp === "number" && Number.isFinite(event.timestamp)
