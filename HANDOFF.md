@@ -253,6 +253,19 @@
 > profile, resume, or prompt sentinels used by the local canary. No permanent
 > trigger or test route remains. ROADMAP R1-6 is complete.
 >
+> **R1-7 `/jobs` blocker fix:** Implementation commit
+> `d8c28ebdce871da47662cfa26d158c698502b723` removes the legacy Match score
+> filter type, state, predicate, and visible `80%+`, `70%+`, and `50%+`
+> threshold options from the private Jobs page while preserving search and
+> persisted role, location, term, work-mode, co-op, authorization, and
+> deadline filters. The explainable Profile Match flow is unchanged. Focused
+> Jobs tests passed 10/10; production-code grep, lint, typecheck, production
+> webpack build, and both diff checks passed. Vercel deployed the exact commit
+> successfully, and a brand-new empty production account confirmed `/jobs`
+> exposes no Match score or percentage-threshold filter. The disposable
+> account was deleted afterward. ROADMAP R1-7 remains incomplete and unchecked
+> pending the rest of the full-flow exit gate.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table

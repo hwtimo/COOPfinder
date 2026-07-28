@@ -3072,6 +3072,35 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Begin R1-7 only under a separate, narrowly scoped task.
 
+### R1-7 legacy Jobs match-filter blocker
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R1-7 production exit-gate blocker
+- **Classification:** PASS for this blocker-only slice
+- **Implementation:** Commit
+  `d8c28ebdce871da47662cfa26d158c698502b723` removes the private Jobs
+  page's legacy Match score filter type, state, filtering predicate, and
+  visible `80%+`, `70%+`, and `50%+` options. Search and the persisted role,
+  location, term, work-mode, co-op, work-authorization, and deadline filters
+  remain. Explainable Profile Match was not changed.
+- **Automated verification:** Focused Jobs tests passed 10/10. The
+  production-source grep found no legacy match-percentage filter strings.
+  Lint, typecheck, production Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **Production verification:** Vercel reported the exact implementation
+  commit Ready in Production. A brand-new empty account on
+  `https://internshipbc.dev/jobs` showed no Match score selector and no
+  `80%+`, `70%+`, or `50%+` option while the honest persisted filters
+  remained. The disposable account was deleted through Settings afterward.
+- **ROADMAP state:** R1-7 remains incomplete and unchecked because this task
+  fixed and verified only the percentage-filter blocker, not the remaining
+  full-flow exit gate.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Resume only the remaining R1-7 production full-flow
+  verification.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
