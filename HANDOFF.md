@@ -920,3 +920,25 @@ unchanged.
 Focused Dashboard tests passed 8/8. Lint, typecheck, the production Next.js
 webpack build, scoped legacy-presentation grep, and both diff checks passed.
 R2-1 remains unchecked pending deployment and production verification.
+
+## R2-1 production completion
+
+Deployed revision `6a639a081d3df13b3889277bfe4e9c76bce734a0`
+completed successfully in Vercel Production. A fresh production account showed
+the four ordered onboarding milestones, highlighted only the current Profile
+step, and exposed one primary Continue CTA.
+
+Through the normal product UI, the same disposable account saved a real Master
+Profile, confirmed evidence and an approved resume fragment, saved and analyzed
+a synthetic private job, created an application, and generated one complete
+immutable tailored-resume version. The resulting active Dashboard displayed one
+primary persisted application action and zero queued actions. Database
+inspection confirmed one owned Master Profile, job, application, and resume
+version backed the displayed state.
+
+Neither Dashboard state showed the removed analytics cards, fabricated metrics,
+percentages, eligibility or outcome language, or competing primary actions.
+The disposable account and all owned rows were deleted through the normal
+Settings flow, and the remaining smoke-only company row was removed after its
+job relation was gone. Final scoped counts returned to zero. R2-1 is complete
+and checked; do not start R2-2 without separate authorization.

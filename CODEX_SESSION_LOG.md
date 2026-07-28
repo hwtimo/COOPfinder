@@ -3240,6 +3240,42 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Deploy and verify R2-1A/R2-1B only when separately
   authorized.
 
+### R2-1 production completion
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-1 production acceptance
+- **Classification:** PASS
+- **Deployment:** The four approved R2-1A/R2-1B commits were pushed from a
+  clean `main`. GitHub reported the Vercel deployment for revision
+  `6a639a081d3df13b3889277bfe4e9c76bce734a0` successful, and local `main`
+  aligned with `origin/main`.
+- **Fresh-account verification:** A normal production signup reached
+  `/dashboard` and rendered exactly four ordered milestones: Master Profile,
+  first job, first analysis, and first tailored resume. Only the current
+  Profile milestone was highlighted with `aria-current="step"`, and the state
+  exposed one primary Continue CTA.
+- **Active-account verification:** Using only normal product flows, the same
+  disposable account saved a Master Profile, confirmed one entry and approved
+  resume fragment, saved and analyzed one synthetic private job, created one
+  application, and generated one complete immutable resume version. The
+  resulting Dashboard showed one primary Review application action derived
+  from that persisted job/application and zero queued actions.
+- **Data verification:** Read-only database counts confirmed one owned Master
+  Profile, private job, application, and resume version backed the active UI.
+  No fallback or fabricated Dashboard data was used.
+- **Presentation verification:** The inspected fresh and active states showed
+  no analytics cards, fabricated metric, percentage, eligibility or outcome
+  claim, or competing primary action.
+- **Cleanup:** Settings account deletion redirected to `/start`, removed the
+  disposable Auth user and all owned Master Profile, entry, job, application,
+  and resume-version rows. The resulting unreferenced smoke-only company row
+  was removed separately; all scoped counts returned to zero.
+- **ROADMAP state:** R2-1 is complete and checked. R2-2 was not started.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before starting R2-2.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

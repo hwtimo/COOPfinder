@@ -210,7 +210,7 @@ action. Density was right for the build-out; launched students need focus.
 - [x] R1-5 privacy / terms / delete account
 - [x] R1-6 error monitoring
 - [x] R1-7 full-flow exit gate
-- [ ] R2-1 next-action dashboard
+- [x] R2-1 next-action dashboard
 - [ ] R2-2 unfounded metrics removal
 - [ ] R2-3 resume-upload onboarding
 - [ ] R2-4 bounded URL auto-analysis
