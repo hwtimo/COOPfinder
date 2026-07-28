@@ -33,7 +33,6 @@ import type {
 import { cn } from "@/lib/utils";
 
 type DeadlineFilter = "all" | "overdue" | "today" | "48h" | "7d" | "later";
-type MatchFilter = "all" | "80" | "70" | "50" | "unanalyzed";
 
 type JobFilters = {
   roleType: string;
@@ -43,7 +42,6 @@ type JobFilters = {
   coopEligible: "all" | "yes" | "no";
   workAuthorization: "all" | PrivateJobWorkAuthorization;
   deadline: DeadlineFilter;
-  matchScore: MatchFilter;
 };
 
 const initialFilters: JobFilters = {
@@ -54,7 +52,6 @@ const initialFilters: JobFilters = {
   coopEligible: "all",
   workAuthorization: "all",
   deadline: "all",
-  matchScore: "all",
 };
 
 const filterSelectClassName =
@@ -79,14 +76,6 @@ function matchesDeadlineFilter(
   if (filter === "48h") return days >= 0 && days <= 2;
   if (filter === "7d") return days >= 0 && days <= 7;
   return days > 7;
-}
-
-function matchesScoreFilter(match: number | null, filter: MatchFilter) {
-  if (filter === "unanalyzed") return match === null;
-  if (filter === "80") return match !== null && match >= 80;
-  if (filter === "70") return match !== null && match >= 70;
-  if (filter === "50") return match !== null && match >= 50;
-  return true;
 }
 
 function matchTone(match: number | null) {
@@ -174,8 +163,7 @@ export function JobsPageClient({
           job.coopEligible === (filters.coopEligible === "yes")) &&
         (filters.workAuthorization === "all" ||
           job.workAuthorization === filters.workAuthorization) &&
-        matchesDeadlineFilter(job.deadline, filters.deadline) &&
-        matchesScoreFilter(job.matchScore, filters.matchScore)
+        matchesDeadlineFilter(job.deadline, filters.deadline)
       );
     });
   }, [filters, jobs, search]);
@@ -410,23 +398,6 @@ export function JobsPageClient({
                 <option value="48h">Next 48 hours</option>
                 <option value="7d">Next 7 days</option>
                 <option value="later">Later</option>
-              </FilterSelect>
-
-              <FilterSelect
-                label="Match score"
-                value={filters.matchScore}
-                onChange={(matchScore) =>
-                  setFilters((current) => ({
-                    ...current,
-                    matchScore: matchScore as MatchFilter,
-                  }))
-                }
-              >
-                <option value="all">Any match</option>
-                <option value="80">80%+</option>
-                <option value="70">70%+</option>
-                <option value="50">50%+</option>
-                <option value="unanalyzed">Not analyzed</option>
               </FilterSelect>
             </div>
           </div>
