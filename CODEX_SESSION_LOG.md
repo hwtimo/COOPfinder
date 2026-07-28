@@ -3130,6 +3130,52 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Resume only the remaining R1-7 production full-flow
   verification.
 
+### R1-7 production full-flow exit gate
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R1-7 production acceptance
+- **Classification:** PASS
+- **Deployed revision:** Vercel reported
+  `a1603878dab5e4cf6b288be89dec7feb084dc8bd` Ready in Production on
+  `https://internshipbc.dev`.
+- **Normal-UI verification:** A fresh production account reached Dashboard,
+  saved a Master Profile with one confirmed project and one approved resume
+  fragment, saved a URL-only private job, added manual JD text to that same
+  job, and completed one successful analysis. No URL retrieval was attempted.
+- **Match verification:** The persisted extraction rendered deterministic
+  required, preferred, soft-skill, and work-authorization comparisons. Profile
+  Match showed counts only, with no coverage percentage or eligibility
+  language.
+- **Tailoring verification:** Tailoring preflight selected only the confirmed
+  structured evidence and approved resume fragment. One production generation
+  succeeded and created one immutable resume version containing the approved
+  project bullet and confirmed TypeScript, Git, React, and Communication
+  evidence only. The persisted review route rendered and its browser
+  `Print / Save as PDF` control was invoked successfully.
+- **Application verification:** The same private job created one application.
+  Changing status from Saved to Tailoring persisted after reload, and the
+  timeline retained both the creation and status-change events. The workflow
+  linked the analyzed job, explainable match, tailoring preflight, and owned
+  immutable resume version.
+- **Product-surface review:** The checked flow exposed no mock fixture content,
+  old COOPfinder branding, test copy, fabricated match metrics, eligibility
+  claim, or dead end. URL fetching and auto-apply were not tested because they
+  are not product capabilities.
+- **Cleanup verification:** Settings deletion redirected to
+  `/start?account_deleted=1`; a subsequent `/dashboard` request redirected to
+  login. Read-only linked-project verification confirmed the disposable Auth
+  user and all schema-derived owned rows were zero across profiles, companies,
+  private jobs, applications, timeline events, Master Profile records and
+  entries, resume versions, usage counters, submitted board rows, tailoring
+  ledger and reservation/event rows, intake rows, guest imports, and parser
+  reservation/event rows.
+- **ROADMAP state:** R1-7 is complete and checked. R1 is complete; no R2 work
+  was started.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await a separately authorized R2 task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

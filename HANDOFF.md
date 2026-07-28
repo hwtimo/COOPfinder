@@ -280,6 +280,21 @@
 > account was deleted afterward. ROADMAP R1-7 remains incomplete and unchecked
 > pending the rest of the full-flow exit gate.
 >
+> **R1-7 production exit gate:** Production revision
+> `a1603878dab5e4cf6b288be89dec7feb084dc8bd` completed the full normal-UI flow
+> with a fresh account: signup and dashboard; confirmed Master Profile
+> evidence and an approved resume fragment; URL-only job save; owner manual-JD
+> transition; one successful job analysis; counts-only deterministic Profile
+> Match; one successful tailored-resume generation using only approved and
+> confirmed evidence; persisted immutable version and Print / Save as PDF
+> control; application creation; persisted status change and timeline; and
+> self-serve account deletion. No URL fetch or auto-apply was attempted. The
+> checked surfaces contained no mock content, old branding, test copy,
+> fabricated match metrics, eligibility claims, or dead end. Deletion
+> redirected to `/start`, revoked private-route access, removed the Auth user,
+> and returned every schema-derived owned-row category to zero. ROADMAP R1-7
+> is complete and checked. Do not redo R1.
+>
 > **Repository evidence reviewed through:** URL/manual-fallback implementation
 > commit `fc9721d115fb3c3cb71e3093fe382d6dd76ca80a`, including parser-credit
 > integration log commit `202556f85cfd8b856aea4ceb32a112675703fa0d`, reservation-table
