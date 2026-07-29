@@ -3276,6 +3276,37 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await separate authorization before starting R2-2.
 
+### R2-2 unfounded metrics removal and production verification
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-2
+- **Classification:** PASS
+- **Implementation:** Commit
+  `1f5a49ede017c2747fe2b1823ad2c1f85114aecd` removes the remaining
+  user-facing legacy `job.matchScore` presentation from `/jobs`, along with
+  the dead display helper and general private-job query/type mapping. Job
+  Detail already contained no legacy Estimated match block, and the production
+  audit found no Estimated callback rate surface.
+- **Preserved behavior:** Deterministic matching logic, persisted data, parser
+  confidence, and internal coverage calculations were unchanged. Explainable
+  Profile Match continues to show matched/not-evidenced counts by category.
+- **Verification:** Focused tests passed 49/49. Lint, typecheck, production
+  Next.js webpack build, production user-facing grep, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **Production verification:** GitHub reported the Vercel deployment for the
+  implementation revision successful. A disposable production account
+  confirmed that `/jobs` no longer renders Estimated match, analyzed Job
+  Detail renders `2 of 2 found` and `0 of 1 found` without percentage or
+  coverage text, and `/jobs/matches` is also counts-only.
+- **Cleanup:** The disposable account was deleted through Settings; the
+  smoke-only company row was removed after its job relation was gone. Final
+  scoped Auth-user, private-job, and company counts were zero.
+- **ROADMAP state:** R2-2 is complete and checked. R2-3 was not started.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before starting R2-3.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

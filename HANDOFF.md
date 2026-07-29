@@ -942,3 +942,28 @@ The disposable account and all owned rows were deleted through the normal
 Settings flow, and the remaining smoke-only company row was removed after its
 job relation was gone. Final scoped counts returned to zero. R2-1 is complete
 and checked; do not start R2-2 without separate authorization.
+
+## R2-2 unfounded metrics removal
+
+Implementation commit `1f5a49ede017c2747fe2b1823ad2c1f85114aecd`
+removes the remaining legacy `job.matchScore` presentation from the production
+saved-jobs table. The “Estimated match” column, percentage badge, tone helper,
+client-facing `matchScore` type, and `match_score` selection/mapping in the
+general private-job loader were removed. Job Detail already had no legacy
+Estimated match block, and no production surface contained Estimated callback
+rate.
+
+The deterministic matcher and its internal coverage calculations remain
+unchanged. Job Detail and `/jobs/matches` continue to present explainable
+matched/not-evidenced counts by category, while parser confidence remains a
+separate legitimate extraction-quality value.
+
+Focused tests passed 49/49. Lint, typecheck, the production Next.js webpack
+build, production user-facing grep, and both diff checks passed. Vercel
+successfully deployed the implementation revision. A disposable production
+account confirmed `/jobs` has no Estimated match column, analyzed Job Detail
+shows count-only Profile Match groups (`2 of 2 found`, `0 of 1 found`), and
+`/jobs/matches` contains no percentage or coverage presentation. The account
+and all smoke-only job/company data were deleted; scoped counts returned to
+zero. R2-2 is complete and checked; do not start R2-3 without separate
+authorization.
