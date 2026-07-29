@@ -1242,3 +1242,32 @@ fixtures were deleted and scoped fixture counts returned to zero.
 The focused regression and rendering suites passed 26/26. Lint, typecheck,
 production Next.js webpack build, and both diff checks passed. R2-5 is complete
 and checked.
+
+## R2-6A application resume-version persistence
+
+Implementation commit `527988e1d3aec3a003fafcd2b44d64cd2d14ebe5`
+adds an optional immutable resume-version link to application creation without
+changing the one-application-per-job product rule. The existing authenticated
+creation action accepts an optional version ID and delegates to the same atomic
+database RPC; existing callers omit it and continue creating unlinked
+applications.
+
+Forward-only migration
+`20260729182516_link_application_resume_version.sql` adds nullable
+`applications.resume_version_id`, a composite owner/job foreign key, and a
+defaulted optional RPC parameter. The RPC derives the user from `auth.uid()`,
+requires both the private job and selected resume version to belong to that
+user, requires the version to belong to the same job, retains the advisory
+transaction lock, and inserts the application plus initial timeline event in
+one transaction. Foreign or job-mismatched versions return the existing safe
+unavailable result before writes. Deleting a linked version clears only the
+optional link and preserves the application.
+
+The migration is applied to the linked development project; all 34 local and
+remote migrations align. Transaction-scoped database verification passed for
+linked and legacy unlinked creation, owner/job mismatch rejection, idempotent
+replay, one initial event, deletion behavior, and forced-failure rollback.
+Disposable fixture counts returned to zero. Focused tests passed 39/39; lint,
+typecheck, production Next.js webpack build, and both diff checks passed. No
+AI/provider, credit, status, date, or UI behavior was added. R2-6 remains
+unchecked pending later tracker slices and production verification.

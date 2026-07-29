@@ -3681,6 +3681,46 @@ only when necessary to explain configuration; never record their values.
   verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await a separately authorized R2-6 task.
 
+### R2-6A application resume-version persistence
+
+- **Date and time:** 2026-07-29 (America/Vancouver)
+- **Development phase:** ROADMAP R2-6A
+- **Classification:** PASS for this bounded persistence slice
+- **Implementation:** Commit
+  `527988e1d3aec3a003fafcd2b44d64cd2d14ebe5` extends the existing application
+  creation boundary with an optional tailored-resume version. Existing callers
+  remain valid and create unlinked applications.
+- **Schema and atomicity:** Forward-only migration
+  `20260729182516_link_application_resume_version.sql` adds nullable
+  `applications.resume_version_id`, enforces the version/user/job relationship
+  with a composite foreign key, and replaces the existing RPC with a defaulted
+  optional parameter. The application and initial timeline event remain one
+  transaction, while the existing advisory lock and one-application-per-job
+  uniqueness preserve concurrent idempotency.
+- **Ownership:** The RPC derives identity from `auth.uid()`. Both the private
+  job and version must be caller-owned, and the version must belong to that
+  same job. Foreign or mismatched versions return unavailable before any write.
+- **Compatibility and deletion:** Omitting the version remains supported.
+  Deleting a linked immutable version clears only the optional link and
+  preserves the application; existing application deletion and timeline
+  cascade behavior are unchanged.
+- **Linked development verification:** All 34 local and remote migrations
+  align. Transaction-scoped disposable fixtures verified linked and unlinked
+  creation, foreign and mismatched rejection with zero writes, idempotent
+  replay, a single initial event, deletion behavior, and forced timeline
+  failure rollback. Final fixture counts were zero.
+- **Verification:** Focused application, matching, query, and rendering tests
+  passed 39/39. Lint, typecheck, production Next.js webpack build,
+  `git diff --check`, and `git diff --cached --check` passed.
+- **Side-effect boundary:** No UI, AI/provider request, credit use, status/date
+  behavior, or unrelated persistence was added or performed.
+- **ROADMAP state:** R2-6 remains incomplete and unchecked pending subsequent
+  tracker slices and production verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization for the next R2-6 slice.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
