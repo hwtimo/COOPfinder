@@ -1021,3 +1021,32 @@ tests passed 50/50. Lint, typecheck, the production Next.js webpack build, and
 both diff checks passed. R2-3 remains unchecked because accepting or persisting
 reviewed draft entries is not part of R2-3B; do not continue without separate
 authorization.
+
+## R2-3C import resume drafts for review
+
+Implementation commit `df785f22556f6b5eac4152a85f30bc729283ca3b`
+adds one explicit `Import draft for review` action beneath the temporary
+resume-draft preview. The authenticated Server Action strictly reparses the
+client-returned draft, reloads the current owner-scoped Master Profile, merges
+only new normalized evidence, and redirects to `/resumes/master` after the
+existing atomic `save_master_profile` path succeeds.
+
+AI-drafted education, work experience, projects, leadership/activities, and
+skills all become Master Profile entries with `confirmed: false`. Draft skills
+are not silently promoted into the trusted top-level skills collection.
+Provider-set confirmation state and fragment fields are rejected. New entries
+receive empty fragment arrays, so no approved resume source fragment is created.
+
+Existing populated profile fields, top-level skills, candidate evidence,
+confirmed entries, and manual approved fragments are preserved. Duplicate
+entries are skipped by whitespace-collapsed, case-insensitive section-and-text
+identity; skills already present in top-level skills and repeated draft skills
+are skipped. A profile-load or save failure returns fixed safe copy and the
+single existing transactional RPC leaves prior data unchanged. Import performs
+no OpenAI/provider request, OCR, credit operation, or migration.
+
+Focused draft-import, profile-persistence, fragment-preservation, draft
+provider, PDF, and Resumes-hub tests passed 47/47. Lint, typecheck, the
+production Next.js webpack build, and both diff checks passed. R2-3 remains
+unchecked pending the separately authorized completion and production
+verification of the resume-upload onboarding flow.

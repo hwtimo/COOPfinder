@@ -3374,6 +3374,44 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await separate authorization before the next R2-3 slice.
 
+### R2-3C import generated resume drafts for review
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-3C
+- **Classification:** PASS for this bounded implementation slice
+- **Implementation:** Commit
+  `df785f22556f6b5eac4152a85f30bc729283ca3b` adds an explicit import action to
+  the temporary `/resumes` draft preview. The request is authenticated,
+  strictly reparses the draft, reloads the current owned Master Profile, uses
+  the existing atomic save path once, and redirects to `/resumes/master` for
+  individual review.
+- **Confirmation boundary:** Every imported education, work-experience,
+  project, leadership/activity, and skill item is a Master Profile entry with
+  `confirmed: false`. Draft skills are not added to trusted top-level skills.
+  Client/provider confirmation changes and fragment fields are rejected, and
+  imported entries contain no approved resume fragments.
+- **Preservation and deduplication:** Existing profile fields, top-level
+  skills, candidate evidence, confirmed entries, and manual approved fragments
+  remain unchanged. Whitespace-collapsed, case-insensitive section/text
+  duplicates, top-level skill duplicates, and repeated draft skills are
+  skipped while first-seen order is preserved.
+- **Atomicity and side effects:** Profile-load failures perform no write. The
+  existing transactional `save_master_profile` RPC is invoked once for a
+  nonempty merge, so a failed persistence result cannot partially replace the
+  current profile. Import makes no OpenAI/provider request, creates no credit
+  activity, performs no OCR, and requires no schema migration.
+- **Verification:** Focused draft-import, profile-persistence,
+  fragment-preservation, draft-provider, PDF, and Resumes-hub tests passed
+  47/47. Lint, typecheck, production Next.js webpack build,
+  `git diff --check`, and `git diff --cached --check` passed.
+- **ROADMAP state:** R2-3 remains incomplete and unchecked pending separately
+  authorized completion and production verification of resume-upload
+  onboarding.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before the next R2-3 slice.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
