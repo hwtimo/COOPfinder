@@ -10,6 +10,10 @@ const upload = readFileSync(
   "utf8",
 );
 const uploadAction = readFileSync("app/(app)/resumes/actions.ts", "utf8");
+const importForm = readFileSync(
+  "components/resumes/resume-profile-draft-import-form.tsx",
+  "utf8",
+);
 const query = readFileSync(
   "lib/resumes/get-owned-resume-version-summaries.ts",
   "utf8",
@@ -119,6 +123,13 @@ test("PDF success is explicit and extends into an unpersisted review draft", () 
   assert.match(upload, /<ResumeProfileDraftPreview draft=\{state\.draft\.value\}/);
   assert.match(uploadAction, /generateResumeProfileDraft\(result\.text\)/);
   assert.doesNotMatch(upload, /saveMasterProfile|confirmed:\s*true/);
+});
+
+test("draft preview exposes one explicit import-for-review action", () => {
+  assert.match(upload, /<ResumeProfileDraftImportForm draft=\{state\.draft\.value\}/);
+  assert.match(importForm, /Import draft for review/);
+  assert.match(importForm, /Review and confirm them individually/);
+  assert.doesNotMatch(importForm, /approved|confirmed:\s*true/i);
 });
 
 test("Resumes hub has explicit unavailable and persisted empty states", () => {

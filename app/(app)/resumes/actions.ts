@@ -1,5 +1,12 @@
 "use server";
 
+import { redirect } from "next/navigation";
+
+import {
+  INITIAL_MASTER_PROFILE_SAVE_STATE,
+  type MasterProfileSaveState,
+} from "@/lib/master-profile/types";
+import { getMasterProfile } from "@/lib/master-profile/queries";
 import {
   extractResumePdf,
   type ResumePdfExtractionResult,
@@ -8,8 +15,11 @@ import {
   generateResumeProfileDraft,
   type GenerateResumeProfileDraftResult,
 } from "@/lib/resumes/generate-resume-profile-draft";
+import { importResumeProfileDraft } from "@/lib/resumes/import-resume-profile-draft";
 import type { ResumeProfileDraftV1 } from "@/lib/resumes/resume-profile-draft-contract";
 import { getSupabaseUser } from "@/lib/supabase/user";
+
+import { saveMasterProfileAction } from "./master/actions";
 
 export type ResumePdfUploadState =
   | { status: "idle"; message: "" }
@@ -25,6 +35,10 @@ export type ResumePdfUploadState =
         | { status: "ready"; value: ResumeProfileDraftV1 }
         | { status: "unavailable"; message: string };
     };
+
+export type ResumeProfileDraftImportState =
+  | { status: "idle"; message: "" }
+  | { status: "error"; message: string };
 
 function isResumePdfFile(value: FormDataEntryValue | null): value is File {
   return Boolean(
@@ -122,4 +136,56 @@ export async function extractResumePdfAction(
             message: messageForDraftFailure(draftResult),
           },
   };
+}
+
+export async function importResumeProfileDraftAction(
+  _previousState: ResumeProfileDraftImportState,
+  formData: FormData,
+): Promise<ResumeProfileDraftImportState> {
+  const user = await getSupabaseUser();
+  if (!user) {
+    return {
+      status: "error",
+      message: "Your session has expired. Log in again before importing.",
+    };
+  }
+
+  const serializedDraft = formData.get("draft");
+  if (typeof serializedDraft !== "string" || serializedDraft.length > 100_000) {
+    return {
+      status: "error",
+      message: "The profile draft is invalid. Upload the resume again.",
+    };
+  }
+
+  let draft: unknown;
+  try {
+    draft = JSON.parse(serializedDraft);
+  } catch {
+    return {
+      status: "error",
+      message: "The profile draft is invalid. Upload the resume again.",
+    };
+  }
+
+  const result = await importResumeProfileDraft(
+    { id: user.id, email: user.email ?? "" },
+    draft,
+    {
+      loadProfile: getMasterProfile,
+      saveProfile: async (payload): Promise<MasterProfileSaveState> =>
+        saveMasterProfileAction(INITIAL_MASTER_PROFILE_SAVE_STATE, payload),
+    },
+  );
+  if (result.status !== "success") {
+    return {
+      status: "error",
+      message:
+        result.status === "invalid_draft"
+          ? "The profile draft is invalid. Upload the resume again."
+          : "The draft could not be imported. Your existing profile was not changed.",
+    };
+  }
+
+  redirect("/resumes/master");
 }

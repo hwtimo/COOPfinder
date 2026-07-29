@@ -50,3 +50,33 @@ export type ResumeProfileDraftV1 = Readonly<{
   projects: readonly ResumeProfileDraftEntry[];
   leadershipActivities: readonly ResumeProfileDraftEntry[];
 }>;
+
+const importedDraftEntrySchema = z
+  .object({
+    temporaryId: z.string().trim().min(1).max(120),
+    section: z.enum([
+      "experience",
+      "project",
+      "education",
+      "skills",
+      "certification",
+      "volunteer",
+    ]),
+    source: z.literal("Resume upload draft"),
+    text: z.string().trim().min(1).max(4_000),
+    skills: z.array(z.string().trim().min(1).max(100)).max(30),
+    confirmed: z.literal(false),
+    sortOrder: z.number().int().min(0).max(99),
+  })
+  .strict();
+
+export const resumeProfileDraftV1Schema = z
+  .object({
+    contractVersion: z.literal(RESUME_PROFILE_DRAFT_CONTRACT_VERSION),
+    skills: z.array(z.string().trim().min(1).max(100)).max(100),
+    education: z.array(importedDraftEntrySchema).max(20),
+    workExperience: z.array(importedDraftEntrySchema).max(30),
+    projects: z.array(importedDraftEntrySchema).max(30),
+    leadershipActivities: z.array(importedDraftEntrySchema).max(30),
+  })
+  .strict();

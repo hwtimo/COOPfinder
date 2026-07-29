@@ -8,6 +8,7 @@ import {
   type ResumePdfUploadState,
 } from "@/app/(app)/resumes/actions";
 import { CardSection } from "@/components/app/card-section";
+import { ResumeProfileDraftImportForm } from "@/components/resumes/resume-profile-draft-import-form";
 import { ResumeProfileDraftPreview } from "@/components/resumes/resume-profile-draft-preview";
 import { Button } from "@/components/ui/button";
 
@@ -91,7 +92,10 @@ export function ResumePdfUpload() {
               className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-5"
             />
             {state.draft.status === "ready" ? (
-              <ResumeProfileDraftPreview draft={state.draft.value} />
+              <>
+                <ResumeProfileDraftPreview draft={state.draft.value} />
+                <ResumeProfileDraftImportForm draft={state.draft.value} />
+              </>
             ) : (
               <p role="alert" className="text-sm text-destructive">
                 {state.draft.message}
