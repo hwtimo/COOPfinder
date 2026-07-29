@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createApplicationFromJob } from "@/lib/applications/create-from-job";
 import { deleteApplication } from "@/lib/applications/delete-application";
+import { getPreferredOwnedResumeVersionForJob } from "@/lib/applications/select-resume-version-for-job";
 import {
   isIsoCalendarDate,
   updateApplicationDeadline,
@@ -38,42 +39,11 @@ export type CreateApplicationActionResult = {
   applicationId?: string;
 };
 
-export async function createApplicationFromJobAction(
-  jobPostingId: unknown,
-  resumeVersionId?: unknown,
+async function finishApplicationCreation(
+  supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  jobPostingId: string,
+  resumeVersionId?: string,
 ): Promise<CreateApplicationActionResult> {
-  if (
-    typeof jobPostingId !== "string" ||
-    !isUuid(jobPostingId) ||
-    (resumeVersionId !== undefined &&
-      (typeof resumeVersionId !== "string" || !isUuid(resumeVersionId)))
-  ) {
-    return {
-      status: "invalid_input",
-      message: "Choose an available saved job before adding an application.",
-    };
-  }
-
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    return {
-      status: "unconfigured",
-      message: "Supabase is not configured. No application was created.",
-    };
-  }
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return {
-      status: "unauthenticated",
-      message: "Your session has expired. Log in again before continuing.",
-    };
-  }
-
   const result = await createApplicationFromJob(
     supabase,
     jobPostingId,
@@ -116,6 +86,98 @@ export async function createApplicationFromJobAction(
     message: "Application tracking started.",
     applicationId: result.applicationId,
   };
+}
+
+export async function createApplicationFromJobAction(
+  jobPostingId: unknown,
+  resumeVersionId?: unknown,
+): Promise<CreateApplicationActionResult> {
+  if (
+    typeof jobPostingId !== "string" ||
+    !isUuid(jobPostingId) ||
+    (resumeVersionId !== undefined &&
+      (typeof resumeVersionId !== "string" || !isUuid(resumeVersionId)))
+  ) {
+    return {
+      status: "invalid_input",
+      message: "Choose an available saved job before adding an application.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return {
+      status: "unconfigured",
+      message: "Supabase is not configured. No application was created.",
+    };
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      status: "unauthenticated",
+      message: "Your session has expired. Log in again before continuing.",
+    };
+  }
+
+  return finishApplicationCreation(
+    supabase,
+    jobPostingId,
+    resumeVersionId,
+  );
+}
+
+export async function createApplicationFromJobDetailAction(
+  jobPostingId: unknown,
+): Promise<CreateApplicationActionResult> {
+  if (typeof jobPostingId !== "string" || !isUuid(jobPostingId)) {
+    return {
+      status: "invalid_input",
+      message: "Choose an available saved job before adding an application.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return {
+      status: "unconfigured",
+      message: "Supabase is not configured. No application was created.",
+    };
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      status: "unauthenticated",
+      message: "Your session has expired. Log in again before continuing.",
+    };
+  }
+
+  const resumeSelection = await getPreferredOwnedResumeVersionForJob(
+    supabase,
+    user.id,
+    jobPostingId,
+  );
+  if (resumeSelection.status === "unavailable") {
+    return {
+      status: "error",
+      message: "The application could not be created. Nothing was added.",
+    };
+  }
+
+  return finishApplicationCreation(
+    supabase,
+    jobPostingId,
+    resumeSelection.resumeVersionId ?? undefined,
+  );
 }
 
 export type UpdateApplicationStatusActionResult = {

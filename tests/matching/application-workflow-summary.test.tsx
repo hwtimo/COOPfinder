@@ -87,6 +87,30 @@ test("untracked control is accessible and tracked control links to the applicati
   assert.match(tracked, /Open application/);
 });
 
+test("Job Detail tracking uses the tailored-version action and requested labels", () => {
+  const untracked = renderToStaticMarkup(
+    <ApplicationTrackingControl
+      jobId={JOB_ID}
+      application={null}
+      linkPreferredResumeVersion
+    />,
+  );
+  assert.match(untracked, />Track application</);
+
+  const tracked = renderToStaticMarkup(
+    <ApplicationTrackingControl
+      jobId={JOB_ID}
+      application={{
+        id: APPLICATION_ID,
+        jobPostingId: JOB_ID,
+        status: "saved",
+      }}
+      linkPreferredResumeVersion
+    />,
+  );
+  assert.match(tracked, /View application/);
+});
+
 test("workflow and tracking layouts remain one-column-first and responsive", () => {
   const workflow = renderToStaticMarkup(
     <ApplicationWorkflowSummary

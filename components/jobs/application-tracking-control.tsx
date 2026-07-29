@@ -4,7 +4,10 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, Loader2, Plus } from "lucide-react";
 import { useRef, useState } from "react";
 
-import { createApplicationFromJobAction } from "@/app/(app)/applications/actions";
+import {
+  createApplicationFromJobAction,
+  createApplicationFromJobDetailAction,
+} from "@/app/(app)/applications/actions";
 import { StatusBadge } from "@/components/app/status-badge";
 import { Button } from "@/components/ui/button";
 import type { ApplicationTrackingLink } from "@/lib/applications/types";
@@ -12,9 +15,11 @@ import type { ApplicationTrackingLink } from "@/lib/applications/types";
 export function ApplicationTrackingControl({
   jobId,
   application,
+  linkPreferredResumeVersion = false,
 }: {
   jobId: string;
   application: ApplicationTrackingLink | null | undefined;
+  linkPreferredResumeVersion?: boolean;
 }) {
   const submittingRef = useRef(false);
   const [pending, setPending] = useState(false);
@@ -41,7 +46,7 @@ export function ApplicationTrackingControl({
         </div>
         <Button asChild variant="outline" size="sm" className="h-8 self-start">
           <Link href={`/applications/${application.id}`}>
-            Open application
+            {linkPreferredResumeVersion ? "View application" : "Open application"}
             <ArrowRight className="size-3" aria-hidden />
           </Link>
         </Button>
@@ -55,7 +60,9 @@ export function ApplicationTrackingControl({
     setPending(true);
     setMessage(null);
     try {
-      const result = await createApplicationFromJobAction(jobId);
+      const result = linkPreferredResumeVersion
+        ? await createApplicationFromJobDetailAction(jobId)
+        : await createApplicationFromJobAction(jobId);
       if (
         (result.status === "created" || result.status === "already_exists") &&
         result.applicationId
@@ -84,7 +91,13 @@ export function ApplicationTrackingControl({
         ) : (
           <Plus className="size-3" aria-hidden />
         )}
-        {pending ? "Starting..." : "Start tracking"}
+        {pending
+          ? linkPreferredResumeVersion
+            ? "Tracking..."
+            : "Starting..."
+          : linkPreferredResumeVersion
+            ? "Track application"
+            : "Start tracking"}
       </Button>
       {message ? (
         <p

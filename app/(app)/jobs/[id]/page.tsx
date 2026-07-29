@@ -366,6 +366,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             <div className="space-y-5">
               <ApplicationTrackingControl
                 jobId={job.id}
+                linkPreferredResumeVersion
                 application={
                   applicationResult.status === "ready"
                     ? applicationResult.data
