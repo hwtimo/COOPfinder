@@ -1325,3 +1325,36 @@ Next.js webpack build, and both diff checks passed. No schema change, migration,
 AI/provider request, credit activity, date control, tracker redesign, or
 drag-and-drop was added. R2-6 remains unchecked pending later tracker slices
 and production verification.
+
+## R2-6D inline application dates
+
+Implementation commit `143869c65990a0c148a2a613ecdc28b4585794de`
+completes the bounded inline-date slice on Application Detail. The existing
+deadline and timezone-aware follow-up controls continue through their original
+atomic RPCs. A matching interview-date control supports set, change, and clear
+through a new owner-scoped atomic RPC. Reloaded Application Detail reads all
+three persisted values.
+
+Forward-only migration
+`20260729191227_add_application_interview_date.sql` adds only nullable
+`applications.interview_date date`, permits the new
+`interview_date_changed` timeline event type, and adds
+`update_application_interview_date(uuid,date)`. The function derives identity
+from `auth.uid()`, locks only the caller-owned application, returns unavailable
+for missing or foreign rows, and inserts one minimal previous/new-date event
+only for a real change. Equal values and repeated clears return unchanged
+before the event insert. PUBLIC and anon execution are revoked; authenticated
+execution is explicit.
+
+The migration is applied to the linked development project; all 35 local and
+remote migrations align. Scoped database verification passed for interview
+set, change, no-op, clear, owner isolation, exactly one event per real change,
+and cleanup. Deadline and follow-up set/change/clear contract tests also pass.
+No notes or private content enters date-event metadata.
+
+Focused application-date, status, ownership, timeline, workflow, and rendering
+tests passed 38/38. Lint, typecheck, production Next.js webpack build, and both
+diff checks passed. Existing status, notes, delete, and one-click advance
+controls remain present. No notifications, Calendar integration, AI/provider
+request, credit activity, tracker redesign, or drag-and-drop was added. R2-6
+remains unchecked pending production verification.

@@ -3793,6 +3793,45 @@ only when necessary to explain configuration; never record their values.
   verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await separate authorization for the next R2-6 slice.
 
+### R2-6D inline application dates
+
+- **Date and time:** 2026-07-29 (America/Vancouver)
+- **Development phase:** ROADMAP R2-6D
+- **Classification:** PASS for this bounded date-persistence slice
+- **Implementation:** Commit
+  `143869c65990a0c148a2a613ecdc28b4585794de` keeps the existing inline
+  application-deadline and follow-up controls and adds an inline interview-date
+  set/change/clear control. Application Detail reloads all three persisted
+  values while retaining status, notes, delete, and one-click advance.
+- **Persistence:** Deadline and follow-up continue through their existing
+  authenticated atomic RPCs. Forward-only migration
+  `20260729191227_add_application_interview_date.sql` adds nullable
+  `applications.interview_date date`, extends the constrained event-type set,
+  and adds `update_application_interview_date(uuid,date)`.
+- **Ownership and events:** The interview RPC derives the caller from
+  `auth.uid()`, locks the owned application row, and returns unavailable for a
+  missing or foreign row. A real set/change/clear inserts exactly one minimal
+  `interview_date_changed` event containing only previous/new calendar dates.
+  Equal values and repeated clears return unchanged before event insertion.
+  PUBLIC and anon execution are revoked; authenticated execution is explicit.
+- **Linked development verification:** The migration is applied and all 35
+  local and remote migrations align. Scoped verification passed for set,
+  change, no-op, clear, three events for three real changes, cross-user
+  unavailability, persisted value checks, and complete fixture cleanup.
+- **Verification:** Focused date, status, RPC, ownership, timeline, workflow,
+  and rendering tests passed 38/38. Lint, typecheck, production Next.js webpack
+  build, `git diff --check`, and `git diff --cached --check` passed.
+- **Scope:** No private notes or sensitive content enters event metadata. No
+  notifications, Calendar integration, AI/provider request, credit activity,
+  tracker redesign, or drag-and-drop was added or performed.
+- **ROADMAP state:** R2-6 remains incomplete and unchecked pending production
+  verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization to deploy and verify R2-6 in
+  production.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
