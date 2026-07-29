@@ -3485,6 +3485,41 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Await separate authorization before integrating the bounded
   transport with the saved-job preparation flow.
 
+### R2-4B persist successful bounded URL fetches
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-4B
+- **Classification:** PASS for this bounded implementation slice
+- **Implementation:** Commit
+  `6a819641d9219021d12d8fdd3b1a650f3d032fea` adds an authenticated Server
+  Action backed by a server-only fetch-and-persist coordinator. It accepts only
+  a private job ID, calls the R2-4A owner-scoped saved-URL transport once, and
+  never accepts a replacement URL from the client.
+- **Atomic persistence:** Successful text uses the shared manual-paste updater
+  in one conditional Supabase UPDATE. It sets `raw_text` and
+  `intake_source = 'pasted_text'` only when job ID, authenticated owner,
+  `pasted_url` state, and fetched `source_url` still match. The source URL,
+  existing extraction, and unrelated fields remain unchanged; no duplicate job
+  or `board_jobs` row is created.
+- **Failure boundary:** All typed URL transport failures collapse to the fixed
+  `manual_paste_required` result and perform zero writes. Unauthenticated,
+  missing/foreign, ownership-race, and persistence-unavailable cases retain
+  fixed non-sensitive outcomes. Fetched text never appears in the Server
+  Action result.
+- **Side-effect boundary:** No UI, Analyze, OpenAI/provider, parser-credit,
+  tailoring-credit, redirect following, retry, crawler, adapter, login-wall
+  bypass, or browser automation was added.
+- **Verification:** Focused persistence, transport, URL-intake, and
+  manual-transition tests passed 94/94. Lint, typecheck, production Next.js
+  webpack build, `git diff --check`, and `git diff --cached --check` passed.
+- **ROADMAP state:** R2-4 remains incomplete and unchecked pending later UI and
+  product-flow integration.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before exposing the bounded
+  URL-fetch action in the saved-job UI.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

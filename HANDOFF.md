@@ -1103,3 +1103,32 @@ Focused URL transport, intake, and manual-transition tests passed 88/88. Lint,
 typecheck, production Next.js webpack build, and both diff checks passed.
 R2-4 remains unchecked because no UI, persistence, or Analyze integration is
 included in R2-4A.
+
+## R2-4B persist successful bounded URL fetches
+
+Implementation commit `6a819641d9219021d12d8fdd3b1a650f3d032fea`
+adds an authenticated Server Action and server-only coordinator for an existing
+URL-only private job. The action accepts only the private job ID. R2-4A derives
+the saved `source_url` from the authenticated owner's row and is invoked
+exactly once; no alternate client URL is accepted.
+
+Only a successful bounded fetch reaches persistence. The existing manual-paste
+transition boundary now exposes its owner-scoped conditional updater for both
+paths. One Supabase UPDATE writes `raw_text` and changes `intake_source` from
+`pasted_url` to `pasted_text`, constrained by job ID, authenticated owner,
+current intake source, and the exact URL that was fetched. `source_url`,
+existing extraction, and all unrelated fields are omitted from the update and
+remain unchanged. No job or public-board row is inserted.
+
+Every redirect, blocked URL, timeout, size/content/HTTP/network failure, empty
+result, or unavailable source returns the single sanitized
+`manual_paste_required` state without obtaining a persistence context or
+performing a write. Authentication, ownership races, and persistence failures
+remain separate safe typed states. The action revalidates the jobs list and
+owned Job Detail only after a confirmed update.
+
+Focused transport, persistence, URL-intake, and manual-transition tests passed
+94/94. Lint, typecheck, the production Next.js webpack build, and both diff
+checks passed. No UI, Analyze, OpenAI/provider, parser-credit, tailoring-credit,
+redirect following, retry, crawling, adapter, or bypass behavior was added.
+R2-4 remains unchecked pending later UI and flow integration.
