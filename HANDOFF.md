@@ -990,3 +990,34 @@ unchanged. Focused extraction/upload tests passed 14/14, including a real
 build, and both diff checks passed. R2-3 remains unchecked because AI drafting
 and user confirmation are later slices; do not proceed without separate
 authorization.
+
+## R2-3B unpersisted Master Profile draft generation
+
+Implementation commit `b25e0e8fc22a94243b9349b3a4f90796b0e61cda`
+extends the authenticated PDF flow so a successful extraction is passed to one
+server-only OpenAI Responses request. Resume drafting has its own centralized
+`OPENAI_MODEL_RESUME_PROFILE_DRAFTING` setting, uses the existing live-provider
+kill switch and API-key boundary, sends no more than 30,000 extracted
+characters, sets `store: false`, uses zero retries, a 30-second timeout, and a
+4,096-token output cap.
+
+The strict `resume-profile-draft-v1` result supports education, general skills,
+work experience, projects, and leadership/activities only. The provider must
+copy entry text verbatim and may return only skills whose exact words occur in
+the extracted resume. Server orchestration validates every returned value
+against the extracted text, rejects the entire unsupported result, removes
+case-insensitive duplicates in stable order, and assigns `confirmed: false`
+itself. Provider output cannot supply confirmation state.
+
+The Resumes hub shows the result as a temporary review-required preview.
+Neither the PDF, extracted text, nor draft is persisted; no Master Profile
+entry, candidate evidence, approved resume fragment, database/Storage write,
+parser credit, tailoring credit, or migration is involved. Provider,
+validation, and configuration failures map to fixed browser-safe messages while
+the extracted-text preview remains available.
+
+Focused schema, provider, orchestration, PDF, diagnostics, legal-copy, and UI
+tests passed 50/50. Lint, typecheck, the production Next.js webpack build, and
+both diff checks passed. R2-3 remains unchecked because accepting or persisting
+reviewed draft entries is not part of R2-3B; do not continue without separate
+authorization.

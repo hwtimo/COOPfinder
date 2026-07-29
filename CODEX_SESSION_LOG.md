@@ -3337,6 +3337,43 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await separate authorization before the next R2-3 slice.
 
+### R2-3B unpersisted Master Profile draft generation
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-3B
+- **Classification:** PASS for this bounded implementation slice
+- **Implementation:** Commit
+  `b25e0e8fc22a94243b9349b3a4f90796b0e61cda` extends the authenticated PDF
+  extraction action into one temporary Master Profile drafting request and
+  renders its result on `/resumes` as review-required, unconfirmed content.
+- **Provider boundary:** Drafting uses the server-only Responses architecture,
+  existing `OPENAI_LIVE_PROVIDER_ENABLED` and `OPENAI_API_KEY` boundaries, and
+  a new centralized `OPENAI_MODEL_RESUME_PROFILE_DRAFTING` task setting. It
+  sends only extracted resume text, bounded to 30,000 characters, with
+  `store: false`, zero retries, a 30-second timeout, and 4,096 maximum output
+  tokens. No model is hardcoded and failures use the existing sanitized
+  diagnostic contract.
+- **Schema and trust boundary:** Strict versioned
+  `resume-profile-draft-v1` output supports education, skills, work experience,
+  projects, and leadership/activities. Unknown fields, including provider-set
+  confirmation state, are rejected. Server orchestration requires every entry
+  and skill to occur in the extracted resume text, deduplicates stably, and
+  assigns every entry `confirmed: false`.
+- **Persistence boundary:** The PDF, extracted text, and draft remain
+  unpersisted. No Master Profile save, evidence entry, approved resume fragment,
+  database/Storage write, parser or tailoring credit, schema migration, or OCR
+  path is used. The Privacy Policy now accurately discloses the bounded resume
+  text sent when a user requests this draft.
+- **Verification:** Focused schema, provider, orchestration, PDF, diagnostics,
+  legal-copy, and UI tests passed 50/50. Lint, typecheck, production Next.js
+  webpack build, `git diff --check`, and `git diff --cached --check` passed.
+- **ROADMAP state:** R2-3 remains incomplete and unchecked because reviewed
+  draft acceptance and persistence are not part of R2-3B.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before the next R2-3 slice.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
