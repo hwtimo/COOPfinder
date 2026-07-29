@@ -1132,3 +1132,35 @@ Focused transport, persistence, URL-intake, and manual-transition tests passed
 checks passed. No UI, Analyze, OpenAI/provider, parser-credit, tailoring-credit,
 redirect following, retry, crawling, adapter, or bypass behavior was added.
 R2-4 remains unchecked pending later UI and flow integration.
+
+## R2-4C URL-only Job Detail fetch and analyze
+
+Implementation commit `0139bfae407e3c27d8a1ebe887e415c4dd48f344`
+connects the R2-4A/R2-4B boundaries to owned URL-only Job Detail. A
+`pasted_url` job now shows one primary `Fetch and analyze` action alongside the
+existing manual-paste fallback, whose save button is secondary.
+
+One submission calls the existing owner-scoped bounded fetch-and-persist
+orchestrator once. Only its confirmed success invokes the unchanged
+credit-enforced Analyze handler once. Fetch failures return before Analyze, so
+they perform no provider, parser reservation, or credit call. Blocked URLs,
+redirects, timeouts, oversized or unsupported content, HTTP/network failures,
+empty text, and unavailable transport use fixed reason-specific copy, retain
+manual paste, and explicitly state that no parser credit was used.
+
+After successful fetch persistence, existing analysis outcomes remain
+authoritative. Credit limits and provider, validation, and persistence failures
+reuse existing sanitized Analyze messages. The fetched private description
+remains saved and the UI disables another fetch, offering only a refresh into
+the normal pasted-text Analyze state. Existing parser reservation refund and
+finalization behavior is unchanged.
+
+The client runner rejects duplicate in-flight submission, and the button is
+disabled while pending. No redirect following, retry, crawling, adapter,
+CAPTCHA/login-wall bypass, alternate URL, public-board exposure, or duplicated
+fetch/parser/credit implementation was added.
+
+Focused orchestration, UI, transport, persistence, parser-credit, Analyze, and
+Profile Match tests passed 186/186. Lint, typecheck, production Next.js webpack
+build, and both diff checks passed. R2-4 remains unchecked pending production
+verification.

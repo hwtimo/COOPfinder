@@ -3520,6 +3520,48 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Await separate authorization before exposing the bounded
   URL-fetch action in the saved-job UI.
 
+### R2-4C URL-only Job Detail fetch and analyze
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-4C
+- **Classification:** PASS for this bounded implementation slice
+- **Implementation:** Commit
+  `0139bfae407e3c27d8a1ebe887e415c4dd48f344` adds one primary
+  `Fetch and analyze` control to an owned `pasted_url` Job Detail. The existing
+  manual-paste form remains available as a secondary fallback.
+- **Orchestration:** One click invokes the R2-4B bounded fetch-and-persist
+  coordinator once. Only success invokes the existing credit-enforced Analyze
+  handler once. No fetch, persistence, parser reservation, credit, or provider
+  logic is duplicated.
+- **Failure and credit boundary:** Blocked URLs, redirects, timeout, oversized
+  or unsupported content, HTTP/network failures, empty text, and unavailable
+  transport return fixed manual-paste guidance before Analyze and explicitly
+  confirm that no parser credit was used. Credit-limit and analysis failures
+  reuse existing safe Analyze feedback.
+- **Persistence and refund behavior:** After a successful fetch, the private
+  text and `pasted_text` transition remain saved even if Analyze fails.
+  Existing extraction and `source_url` remain unchanged by the fetch update.
+  Existing parser-credit reservation, refund, and finalization behavior is
+  unchanged and covered by its regression tests.
+- **Duplicate prevention:** The client runner ignores an in-flight duplicate,
+  disables the primary button while pending, and permanently disables re-fetch
+  after text was saved. A failed analysis offers refresh into the existing
+  pasted-text Analyze state rather than another URL request.
+- **Scope boundary:** No redirect following, retry, crawling, adapter,
+  CAPTCHA/login-wall bypass, alternate client URL, public-board exposure, or
+  other ROADMAP work was added.
+- **Verification:** Focused orchestration, UI, transport, persistence,
+  parser-credit, Analyze, and Profile Match tests passed 186/186. Lint,
+  typecheck, production Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **ROADMAP state:** R2-4 remains incomplete and unchecked pending production
+  verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization to deploy and verify the
+  bounded URL fetch-and-analyze flow in production.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
