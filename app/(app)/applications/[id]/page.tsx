@@ -34,6 +34,7 @@ import { ApplicationDeadlineForm } from "./application-deadline-form";
 import { ApplicationDeleteControl } from "./application-delete-control";
 import { ApplicationFollowUpForm } from "./application-follow-up-form";
 import { ApplicationNotesForm } from "./application-notes-form";
+import { ApplicationStatusAdvance } from "./application-status-advance";
 import { ApplicationStatusForm } from "./application-status-form";
 
 export const dynamic = "force-dynamic";
@@ -449,6 +450,10 @@ export default async function ApplicationDetailPage({
                   <StatusBadge status={application.status} />
                 </div>
               </div>
+              <ApplicationStatusAdvance
+                applicationId={application.id}
+                currentStatus={application.status}
+              />
               <ApplicationStatusForm
                 applicationId={application.id}
                 currentStatus={application.status}

@@ -21,6 +21,24 @@ export function isApplicationTrackerStatus(
   return typeof value === "string" && applicationTrackerStatuses.has(value);
 }
 
+const nextApplicationTrackerStatus: Readonly<
+  Record<ApplicationTrackerStatus, ApplicationTrackerStatus | null>
+> = {
+  saved: "tailoring",
+  tailoring: "ready",
+  ready: "applied",
+  applied: "interview",
+  interview: "offer",
+  offer: null,
+  rejected: null,
+};
+
+export function getNextApplicationTrackerStatus(
+  status: ApplicationTrackerStatus,
+): ApplicationTrackerStatus | null {
+  return nextApplicationTrackerStatus[status];
+}
+
 export type ApplicationJobSummary = {
   id: string;
   title: string;
