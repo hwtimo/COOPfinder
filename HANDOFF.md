@@ -1271,3 +1271,33 @@ Disposable fixture counts returned to zero. Focused tests passed 39/39; lint,
 typecheck, production Next.js webpack build, and both diff checks passed. No
 AI/provider, credit, status, date, or UI behavior was added. R2-6 remains
 unchecked pending later tracker slices and production verification.
+
+## R2-6B one-click Job Detail application tracking
+
+Implementation commit `6aff6c306f03a5f65c92534e0acdda4a3cd6a200`
+connects owned Job Detail to the R2-6A atomic creation boundary. An untracked
+job shows `Track application`; one submission selects an eligible owned
+tailored-resume version, creates the application and initial timeline event
+through the existing RPC, and opens the application detail. A tracked job
+shows `View application` and creates nothing.
+
+Selection performs one owner- and job-scoped resume-version query at click
+time. It considers only structurally valid persisted v2 generated originals
+and valid user-authored children whose generated parent is present for the
+same job. The newest eligible version wins; an edited child wins an exact
+timestamp tie with its generated parent, followed by a stable ID tie-break.
+When no version is eligible, the application is created unlinked. The R2-6A
+RPC remains the final ownership, same-job, concurrency, idempotency, and
+atomicity boundary.
+
+The client retains its synchronous submission guard and pending disabled
+state, so duplicate in-flight clicks converge on the existing one-application
+RPC behavior. Matching-card tracking retains its prior labels and unlinked
+creation behavior; this slice changes only Job Detail. No migration,
+AI/provider request, credit use, automatic status change, date UI, or redesign
+was added.
+
+Focused selection, application persistence, workflow, and rendering tests
+passed 35/35. Lint, typecheck, production Next.js webpack build, and both diff
+checks passed. R2-6 remains unchecked pending later tracker slices and
+production verification.

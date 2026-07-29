@@ -3721,6 +3721,42 @@ only when necessary to explain configuration; never record their values.
   verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await separate authorization for the next R2-6 slice.
 
+### R2-6B one-click Job Detail application tracking
+
+- **Date and time:** 2026-07-29 (America/Vancouver)
+- **Development phase:** ROADMAP R2-6B
+- **Classification:** PASS for this bounded UI/orchestration slice
+- **Implementation:** Commit
+  `6aff6c306f03a5f65c92534e0acdda4a3cd6a200` adds `Track application` to
+  untracked owned Job Detail and `View application` for an existing tracker
+  row. Successful creation redirects to the existing application detail.
+- **Resume selection:** One query filters immutable resume versions by the
+  authenticated owner and current private job. Only valid generated v2
+  originals and valid user-authored children linked to an available generated
+  parent are eligible. The newest eligible version wins; a user-authored child
+  wins an exact created-time tie, followed by a stable ID tie-break. No
+  eligible version produces the backward-compatible unlinked application.
+- **Persistence and isolation:** The action reuses the R2-6A atomic RPC, which
+  remains the final owner/same-job validation boundary and preserves one
+  application per job, concurrent idempotency, and the single initial timeline
+  event. Foreign, mismatched, malformed, and unavailable versions never link.
+- **Submission behavior:** A synchronous client ref plus the pending disabled
+  state prevents duplicate in-flight submissions. Existing applications are
+  linked directly and do not call creation.
+- **Scope:** Matching-card tracking retains its existing behavior. No schema
+  change, migration, AI/provider request, credit activity, automatic status
+  mutation, date UI, or redesign was added or performed.
+- **Verification:** Focused application persistence, resume selection,
+  workflow, and rendering tests passed 35/35. Lint, typecheck, production
+  Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **ROADMAP state:** R2-6 remains incomplete and unchecked pending subsequent
+  slices and production verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization for the next R2-6 slice.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
