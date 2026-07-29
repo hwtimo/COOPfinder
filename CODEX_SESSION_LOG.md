@@ -3649,6 +3649,38 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Await separate authorization to deploy and verify generated
   original editing, child persistence, reload, and Print/PDF in production.
 
+### R2-5 production save fix and completion
+
+- **Date and time:** 2026-07-29 (America/Vancouver)
+- **Development phase:** ROADMAP R2-5 completion
+- **Classification:** PASS
+- **Confirmed root cause:** The tailored-resume Server Action module exported
+  a runtime initial-state object alongside its async action. Next.js rejected
+  the `"use server"` module during production loading before validation,
+  owner lookup, or child insertion.
+- **Fix:** Implementation commit
+  `25897dc2992a8a4db1a0d1c1fc2c7281701b8943` keeps only async runtime exports
+  in the action module and defines the initial form state in the client editor.
+  A focused regression assertion protects the Server Action export boundary.
+- **Preserved boundaries:** The generated parent remains immutable;
+  authorization remains request-bound and owner-derived; a successful save
+  creates one atomic `user_authored` child linked to its parent; Print/PDF uses
+  the opened persisted version; no provider/OpenAI or credit path is involved.
+- **Verification:** Focused tests passed 26/26. Lint, typecheck, production
+  Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed. The exact implementation revision was
+  deployed to `internshipbc.dev`.
+- **Production result:** Editing, removal, reordering, save, child reload,
+  parent immutability, version labels, and child Print/PDF all passed.
+  Reservation, event, ledger, and credit-balance counts were unchanged.
+- **Cleanup:** The temporary generated parent and its child were deleted;
+  remaining scoped fixture-version count returned to zero.
+- **ROADMAP state:** R2-5 is complete and checked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await a separately authorized R2-6 task.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

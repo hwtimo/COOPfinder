@@ -1221,3 +1221,24 @@ request, credit use, schema change, parent update, or redesign was added.
 Focused editor, persistence, owner-loader, migration, and review tests passed
 26/26. Lint, typecheck, production Next.js webpack build, and both diff checks
 passed. R2-5 remains unchecked pending production deployment and verification.
+
+## R2-5 production completion
+
+Production initially rejected edited-version saves before validation or
+persistence because the `"use server"` action module exported a runtime state
+object. Next.js permits only async function exports from such modules.
+Implementation commit `25897dc2992a8a4db1a0d1c1fc2c7281701b8943`
+moves the initial form state to the client editor while leaving the Server
+Action contract and owner-scoped persistence boundary unchanged.
+
+The exact revision was deployed to `internshipbc.dev`. Production verification
+confirmed bullet editing, removal, and reordering; creation and reload of a
+linked `user_authored` child; an unchanged generated parent; accurate generated
+and user-edited labels; and Print/PDF from the opened child document. Database
+before/after checks confirmed no provider request, credit balance change,
+reservation, reservation event, or ledger event. Temporary parent and child
+fixtures were deleted and scoped fixture counts returned to zero.
+
+The focused regression and rendering suites passed 26/26. Lint, typecheck,
+production Next.js webpack build, and both diff checks passed. R2-5 is complete
+and checked.
