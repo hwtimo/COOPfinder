@@ -33,6 +33,7 @@ import { getSupabaseUser } from "@/lib/supabase/user";
 import { ApplicationDeadlineForm } from "./application-deadline-form";
 import { ApplicationDeleteControl } from "./application-delete-control";
 import { ApplicationFollowUpForm } from "./application-follow-up-form";
+import { ApplicationInterviewDateForm } from "./application-interview-date-form";
 import { ApplicationNotesForm } from "./application-notes-form";
 import { ApplicationStatusAdvance } from "./application-status-advance";
 import { ApplicationStatusForm } from "./application-status-form";
@@ -48,6 +49,7 @@ const eventLabels: Record<string, string> = {
   status_changed: "Status changed",
   note_updated: "Notes updated",
   deadline_changed: "Deadline updated",
+  interview_date_changed: "Interview date updated",
   follow_up_changed: "Follow-up updated",
   marked_applied: "Marked as applied",
   activity: "Application activity",
@@ -131,7 +133,11 @@ function metadataStatus(
 
 function metadataDeadline(
   metadata: Record<string, unknown>,
-  key: "previous_deadline" | "new_deadline",
+  key:
+    | "previous_deadline"
+    | "new_deadline"
+    | "previous_interview_date"
+    | "new_interview_date",
 ): string | null | undefined {
   if (!Object.hasOwn(metadata, key)) return undefined;
 
@@ -215,6 +221,27 @@ function eventDetail(event: ApplicationTimelineEvent): string {
         return `Follow-up changed from ${formatDateTime(previous, "a saved time")} to ${formatDateTime(next, "a saved time")}.`;
       }
       return "The follow-up schedule was updated.";
+    }
+    case "interview_date_changed": {
+      const previous = metadataDeadline(
+        event.metadata,
+        "previous_interview_date",
+      );
+      const next = metadataDeadline(event.metadata, "new_interview_date");
+
+      if (previous === undefined || next === undefined) {
+        return "The interview date was updated.";
+      }
+      if (previous === null && next !== null) {
+        return `Interview set for ${formatDate(next, "a saved date")}.`;
+      }
+      if (previous !== null && next === null) {
+        return `Interview date cleared; previously ${formatDate(previous, "a saved date")}.`;
+      }
+      if (previous !== null && next !== null) {
+        return `Interview changed from ${formatDate(previous, "a saved date")} to ${formatDate(next, "a saved date")}.`;
+      }
+      return "The interview date was updated.";
     }
     case "marked_applied":
       return "The application was marked as applied.";
@@ -367,6 +394,12 @@ export default async function ApplicationDetailPage({
               <DetailItem label="Deadline">
                 {formatDate(deadlineDate, "No deadline")}
               </DetailItem>
+              <DetailItem label="Interview">
+                {formatDate(
+                  application.interviewDate,
+                  "No interview scheduled",
+                )}
+              </DetailItem>
               <DetailItem label="Follow-up">
                 {formatDateTime(
                   application.followUpDue,
@@ -461,6 +494,10 @@ export default async function ApplicationDetailPage({
               <ApplicationDeadlineForm
                 applicationId={application.id}
                 initialDeadline={dateOnly(application.deadline)}
+              />
+              <ApplicationInterviewDateForm
+                applicationId={application.id}
+                initialInterviewDate={application.interviewDate}
               />
               <ApplicationFollowUpForm
                 applicationId={application.id}

@@ -14,6 +14,7 @@ import {
   isIsoTimestampWithTimezone,
   updateApplicationFollowUp,
 } from "@/lib/applications/update-follow-up";
+import { updateApplicationInterviewDate } from "@/lib/applications/update-interview-date";
 import {
   APPLICATION_NOTES_MAX_LENGTH,
   updateApplicationNotes,
@@ -470,6 +471,113 @@ export async function updateApplicationDeadlineAction(
         : "Application deadline saved.",
     applicationId: result.applicationId,
     deadline: result.deadline,
+  };
+}
+
+export type UpdateApplicationInterviewDateActionResult = {
+  status:
+    | "updated"
+    | "unchanged"
+    | "unavailable"
+    | "invalid_input"
+    | "unconfigured"
+    | "unauthenticated"
+    | "error";
+  message: string;
+  applicationId?: string;
+  interviewDate?: string | null;
+};
+
+export async function updateApplicationInterviewDateAction(
+  applicationId: unknown,
+  interviewDate: unknown,
+): Promise<UpdateApplicationInterviewDateActionResult> {
+  if (typeof applicationId !== "string" || !isUuid(applicationId)) {
+    return {
+      status: "invalid_input",
+      message: "Choose a valid application before saving an interview date.",
+    };
+  }
+
+  if (
+    typeof interviewDate !== "string" ||
+    (interviewDate !== "" && !isIsoCalendarDate(interviewDate))
+  ) {
+    return {
+      status: "invalid_input",
+      message:
+        "Enter a valid calendar date in YYYY-MM-DD format, or clear the field.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return {
+      status: "unconfigured",
+      message: "Supabase is not configured. The interview date was not changed.",
+    };
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      status: "unauthenticated",
+      message: "Your session has expired. Log in again before continuing.",
+    };
+  }
+
+  const result = await updateApplicationInterviewDate(
+    supabase,
+    applicationId,
+    interviewDate === "" ? null : interviewDate,
+  );
+
+  if (result.status === "unavailable") {
+    return {
+      status: "unavailable",
+      message: "This application is unavailable or is not owned by your account.",
+    };
+  }
+
+  if (result.status === "unexpected") {
+    console.error("Application interview date RPC failed", {
+      code: result.errorCode ?? "invalid_response",
+    });
+    return {
+      status: "error",
+      message:
+        "The application interview date could not be saved. Nothing was changed.",
+    };
+  }
+
+  revalidatePath("/applications");
+  revalidatePath(`/applications/${applicationId}`);
+  refresh();
+
+  if (result.status === "unchanged") {
+    return {
+      status: "unchanged",
+      message:
+        result.interviewDate === null
+          ? "This application interview date is already clear."
+          : "This application interview date is already saved.",
+      applicationId: result.applicationId,
+      interviewDate: result.interviewDate,
+    };
+  }
+
+  return {
+    status: "updated",
+    message:
+      result.interviewDate === null
+        ? "Application interview date cleared."
+        : "Application interview date saved.",
+    applicationId: result.applicationId,
+    interviewDate: result.interviewDate,
   };
 }
 

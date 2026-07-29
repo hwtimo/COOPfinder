@@ -83,6 +83,7 @@ type ApplicationDetailRow = {
   status: string;
   notes: string | null;
   deadline: string | null;
+  interview_date: string | null;
   follow_up_due: string | null;
   applied_at: string | null;
   created_at: string;
@@ -300,7 +301,7 @@ export async function getApplicationDetail(
   const applicationResult = await supabase
     .from("applications")
     .select(
-      "id,job_posting_id,status,notes,deadline,follow_up_due,applied_at,created_at,updated_at",
+      "id,job_posting_id,status,notes,deadline,interview_date,follow_up_due,applied_at,created_at,updated_at",
     )
     .eq("id", applicationId)
     .eq("user_id", userId)
@@ -356,6 +357,7 @@ export async function getApplicationDetail(
     status: application.status,
     notes: application.notes,
     deadline: application.deadline,
+    interviewDate: application.interview_date,
     followUpDue: application.follow_up_due,
     appliedAt: application.applied_at,
     createdAt: application.created_at,

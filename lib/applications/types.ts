@@ -107,6 +107,7 @@ export type ApplicationDetail = {
   status: ApplicationTrackerStatus;
   notes: string | null;
   deadline: string | null;
+  interviewDate: string | null;
   followUpDue: string | null;
   appliedAt: string | null;
   createdAt: string;
