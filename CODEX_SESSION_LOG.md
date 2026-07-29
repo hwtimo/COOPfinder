@@ -3307,6 +3307,36 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await separate authorization before starting R2-3.
 
+### R2-3A resume PDF upload and deterministic text extraction
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-3A
+- **Classification:** PASS for this bounded implementation slice
+- **Implementation:** Commit
+  `b427f60d9145816ea08d4a2f0df856b0965ca1ca` enables the existing Resumes
+  upload surface and adds an authenticated Server Action backed by `unpdf`.
+  Selectable PDF text is normalized deterministically and returned to a
+  read-only temporary preview.
+- **Validation boundaries:** PDF MIME type, `.pdf` extension, `%PDF-`
+  signature, nonzero size, 5 MB file size, 25-page count, 10-second parsing
+  timeout, bounded image allocation, and 100,000 extracted characters are
+  enforced. Empty/scanned, encrypted, malformed, unreadable, and oversized
+  inputs receive fixed honest messages; no OCR is attempted.
+- **Persistence and trust boundary:** Neither the PDF nor extracted text is
+  stored. No database, Storage, provider, OpenAI, Master Profile save, evidence
+  creation, or confirmation path is called. Existing profile data and trust
+  boundaries are unchanged.
+- **Verification:** Focused extraction/upload tests passed 14/14, including
+  actual `unpdf` extraction from a selectable-text PDF fixture. Lint,
+  typecheck, production Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **ROADMAP state:** R2-3 remains incomplete and unchecked because profile
+  drafting and entry-by-entry confirmation are not part of R2-3A.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before the next R2-3 slice.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

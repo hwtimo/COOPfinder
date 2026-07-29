@@ -967,3 +967,26 @@ shows count-only Profile Match groups (`2 of 2 found`, `0 of 1 found`), and
 and all smoke-only job/company data were deleted; scoped counts returned to
 zero. R2-2 is complete and checked; do not start R2-3 without separate
 authorization.
+
+## R2-3A resume PDF upload and deterministic extraction
+
+Implementation commit `b427f60d9145816ea08d4a2f0df856b0965ca1ca`
+enables authenticated PDF upload from the existing Resumes hub and extracts
+selectable text server-side with `unpdf`. The upload is limited to PDF files up
+to 5 MB and 25 pages; the Server Action request limit is 6 MB to accommodate
+multipart overhead. Parsing has a 10-second timeout, a bounded image allocation,
+and a 100,000-character extracted-text limit.
+
+Invalid, empty, oversized, encrypted, malformed, unreadable, and scanned or
+image-only PDFs return fixed honest messages. OCR is not performed. Successful
+text is normalized deterministically and returned only to a read-only browser
+preview that explicitly states the PDF and text were not saved.
+
+The action re-authenticates the request. It performs no storage upload, database
+write, OpenAI/provider call, profile drafting, evidence creation, or confirmation
+change, so existing Master Profile persistence and trust boundaries remain
+unchanged. Focused extraction/upload tests passed 14/14, including a real
+`unpdf` selectable-text fixture. Lint, typecheck, the production Next.js webpack
+build, and both diff checks passed. R2-3 remains unchecked because AI drafting
+and user confirmation are later slices; do not proceed without separate
+authorization.
