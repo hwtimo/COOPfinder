@@ -1405,3 +1405,32 @@ the production Next.js webpack build, `git diff --check`, and
 `git diff --cached --check` passed. No schema, migration, provider path,
 credit policy, Generate UX, or unrelated design work changed. R2-7 remains
 unchecked pending its remaining slice and production verification.
+
+## R2-7B tailored-resume Generate status UX
+
+Implementation commit `d09b5f4ec02312bf9e9e1654dac1ac80506ad68c`
+replaces the bare Generate pending state with an ordered, truthful three-step
+status surface. The in-flight button is disabled, a synchronous client guard
+blocks duplicate dispatch, and the UI explicitly says that an already-running
+generation will not use another credit. The existing idempotency key and
+trusted reservation RPC remain the concurrent server boundary.
+
+The generation coordinator now carries an explicit sanitized credit result:
+`used`, `not_used`, `refunded`, or `refund_unavailable`. Preflight,
+no-credit, rate-limit, and duplicate/in-progress outcomes report no credit
+used. Provider, validation, document-building, and persistence failures report
+a refund only when the trusted refund result confirms it. An unavailable
+reservation, finalization, or refund result reports that refund status is
+unavailable and never infers success.
+
+Generated originals still use the existing provider-safe input, validation,
+immutable document construction, and atomic finalization path. A confirmed
+failure finalizes no resume version and no debit; successful generation and
+completed replay still open the existing immutable version. Reservation IDs,
+provider details, prompts, and internal errors remain server-only.
+
+Focused Generate action, UI, reservation, refund, provider-contract, and
+atomic-document tests passed 52/52. Lint, typecheck, the production Next.js
+webpack build, `git diff --check`, and `git diff --cached --check` passed. No
+schema, migration, Analyze UX, reservation policy, persistence contract, or
+redesign changed. R2-7 remains unchecked pending production verification.

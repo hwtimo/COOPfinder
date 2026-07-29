@@ -3899,6 +3899,42 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Await separate authorization for the remaining R2-7 work
   and production verification.
 
+### R2-7B tailored-resume Generate status UX
+
+- **Date and time:** 2026-07-29 (America/Vancouver)
+- **Development phase:** ROADMAP R2-7B
+- **Classification:** PASS for this bounded Generate status slice
+- **Implementation:** Commit
+  `d09b5f4ec02312bf9e9e1654dac1ac80506ad68c` adds an ordered three-step
+  Generate pending surface, disables duplicate submission, adds a synchronous
+  client dispatch guard, and explains that an already-running request will
+  not use another credit.
+- **Credit truth:** The existing generation coordinator now returns only the
+  sanitized explicit outcomes `used`, `not_used`, `refunded`, or
+  `refund_unavailable`. Pre-reservation failures and duplicate/in-progress
+  requests report no credit used. Post-reservation failures report refunded
+  only after the trusted refund RPC confirms `refunded`, `already_refunded`,
+  or `expired`; uncertain reservation/finalization/refund outcomes never claim
+  a refund.
+- **Persistence:** Confirmed failed provider, validation, document, or
+  persistence paths create no resume version and no credit debit. Successful
+  generation and replay retain the existing atomic immutable-version and
+  idempotency paths. Reservation identifiers, provider details, prompts, and
+  internal errors remain server-only.
+- **Verification:** Focused Generate action, UI, reservation, refund,
+  provider-contract, and atomic-document tests passed 52/52. Lint, typecheck,
+  production Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **Scope:** No schema, migration, Analyze UX, reservation policy, provider
+  contract, persistence contract, or redesign was added or changed.
+- **ROADMAP state:** R2-7 remains incomplete and unchecked pending production
+  verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization to deploy and verify R2-7 in
+  production.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
