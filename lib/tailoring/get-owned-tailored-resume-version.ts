@@ -10,9 +10,11 @@ import {
 } from "./tailoring-generated-content";
 import {
   buildTailoredResumeDocumentReviewViewModel,
+  buildTailoredResumeDocumentReviewViewModelFromDocument,
   parseTailoredResumeVersionContent,
   type TailoredResumeDocumentReviewViewModel,
 } from "./tailored-resume-version-content";
+import { parseUserEditedTailoredResumeVersionContent } from "./user-edited-tailored-resume-version";
 
 type ResumeVersionRow = Readonly<{
   id: string;
@@ -102,6 +104,20 @@ export function createGetOwnedTailoredResumeVersionLoader(
         versionName: lookup.version.name,
         review: buildTailoredResumeDocumentReviewViewModel(
           documentContent.content,
+        ),
+      };
+    }
+
+    const userEditedContent = parseUserEditedTailoredResumeVersionContent(
+      lookup.version.content,
+    );
+    if (userEditedContent.status === "valid") {
+      return {
+        status: "ready",
+        resumeVersionId: lookup.version.id,
+        versionName: lookup.version.name,
+        review: buildTailoredResumeDocumentReviewViewModelFromDocument(
+          userEditedContent.content.document,
         ),
       };
     }

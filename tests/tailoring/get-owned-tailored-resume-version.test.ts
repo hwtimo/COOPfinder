@@ -6,6 +6,10 @@ import { buildTailoringProviderInputV2 } from "../../lib/tailoring/build-tailori
 import { createGetOwnedTailoredResumeVersionLoader } from "../../lib/tailoring/get-owned-tailored-resume-version";
 import { buildTailoredResumeDocument } from "../../lib/tailoring/tailored-resume-document";
 import { buildTailoredResumeVersionContent } from "../../lib/tailoring/tailored-resume-version-content";
+import {
+  buildUserEditedTailoredResumeVersion,
+  USER_EDITED_TAILORED_RESUME_INPUT_CONTRACT_VERSION,
+} from "../../lib/tailoring/user-edited-tailored-resume-version";
 import { buildTailoringGeneratedContent } from "../../lib/tailoring/tailoring-generated-content";
 import {
   immutableTailoringProviderInput,
@@ -113,6 +117,47 @@ test("existing v1 generated content remains readable", async () => {
   assert.equal(result.status, "ready");
   if (result.status !== "ready" || !("summaryEvidence" in result.review)) return;
   assert.equal(result.review.summaryEvidence[0].term, "TypeScript");
+});
+
+test("user-authored child content remains readable through the immutable review loader", async () => {
+  const edited = buildUserEditedTailoredResumeVersion(
+    VERSION_ID,
+    v2Content(),
+    {
+      contractVersion: USER_EDITED_TAILORED_RESUME_INPUT_CONTRACT_VERSION,
+      entries: [
+        {
+          entryId: "entry_001",
+          bullets: [
+            {
+              fragmentId: "fragment_001_001",
+              text: "User-authored wording.",
+            },
+          ],
+        },
+      ],
+    },
+  );
+  assert.equal(edited.status, "success");
+  if (edited.status !== "success") return;
+  const result = await harness({
+    row: {
+      id: VERSION_ID,
+      name: "Product Developer - tailored v2 - edited",
+      content: edited.content,
+      jobPostingId: JOB_ID,
+    },
+  }).loader(VERSION_ID);
+  assert.equal(result.status, "ready");
+  if (result.status !== "ready" || !("identity" in result.review)) return;
+  assert.deepEqual(
+    result.review.sections.flatMap((section) =>
+      section.entries.flatMap((entry) =>
+        entry.bullets.map((bullet) => bullet.text),
+      ),
+    ),
+    ["User-authored wording."],
+  );
 });
 
 test("foreign, missing, detached-job, and malformed IDs share safe not-found behavior", async () => {

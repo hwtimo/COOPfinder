@@ -249,10 +249,18 @@ export type TailoredResumeDocumentReviewViewModel = Readonly<{
 export function buildTailoredResumeDocumentReviewViewModel(
   content: TailoredResumeVersionContentV2,
 ): TailoredResumeDocumentReviewViewModel {
+  return buildTailoredResumeDocumentReviewViewModelFromDocument(
+    content.document,
+  );
+}
+
+export function buildTailoredResumeDocumentReviewViewModelFromDocument(
+  document: TailoredResumeDocumentV1,
+): TailoredResumeDocumentReviewViewModel {
   return {
-    identity: { ...content.document.identity },
-    education: { ...content.document.education },
-    sections: content.document.sections.map((section) => ({
+    identity: { ...document.identity },
+    education: { ...document.education },
+    sections: document.sections.map((section) => ({
       type: section.type,
       entries: section.entries.map((entry) => ({
         heading: entry.heading,
