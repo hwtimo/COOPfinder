@@ -40,8 +40,14 @@ export type CreateApplicationActionResult = {
 
 export async function createApplicationFromJobAction(
   jobPostingId: unknown,
+  resumeVersionId?: unknown,
 ): Promise<CreateApplicationActionResult> {
-  if (typeof jobPostingId !== "string" || !isUuid(jobPostingId)) {
+  if (
+    typeof jobPostingId !== "string" ||
+    !isUuid(jobPostingId) ||
+    (resumeVersionId !== undefined &&
+      (typeof resumeVersionId !== "string" || !isUuid(resumeVersionId)))
+  ) {
     return {
       status: "invalid_input",
       message: "Choose an available saved job before adding an application.",
@@ -68,7 +74,11 @@ export async function createApplicationFromJobAction(
     };
   }
 
-  const result = await createApplicationFromJob(supabase, jobPostingId);
+  const result = await createApplicationFromJob(
+    supabase,
+    jobPostingId,
+    resumeVersionId,
+  );
 
   if (result.status === "unavailable") {
     return {

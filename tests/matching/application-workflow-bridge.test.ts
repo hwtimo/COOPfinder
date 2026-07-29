@@ -261,7 +261,10 @@ test("existing application creation path preserves created and idempotent result
       async rpc(name: string, args: Record<string, unknown>) {
         rpcCalls += 1;
         assert.equal(name, "create_application_from_job");
-        assert.deepEqual(args, { p_job_posting_id: JOB_ID });
+        assert.deepEqual(args, {
+          p_job_posting_id: JOB_ID,
+          p_resume_version_id: null,
+        });
         return {
           data: { result_status: status, application_id: VERSION_ID },
           error: null,
