@@ -1434,3 +1434,30 @@ atomic-document tests passed 52/52. Lint, typecheck, the production Next.js
 webpack build, `git diff --check`, and `git diff --cached --check` passed. No
 schema, migration, Analyze UX, reservation policy, persistence contract, or
 redesign changed. R2-7 remains unchecked pending production verification.
+
+## R2-7 production completion
+
+Clean `main` was pushed and Vercel deployed exact revision
+`e75617c04659c9e29c926615bfa2a17485911ad7` to `internshipbc.dev`.
+
+Production verification confirmed the ordered three-step pending surfaces for
+both Analyze and Generate. Each in-flight control was disabled and explicitly
+stated that another credit would not be used. Analyze completed successfully,
+displayed its persisted result and one-credit outcome, and a subsequent
+no-credit Analyze Again reported the sanitized reason plus `No analysis credit
+was used.` while leaving the prior extraction and Profile Match unchanged.
+
+Generate completed successfully, created exactly one immutable resume version,
+and changed the disposable account's tailoring-credit balance from 1 to 0.
+A subsequent no-credit attempt reported the sanitized reason plus `No tailoring
+credit was used.` and created no additional reservation, event, or version.
+No reservation identifiers, provider details, prompts, or raw errors appeared
+in either production surface. Confirmed-refund and uncertain-refund mappings
+remain covered by the focused automated suites; no production failure was
+deliberately induced.
+
+The disposable account was deleted through Settings. The Auth user and every
+schema-derived owned row returned to zero, including profile, job, extraction,
+parser-credit, tailoring-credit, reservation/event, and resume-version rows.
+The separate smoke-only legacy job and its now-unreferenced company were also
+removed. R2-7 is complete and checked.

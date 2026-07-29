@@ -3935,6 +3935,42 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Await separate authorization to deploy and verify R2-7 in
   production.
 
+### R2-7 production completion
+
+- **Date and time:** 2026-07-29 (America/Vancouver)
+- **Development phase:** ROADMAP R2-7
+- **Classification:** PASS
+- **Deployment:** Clean `main` containing only commits
+  `d09b5f4ec02312bf9e9e1654dac1ac80506ad68c` and
+  `e75617c04659c9e29c926615bfa2a17485911ad7` was pushed. Vercel deployed exact
+  revision `e75617c04659c9e29c926615bfa2a17485911ad7` to
+  `internshipbc.dev`.
+- **Analyze verification:** Production displayed the ordered three-step
+  pending state, disabled duplicate submission, and stated that the running
+  request would not use another credit. The request completed successfully.
+  A safe no-credit Analyze Again reported the sanitized reason and
+  `No analysis credit was used.`; the prior persisted extraction and Profile
+  Match remained unchanged.
+- **Generate verification:** Production displayed the ordered three-step
+  pending state, disabled duplicate submission, and stated that the running
+  request would not use another credit. Successful generation created exactly
+  one immutable version and changed the tailoring-credit balance from 1 to 0.
+  A safe no-credit attempt reported `No tailoring credit was used.` and added
+  no reservation, event, or version.
+- **Privacy and failure scope:** No internal reservation identifier, provider
+  detail, prompt, or raw error appeared. Production provider or persistence
+  failure was not deliberately induced; confirmed-refund and uncertain-refund
+  mappings remain covered by the focused automated tests recorded in the
+  preceding R2-7A and R2-7B entries.
+- **Cleanup:** The disposable account was deleted through Settings. The Auth
+  user and every schema-derived owned row returned to zero. The separate
+  smoke-only legacy job and its unreferenced company were also removed.
+- **ROADMAP state:** R2-7 is complete and checked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before starting R3-1.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

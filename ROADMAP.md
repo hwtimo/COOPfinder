@@ -216,7 +216,7 @@ action. Density was right for the build-out; launched students need focus.
 - [ ] R2-4 bounded URL auto-analysis
 - [x] R2-5 tailored resume editing
 - [x] R2-6 tracker simplification
-- [ ] R2-7 AI status UX
+- [x] R2-7 AI status UX
 - [ ] R3-1 design refresh (Toss-inspired, own tokens)
 - [ ] R3-2 mobile pass
 - [ ] R3-3 empty states
