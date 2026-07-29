@@ -129,6 +129,11 @@ test("server action validates, creates one child, and redirects to that persiste
     "utf8",
   );
   assert.match(action, /^"use server";/);
+  assert.doesNotMatch(
+    action,
+    /export\s+(?:const|let|var|class)\s+/,
+    '"use server" modules may only expose async runtime functions',
+  );
   assert.match(action, /userEditedTailoredResumeInputV1Schema\.safeParse/);
   assert.match(action, /createOwnedUserEditedTailoredResumeVersion\(/);
   assert.match(

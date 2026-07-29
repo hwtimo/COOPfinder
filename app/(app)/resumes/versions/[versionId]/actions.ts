@@ -11,11 +11,6 @@ export type SaveUserEditedResumeVersionState =
   | Readonly<{ status: "idle"; message: "" }>
   | Readonly<{ status: "error"; message: string }>;
 
-export const INITIAL_SAVE_USER_EDITED_RESUME_VERSION_STATE = {
-  status: "idle",
-  message: "",
-} as const satisfies SaveUserEditedResumeVersionState;
-
 const MAX_SERIALIZED_EDIT_LENGTH = 250_000;
 
 export async function saveUserEditedResumeVersionAction(

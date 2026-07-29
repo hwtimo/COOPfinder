@@ -4,8 +4,8 @@ import { ArrowDown, ArrowUp, RotateCcw, Trash2 } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
 
 import {
-  INITIAL_SAVE_USER_EDITED_RESUME_VERSION_STATE,
   saveUserEditedResumeVersionAction,
+  type SaveUserEditedResumeVersionState,
 } from "@/app/(app)/resumes/versions/[versionId]/actions";
 import { CardSection } from "@/components/app/card-section";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,11 @@ type TailoredResumeEditorProps = Readonly<{
   parentVersionId: string;
   initialEntries: readonly EditableResumeEntry[];
 }>;
+
+const INITIAL_SAVE_STATE = {
+  status: "idle",
+  message: "",
+} as const satisfies SaveUserEditedResumeVersionState;
 
 function cloneEntries(entries: readonly EditableResumeEntry[]) {
   return entries.map((entry) => ({
@@ -43,7 +48,7 @@ export function TailoredResumeEditor({
   );
   const [state, formAction, pending] = useActionState(
     saveAction,
-    INITIAL_SAVE_USER_EDITED_RESUME_VERSION_STATE,
+    INITIAL_SAVE_STATE,
   );
   const input = toUserEditedTailoredResumeInput(entries);
   const bulletCount = entries.reduce(
