@@ -5,6 +5,7 @@ import { AlertTriangle, BookUser, FileText, Upload } from "lucide-react";
 import { CardSection } from "@/components/app/card-section";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
+import { ResumePdfUpload } from "@/components/resumes/resume-pdf-upload";
 import { Button } from "@/components/ui/button";
 import { getLoginHref } from "@/lib/auth/paths";
 import { formatPrivateJobDate } from "@/lib/jobs/dates";
@@ -27,15 +28,11 @@ function ResumeHubHeader() {
               Master Profile
             </Link>
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            disabled
-            title="Resume upload is not implemented yet"
-          >
-            <Upload className="size-3.5" aria-hidden />
-            Upload resume
+          <Button size="sm" variant="outline" className="gap-1.5" asChild>
+            <a href="#resume-upload">
+              <Upload className="size-3.5" aria-hidden />
+              Upload resume
+            </a>
           </Button>
         </>
       }
@@ -65,6 +62,7 @@ export default async function ResumesPage() {
   return (
     <div className="space-y-6">
       <ResumeHubHeader />
+      <ResumePdfUpload />
 
       {result.status === "unavailable" ? (
         <EmptyState

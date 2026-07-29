@@ -5,6 +5,11 @@ import test from "node:test";
 import { parseOwnedResumeVersionSummaries } from "../../lib/resumes/resume-version-summaries";
 
 const page = readFileSync("app/(app)/resumes/page.tsx", "utf8");
+const upload = readFileSync(
+  "components/resumes/resume-pdf-upload.tsx",
+  "utf8",
+);
+const uploadAction = readFileSync("app/(app)/resumes/actions.ts", "utf8");
 const query = readFileSync(
   "lib/resumes/get-owned-resume-version-summaries.ts",
   "utf8",
@@ -94,12 +99,25 @@ test("hub query is server-only, owner-scoped, read-only, and display-minimal", (
   );
 });
 
-test("Resumes hub keeps real entry points and honest disabled upload", () => {
+test("Resumes hub keeps real entry points and enables bounded PDF extraction", () => {
   assert.match(page, /href="\/resumes\/master"/);
   assert.match(page, />\s*Master Profile\s*</);
   assert.match(page, />\s*Upload resume\s*</);
-  assert.match(page, /disabled/);
-  assert.match(page, /title="Resume upload is not implemented yet"/);
+  assert.match(page, /href="#resume-upload"/);
+  assert.match(page, /<ResumePdfUpload \/>/);
+  assert.match(upload, /accept="\.pdf,application\/pdf"/);
+  assert.match(upload, /PDF only, up to 5 MB and 25 pages/);
+  assert.match(upload, /Scanned or image-only PDFs/);
+  assert.doesNotMatch(page, /Resume upload is not implemented yet/);
+});
+
+test("PDF success is explicit, temporary, and creates no profile evidence", () => {
+  assert.match(upload, /Text extracted/);
+  assert.match(upload, /state\.text/);
+  assert.match(upload, /readOnly/);
+  assert.match(uploadAction, /This PDF and its text have not been saved/);
+  assert.match(upload, /No evidence was\s+created or confirmed/);
+  assert.doesNotMatch(upload, /saveMasterProfile|confirmed:\s*true|OpenAI/);
 });
 
 test("Resumes hub has explicit unavailable and persisted empty states", () => {
