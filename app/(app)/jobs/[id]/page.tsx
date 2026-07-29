@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { DeadlineBadge, StatusBadge } from "@/components/app/status-badge";
 import { PrivateJobControls } from "@/components/jobs/private-job-controls";
 import { JobAnalysisControl } from "@/components/jobs/job-analysis-control";
+import { JobUrlFetchAnalysisControl } from "@/components/jobs/job-url-fetch-analysis-control";
 import { ManualJobDescriptionForm } from "@/components/jobs/manual-job-description-form";
 import { ProfileMatchSummary } from "@/components/jobs/profile-match-summary";
 import { ApplicationTrackingControl } from "@/components/jobs/application-tracking-control";
@@ -335,10 +336,13 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             <div className="space-y-4">
               <JobAnalysis analysis={analysis} />
               {needsManualJobDescription ? (
-                <ManualJobDescriptionForm
-                  jobId={job.id}
-                  sourceUrl={validSourceUrl ? job.sourceUrl : null}
-                />
+                <>
+                  <JobUrlFetchAnalysisControl jobId={job.id} />
+                  <ManualJobDescriptionForm
+                    jobId={job.id}
+                    sourceUrl={validSourceUrl ? job.sourceUrl : null}
+                  />
+                </>
               ) : null}
               {canAnalyze ? (
                 <JobAnalysisControl

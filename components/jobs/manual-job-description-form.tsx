@@ -88,6 +88,7 @@ export function ManualJobDescriptionForm({
 
         <Button
           type="submit"
+          variant="outline"
           className="h-9 rounded-md"
           disabled={pending || state.status === "success"}
         >

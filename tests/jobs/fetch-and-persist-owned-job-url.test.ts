@@ -79,6 +79,7 @@ test("every typed transport failure returns manual fallback and makes zero write
     });
     assert.deepEqual(await run(JOB_ID), {
       status: "manual_paste_required",
+      reason: status,
     });
     assert.equal(writes, 0);
   }

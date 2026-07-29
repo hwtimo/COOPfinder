@@ -26,6 +26,7 @@ import {
   fetchAndPersistOwnedJobUrl,
   type FetchAndPersistOwnedJobUrlResult,
 } from "@/lib/jobs/fetch-and-persist-owned-job-url";
+import { createFetchAndAnalyzeOwnedJobHandler } from "@/lib/jobs/fetch-and-analyze-owned-job";
 import {
   intakeSourceAfterManualEdit,
   jobUrlFieldError,
@@ -85,6 +86,10 @@ const handlePrivateJobExtraction = createPrivateJobExtractionActionHandler({
   runBridge: extractAndPersistOwnedJobWithCredits,
   revalidatePath,
 });
+const handleFetchAndAnalyzeOwnedJob = createFetchAndAnalyzeOwnedJobHandler({
+  fetchAndPersist: fetchAndPersistOwnedJobUrl,
+  analyze: handlePrivateJobExtraction,
+});
 
 export async function extractAndPersistPrivateJobAction(
   jobId: string,
@@ -138,6 +143,15 @@ export async function fetchSavedJobUrlAction(
 ): Promise<FetchAndPersistOwnedJobUrlResult> {
   const result = await fetchAndPersistOwnedJobUrl(jobId);
   if (result.status === "success") {
+    revalidatePath("/jobs");
+    revalidatePath(`/jobs/${jobId}`);
+  }
+  return result;
+}
+
+export async function fetchAndAnalyzeSavedJobAction(jobId: string) {
+  const result = await handleFetchAndAnalyzeOwnedJob(jobId);
+  if (result.status === "analysis_result") {
     revalidatePath("/jobs");
     revalidatePath(`/jobs/${jobId}`);
   }

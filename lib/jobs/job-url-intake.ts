@@ -4,7 +4,7 @@ export const PRIVATE_JOB_DESCRIPTION_MAX_LENGTH = 100_000;
 export const MANUAL_JOB_DESCRIPTION_HEADING =
   "Paste the job description to continue";
 export const MANUAL_JOB_DESCRIPTION_EXPLANATION =
-  "Automatic URL retrieval is not currently supported. Paste the job description from the saved posting to make Analyze available.";
+  "If the saved page cannot be retrieved, paste its job description here to make Analyze available.";
 
 const TRACKING_QUERY_KEYS = new Set([
   "utm_source",

@@ -218,6 +218,7 @@ test("URL-only UI requires manual text and transition makes Analyze reachable", 
   assert.equal(isPreparedForJobAnalysis("pasted_url", null), false);
   assert.equal(requiresManualJobDescription("pasted_text", "Manual JD"), false);
   assert.equal(isPreparedForJobAnalysis("pasted_text", "Manual JD"), true);
-  assert.match(MANUAL_JOB_DESCRIPTION_EXPLANATION, /not currently supported/i);
-  assert.doesNotMatch(MANUAL_JOB_DESCRIPTION_EXPLANATION, /fetching|scraping/i);
+  assert.match(MANUAL_JOB_DESCRIPTION_EXPLANATION, /cannot be retrieved/i);
+  assert.match(MANUAL_JOB_DESCRIPTION_EXPLANATION, /paste/i);
+  assert.doesNotMatch(MANUAL_JOB_DESCRIPTION_EXPLANATION, /scraping/i);
 });

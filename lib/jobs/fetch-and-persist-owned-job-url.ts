@@ -12,7 +12,13 @@ export type FetchAndPersistOwnedJobUrlResult =
   | { status: "success" }
   | { status: "unauthenticated" }
   | { status: "job_unavailable" }
-  | { status: "manual_paste_required" }
+  | {
+      status: "manual_paste_required";
+      reason: Exclude<
+        JobUrlFetchResult["status"],
+        "success" | "unauthenticated" | "job_unavailable"
+      >;
+    }
   | { status: "persistence_unavailable" };
 
 type PersistenceResponse = {
@@ -59,7 +65,10 @@ export function createFetchAndPersistOwnedJobUrlHandler(
     try {
       fetched = await dependencies.fetchOwnedSource(jobId);
     } catch {
-      return { status: "manual_paste_required" };
+      return {
+        status: "manual_paste_required",
+        reason: "transport_unavailable",
+      };
     }
 
     if (fetched.status === "unauthenticated") {
@@ -69,7 +78,7 @@ export function createFetchAndPersistOwnedJobUrlHandler(
       return { status: "job_unavailable" };
     }
     if (fetched.status !== "success") {
-      return { status: "manual_paste_required" };
+      return { status: "manual_paste_required", reason: fetched.status };
     }
 
     let context: PersistenceContext;
