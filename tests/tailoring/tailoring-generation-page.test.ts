@@ -28,10 +28,17 @@ test("non-ready preflight hides Generate and legacy mock IDs fail closed", () =>
 
 test("pending submission is disabled and one key is reused until a terminal retry", () => {
   assert.match(control, /disabled=\{pending\}/);
+  assert.match(control, /Already generating — this won’t use another credit\./);
+  assert.match(control, /1\. Check the job, approved evidence, and tailoring credit\./);
+  assert.match(control, /2\. Generate and validate the tailored resume\./);
+  assert.match(control, /3\. Save the immutable version and finalize the credit\./);
   assert.match(control, /useRef\(initialIdempotencyKey\)/);
+  assert.match(control, /const submitting = useRef\(false\)/);
+  assert.match(control, /if \(submitting\.current\)/);
   assert.match(control, /generateTailoredResumeAction\(\s*jobId,\s*idempotencyKey\.current/);
   assert.match(control, /if \(nextState\.retryable\) idempotencyKey\.current = crypto\.randomUUID\(\)/);
   assert.match(route, /initialIdempotencyKey=\{randomUUID\(\)\}/);
+  assert.doesNotMatch(control, />\s*Generating tailored resume\s*</);
 });
 
 test("browser UI performs no direct credit, reservation, finalization, or provider operation", () => {

@@ -45,7 +45,7 @@ type TrustedTailoringContext = Readonly<{
   ) => Promise<Readonly<{ data: unknown; error: unknown }>>;
 }>;
 
-export type GenerateOwnedTailoredResumeResult =
+type GenerateOwnedTailoredResumeBaseResult =
   | Readonly<{
       status: "generated" | "already_completed";
       resumeVersionId: string;
@@ -68,6 +68,16 @@ export type GenerateOwnedTailoredResumeResult =
   | Readonly<{ status: "invalid_provider_output" }>
   | Readonly<{ status: "persistence_failed" }>
   | Readonly<{ status: "unavailable" }>;
+
+export type TailoringGenerationCreditResult =
+  | "used"
+  | "not_used"
+  | "refunded"
+  | "refund_unavailable";
+
+export type GenerateOwnedTailoredResumeResult =
+  GenerateOwnedTailoredResumeBaseResult &
+    Readonly<{ creditResult: TailoringGenerationCreditResult }>;
 
 export type GenerateOwnedTailoredResumeDependencies = Readonly<{
   getAuthenticatedUser: () => Promise<Readonly<{ id: string }> | null>;
@@ -165,12 +175,17 @@ async function finalize(
   }
 }
 
-async function refundIgnoringFailure(
+async function refundGenerationCredit(
   context: TrustedTailoringContext,
   userId: string,
   reservationId: string,
-) {
-  await refund(context, userId, reservationId);
+): Promise<"refunded" | "refund_unavailable"> {
+  const result = await refund(context, userId, reservationId);
+  return result.status === "refunded" ||
+    result.status === "already_refunded" ||
+    result.status === "expired"
+    ? "refunded"
+    : "refund_unavailable";
 }
 
 export function createGenerateOwnedTailoredResumeCoordinator(
@@ -184,28 +199,36 @@ export function createGenerateOwnedTailoredResumeCoordinator(
     try {
       user = await dependencies.getAuthenticatedUser();
     } catch {
-      return { status: "unavailable" };
+      return { status: "unavailable", creditResult: "not_used" };
     }
-    if (!user) return { status: "unauthenticated" };
-    if (!UUID_PATTERN.test(jobId)) return { status: "not_found" };
-    if (!UUID_PATTERN.test(idempotencyKey)) return { status: "unavailable" };
+    if (!user) return { status: "unauthenticated", creditResult: "not_used" };
+    if (!UUID_PATTERN.test(jobId)) {
+      return { status: "not_found", creditResult: "not_used" };
+    }
+    if (!UUID_PATTERN.test(idempotencyKey)) {
+      return { status: "unavailable", creditResult: "not_used" };
+    }
 
     let source: OwnedTailoringGenerationSourceResult;
     try {
       source = await dependencies.getGenerationSource(jobId);
     } catch {
-      return { status: "unavailable" };
+      return { status: "unavailable", creditResult: "not_used" };
     }
-    if (source.status !== "ready") return source;
+    if (source.status !== "ready") {
+      return { ...source, creditResult: "not_used" };
+    }
 
     const projection = dependencies.buildProviderInput(
       source.preflight,
       source.resumeSourceSnapshot,
     );
     if (projection.status === "not_ready") {
-      return { status: projection.readiness };
+      return { status: projection.readiness, creditResult: "not_used" };
     }
-    if (projection.status !== "success") return { status: "unavailable" };
+    if (projection.status !== "success") {
+      return { status: "unavailable", creditResult: "not_used" };
+    }
 
     let fingerprint: string;
     let context: TrustedTailoringContext | null;
@@ -213,9 +236,9 @@ export function createGenerateOwnedTailoredResumeCoordinator(
       fingerprint = dependencies.fingerprintInput(projection.input);
       context = await dependencies.getTrustedContext();
     } catch {
-      return { status: "unavailable" };
+      return { status: "unavailable", creditResult: "not_used" };
     }
-    if (!context) return { status: "unavailable" };
+    if (!context) return { status: "unavailable", creditResult: "not_used" };
 
     const reservation = await reserve(
       context,
@@ -226,11 +249,11 @@ export function createGenerateOwnedTailoredResumeCoordinator(
     );
     switch (reservation.status) {
       case "insufficient_credit":
-        return { status: "insufficient_credit" };
+        return { status: "insufficient_credit", creditResult: "not_used" };
       case "rate_limited":
-        return { status: "rate_limited" };
+        return { status: "rate_limited", creditResult: "not_used" };
       case "generation_in_progress":
-        return { status: "generation_in_progress" };
+        return { status: "generation_in_progress", creditResult: "not_used" };
       case "already_completed": {
         const completed = await finalize(
           context,
@@ -244,17 +267,19 @@ export function createGenerateOwnedTailoredResumeCoordinator(
               status: "already_completed",
               resumeVersionId: completed.resumeVersionId,
               versionName: completed.versionName,
+              creditResult: "used",
             }
-          : { status: "unavailable" };
+          : { status: "unavailable", creditResult: "refund_unavailable" };
       }
       case "terminal_refunded":
       case "terminal_expired":
-        return { status: "attempt_terminal" };
+        return { status: "attempt_terminal", creditResult: "not_used" };
       case "not_found":
-        return { status: "not_found" };
+        return { status: "not_found", creditResult: "not_used" };
       case "invalid_input":
+        return { status: "unavailable", creditResult: "not_used" };
       case "unavailable":
-        return { status: "unavailable" };
+        return { status: "unavailable", creditResult: "refund_unavailable" };
       case "reserved":
         break;
     }
@@ -263,23 +288,47 @@ export function createGenerateOwnedTailoredResumeCoordinator(
     try {
       providerResult = await dependencies.provider.generatePlan(projection.input);
     } catch {
-      await refundIgnoringFailure(context, user.id, reservation.reservationId);
-      return { status: "provider_unavailable" };
+      return {
+        status: "provider_unavailable",
+        creditResult: await refundGenerationCredit(
+          context,
+          user.id,
+          reservation.reservationId,
+        ),
+      };
     }
     if (
       providerResult.status === "refusal" ||
       providerResult.status === "unavailable"
     ) {
-      await refundIgnoringFailure(context, user.id, reservation.reservationId);
-      return { status: "provider_unavailable" };
+      return {
+        status: "provider_unavailable",
+        creditResult: await refundGenerationCredit(
+          context,
+          user.id,
+          reservation.reservationId,
+        ),
+      };
     }
     if (providerResult.status === "configuration_unavailable") {
-      await refundIgnoringFailure(context, user.id, reservation.reservationId);
-      return { status: "configuration_unavailable" };
+      return {
+        status: "configuration_unavailable",
+        creditResult: await refundGenerationCredit(
+          context,
+          user.id,
+          reservation.reservationId,
+        ),
+      };
     }
     if (providerResult.status === "invalid_output") {
-      await refundIgnoringFailure(context, user.id, reservation.reservationId);
-      return { status: "invalid_provider_output" };
+      return {
+        status: "invalid_provider_output",
+        creditResult: await refundGenerationCredit(
+          context,
+          user.id,
+          reservation.reservationId,
+        ),
+      };
     }
 
     let validation: ValidateTailoringPlanV2Result;
@@ -292,8 +341,14 @@ export function createGenerateOwnedTailoredResumeCoordinator(
       validation = { status: "invalid", reason: "invalid_shape" };
     }
     if (validation.status !== "valid") {
-      await refundIgnoringFailure(context, user.id, reservation.reservationId);
-      return { status: "invalid_provider_output" };
+      return {
+        status: "invalid_provider_output",
+        creditResult: await refundGenerationCredit(
+          context,
+          user.id,
+          reservation.reservationId,
+        ),
+      };
     }
 
     let document;
@@ -303,8 +358,14 @@ export function createGenerateOwnedTailoredResumeCoordinator(
       document = { status: "invalid_document" as const };
     }
     if (document.status !== "success") {
-      await refundIgnoringFailure(context, user.id, reservation.reservationId);
-      return { status: "invalid_provider_output" };
+      return {
+        status: "invalid_provider_output",
+        creditResult: await refundGenerationCredit(
+          context,
+          user.id,
+          reservation.reservationId,
+        ),
+      };
     }
 
     let versionContent;
@@ -319,8 +380,14 @@ export function createGenerateOwnedTailoredResumeCoordinator(
       versionContent = { status: "invalid" as const };
     }
     if (versionContent.status !== "success") {
-      await refundIgnoringFailure(context, user.id, reservation.reservationId);
-      return { status: "invalid_provider_output" };
+      return {
+        status: "invalid_provider_output",
+        creditResult: await refundGenerationCredit(
+          context,
+          user.id,
+          reservation.reservationId,
+        ),
+      };
     }
 
     const finalized = await finalize(
@@ -339,16 +406,23 @@ export function createGenerateOwnedTailoredResumeCoordinator(
           finalized.status === "finalized" ? "generated" : "already_completed",
         resumeVersionId: finalized.resumeVersionId,
         versionName: finalized.versionName,
+        creditResult: "used",
       };
     }
     if (
       finalized.status === "terminal_refunded" ||
       finalized.status === "expired"
     ) {
-      return { status: "attempt_terminal" };
+      return { status: "attempt_terminal", creditResult: "refunded" };
     }
-    await refundIgnoringFailure(context, user.id, reservation.reservationId);
-    return { status: "persistence_failed" };
+    return {
+      status: "persistence_failed",
+      creditResult: await refundGenerationCredit(
+        context,
+        user.id,
+        reservation.reservationId,
+      ),
+    };
   };
 }
 

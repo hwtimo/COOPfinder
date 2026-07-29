@@ -21,6 +21,7 @@ export async function generateTailoredResumeAction(
     return {
       status: "error",
       message: "The generation request is invalid. Please try again.",
+      creditMessage: "No tailoring credit was used.",
       retryable: true,
     };
   }
@@ -35,6 +36,7 @@ export async function generateTailoredResumeAction(
       status: "error",
       message:
         "The tailored resume could not be generated. Please try again.",
+      creditMessage: "Refund status is unavailable. Do not assume a refund.",
       retryable: true,
     };
   }
@@ -48,5 +50,7 @@ export async function generateTailoredResumeAction(
     : {
         status: "error",
         message: "The tailored resume could not be generated. Please try again.",
+        creditMessage:
+          "Refund status is unavailable. Do not assume a refund.",
       };
 }

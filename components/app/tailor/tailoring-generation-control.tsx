@@ -22,15 +22,28 @@ export function TailoringGenerationControl({
   canGenerate: boolean;
 }) {
   const idempotencyKey = useRef(initialIdempotencyKey);
+  const submitting = useRef(false);
   const action = useCallback(
     async (previousState: typeof INITIAL_TAILORING_GENERATION_ACTION_STATE) => {
-      const nextState = await generateTailoredResumeAction(
-        jobId,
-        idempotencyKey.current,
-        previousState,
-      );
-      if (nextState.retryable) idempotencyKey.current = crypto.randomUUID();
-      return nextState;
+      if (submitting.current) {
+        return {
+          status: "pending" as const,
+          message: "Already generating — this won’t use another credit.",
+          creditMessage: "No additional tailoring credit was used.",
+        };
+      }
+      submitting.current = true;
+      try {
+        const nextState = await generateTailoredResumeAction(
+          jobId,
+          idempotencyKey.current,
+          previousState,
+        );
+        if (nextState.retryable) idempotencyKey.current = crypto.randomUUID();
+        return nextState;
+      } finally {
+        submitting.current = false;
+      }
     },
     [jobId],
   );
@@ -65,7 +78,7 @@ export function TailoringGenerationControl({
               {pending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" aria-hidden />
-                  Generating tailored resume
+                  Generation in progress...
                 </>
               ) : (
                 <>
@@ -76,8 +89,28 @@ export function TailoringGenerationControl({
             </Button>
           </form>
         ) : null}
+        {pending ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mt-3 rounded-md border border-brand/20 bg-brand-soft/30 px-3 py-3 text-xs leading-5 text-text-secondary"
+          >
+            <p className="font-semibold text-foreground">
+              Already generating — this won’t use another credit.
+            </p>
+            <p className="mt-1">
+              The server completes these steps in order; exact step timing is
+              not reported.
+            </p>
+            <ol className="mt-2 space-y-1" aria-label="Generation progress">
+              <li>1. Check the job, approved evidence, and tailoring credit.</li>
+              <li>2. Generate and validate the tailored resume.</li>
+              <li>3. Save the immutable version and finalize the credit.</li>
+            </ol>
+          </div>
+        ) : null}
         {state.status !== "idle" ? (
-          <p
+          <div
             role="status"
             className={
               state.status === "error"
@@ -85,8 +118,9 @@ export function TailoringGenerationControl({
                 : "mt-3 text-sm text-muted-foreground"
             }
           >
-            {state.message}
-          </p>
+            <p>{state.message}</p>
+            <p className="mt-1 font-medium">{state.creditMessage}</p>
+          </div>
         ) : null}
       </div>
     </CardSection>

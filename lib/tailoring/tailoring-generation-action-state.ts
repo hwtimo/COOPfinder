@@ -3,11 +3,12 @@ import type { GenerateOwnedTailoredResumeResult } from "./generate-owned-tailore
 export type TailoringGenerationActionState = Readonly<{
   status: "idle" | "pending" | "error";
   message: string;
+  creditMessage: string;
   retryable?: boolean;
 }>;
 
 export const INITIAL_TAILORING_GENERATION_ACTION_STATE: TailoringGenerationActionState =
-  Object.freeze({ status: "idle", message: "" });
+  Object.freeze({ status: "idle", message: "", creditMessage: "" });
 
 export type TailoringGenerationActionOutcome =
   | Readonly<{ status: "redirect"; href: string }>
@@ -20,6 +21,15 @@ export type TailoringGenerationActionOutcome =
 export function mapTailoringGenerationActionOutcome(
   result: GenerateOwnedTailoredResumeResult,
 ): TailoringGenerationActionOutcome {
+  const creditMessages = {
+    used: "One tailoring credit was used.",
+    not_used: "No tailoring credit was used.",
+    refunded: "The tailoring credit was refunded.",
+    refund_unavailable:
+      "Refund status is unavailable. Do not assume a refund.",
+  } as const;
+  const creditMessage = creditMessages[result.creditResult];
+
   if (result.status === "generated" || result.status === "already_completed") {
     return {
       status: "redirect",
@@ -34,8 +44,8 @@ export function mapTailoringGenerationActionOutcome(
       status: "state",
       state: {
         status: "pending",
-        message:
-          "Tailored resume generation is already in progress. Try refreshing this page shortly.",
+        message: "Already generating — this won’t use another credit.",
+        creditMessage,
       },
     };
   }
@@ -46,6 +56,7 @@ export function mapTailoringGenerationActionOutcome(
         status: "error",
         message:
           "You do not have enough tailoring credits to generate this resume.",
+        creditMessage,
       },
     };
   }
@@ -56,6 +67,7 @@ export function mapTailoringGenerationActionOutcome(
         status: "error",
         message:
           "Tailored resume generation is temporarily limited. Please try again later.",
+        creditMessage,
         retryable: false,
       },
     };
@@ -67,6 +79,7 @@ export function mapTailoringGenerationActionOutcome(
         status: "error",
         message:
           "Tailored resume generation is not available right now. Please try again later.",
+        creditMessage,
         retryable: false,
       },
     };
@@ -90,6 +103,7 @@ export function mapTailoringGenerationActionOutcome(
       state: {
         status: "error",
         message: guidance[result.status as keyof typeof guidance],
+        creditMessage,
       },
     };
   }
@@ -100,6 +114,7 @@ export function mapTailoringGenerationActionOutcome(
       status: "error",
       message:
         "The tailored resume could not be generated. Please try again.",
+      creditMessage,
       retryable: true,
     },
   };

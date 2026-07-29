@@ -41,6 +41,7 @@ type HarnessOptions = Readonly<{
   providerThrows?: boolean;
   providerOutput?: unknown;
   finalizationStatus?: string;
+  refundStatus?: string;
   trustedAvailable?: boolean;
   invalidProjection?: boolean;
   invalidDocument?: boolean;
@@ -115,7 +116,14 @@ function harness(options: HarnessOptions = {}) {
           }
           if (name === "refund_tailoring_generation_reservation_trusted") {
             return {
-              data: [{ result_status: "refunded", reservation_id: RESERVATION_ID, resume_version_id: null }],
+              data: [{
+                result_status: options.refundStatus ?? "refunded",
+                reservation_id:
+                  options.refundStatus === "unavailable"
+                    ? null
+                    : RESERVATION_ID,
+                resume_version_id: null,
+              }],
               error: null,
             };
           }
@@ -133,6 +141,7 @@ test("successful v2 generation reserves, invokes once, builds a complete documen
     status: "generated",
     resumeVersionId: VERSION_ID,
     versionName: `Product Developer - tailored v2 - ${RESERVATION_ID}`,
+    creditResult: "used",
   });
   assert.equal(fixture.providerCalls(), 1);
   assert.deepEqual(fixture.rpcCalls.map((call) => call.name), [
@@ -151,9 +160,18 @@ test("successful v2 generation reserves, invokes once, builds a complete documen
 
 test("authentication, invalid IDs, and non-ready source states stop before reservation", async () => {
   const unauthenticated = harness({ user: null });
-  assert.deepEqual(await unauthenticated.coordinator(JOB_ID, KEY_ID), { status: "unauthenticated" });
-  assert.deepEqual(await harness().coordinator("bad", KEY_ID), { status: "not_found" });
-  assert.deepEqual(await harness().coordinator(JOB_ID, "bad"), { status: "unavailable" });
+  assert.deepEqual(await unauthenticated.coordinator(JOB_ID, KEY_ID), {
+    status: "unauthenticated",
+    creditResult: "not_used",
+  });
+  assert.deepEqual(await harness().coordinator("bad", KEY_ID), {
+    status: "not_found",
+    creditResult: "not_used",
+  });
+  assert.deepEqual(await harness().coordinator(JOB_ID, "bad"), {
+    status: "unavailable",
+    creditResult: "not_used",
+  });
   for (const status of [
     "not_found",
     "extraction_unavailable",
@@ -164,25 +182,38 @@ test("authentication, invalid IDs, and non-ready source states stop before reser
     "unavailable",
   ] as const) {
     const fixture = harness({ source: { status } });
-    assert.deepEqual(await fixture.coordinator(JOB_ID, KEY_ID), { status });
+    assert.deepEqual(await fixture.coordinator(JOB_ID, KEY_ID), {
+      status,
+      creditResult: "not_used",
+    });
     assert.equal(fixture.providerCalls(), 0);
     assert.equal(fixture.rpcCalls.length, 0);
   }
+  const invalidPreflight = harness({ invalidProjection: true });
+  assert.deepEqual(await invalidPreflight.coordinator(JOB_ID, KEY_ID), {
+    status: "unavailable",
+    creditResult: "not_used",
+  });
+  assert.equal(invalidPreflight.providerCalls(), 0);
+  assert.equal(invalidPreflight.rpcCalls.length, 0);
 });
 
 test("reservation outcomes before generation invoke the provider zero times", async () => {
   const cases = [
-    ["insufficient_credit", "insufficient_credit"],
-    ["rate_limited", "rate_limited"],
-    ["generation_in_progress", "generation_in_progress"],
-    ["terminal_refunded", "attempt_terminal"],
-    ["terminal_expired", "attempt_terminal"],
-    ["not_found", "not_found"],
-    ["invalid_input", "unavailable"],
+    ["insufficient_credit", "insufficient_credit", "not_used"],
+    ["rate_limited", "rate_limited", "not_used"],
+    ["generation_in_progress", "generation_in_progress", "not_used"],
+    ["terminal_refunded", "attempt_terminal", "not_used"],
+    ["terminal_expired", "attempt_terminal", "not_used"],
+    ["not_found", "not_found", "not_used"],
+    ["invalid_input", "unavailable", "not_used"],
   ] as const;
-  for (const [reservationStatus, expected] of cases) {
+  for (const [reservationStatus, expected, creditResult] of cases) {
     const fixture = harness({ reservationStatus });
-    assert.deepEqual(await fixture.coordinator(JOB_ID, KEY_ID), { status: expected });
+    assert.deepEqual(await fixture.coordinator(JOB_ID, KEY_ID), {
+      status: expected,
+      creditResult,
+    });
     assert.equal(fixture.providerCalls(), 0);
   }
 });
@@ -209,6 +240,7 @@ test("provider failures and invalid provider output each attempt one refund", as
     const fixture = harness(options);
     const result = await fixture.coordinator(JOB_ID, KEY_ID);
     assert.ok(result.status === "provider_unavailable" || result.status === "invalid_provider_output");
+    assert.equal(result.creditResult, "refunded");
     assert.equal(fixture.providerCalls(), 1);
     assert.equal(fixture.rpcCalls.filter((call) => call.name === "refund_tailoring_generation_reservation_trusted").length, 1);
   }
@@ -224,7 +256,10 @@ test("invalid, duplicate, unknown, and incompatible v2 references refund without
   ];
   for (const providerOutput of unsafePlans) {
     const fixture = harness({ providerOutput });
-    assert.deepEqual(await fixture.coordinator(JOB_ID, KEY_ID), { status: "invalid_provider_output" });
+    assert.deepEqual(await fixture.coordinator(JOB_ID, KEY_ID), {
+      status: "invalid_provider_output",
+      creditResult: "refunded",
+    });
     assert.equal(fixture.rpcCalls.at(-1)?.name, "refund_tailoring_generation_reservation_trusted");
   }
 });
@@ -238,8 +273,61 @@ test("document, envelope, and finalization failures refund and never partially f
     const fixture = harness(options);
     const result = await fixture.coordinator(JOB_ID, KEY_ID);
     assert.ok(result.status === "invalid_provider_output" || result.status === "persistence_failed");
+    assert.equal(result.creditResult, "refunded");
     assert.equal(fixture.rpcCalls.at(-1)?.name, "refund_tailoring_generation_reservation_trusted");
   }
+});
+
+test("an unavailable refund is surfaced as unknown and creates no version or debit", async () => {
+  const fixture = harness({
+    providerThrows: true,
+    refundStatus: "unavailable",
+  });
+
+  assert.deepEqual(await fixture.coordinator(JOB_ID, KEY_ID), {
+    status: "provider_unavailable",
+    creditResult: "refund_unavailable",
+  });
+  assert.equal(fixture.providerCalls(), 1);
+  assert.equal(
+    fixture.rpcCalls.filter(
+      ({ name }) => name === "finalize_tailored_resume_document_trusted",
+    ).length,
+    0,
+  );
+  assert.equal(
+    fixture.rpcCalls.filter(
+      ({ name }) =>
+        name === "refund_tailoring_generation_reservation_trusted",
+    ).length,
+    1,
+  );
+});
+
+test("uncertain persistence finalization never claims a refund", async () => {
+  const fixture = harness({
+    finalizationStatus: "unavailable",
+    refundStatus: "unavailable",
+  });
+
+  assert.deepEqual(await fixture.coordinator(JOB_ID, KEY_ID), {
+    status: "persistence_failed",
+    creditResult: "refund_unavailable",
+  });
+  assert.equal(fixture.providerCalls(), 1);
+  assert.equal(
+    fixture.rpcCalls.filter(
+      ({ name }) => name === "finalize_tailored_resume_document_trusted",
+    ).length,
+    1,
+  );
+  assert.equal(
+    fixture.rpcCalls.filter(
+      ({ name }) =>
+        name === "refund_tailoring_generation_reservation_trusted",
+    ).length,
+    1,
+  );
 });
 
 test("coordinator exposes only job and idempotency IDs and activates no route or UI", () => {
