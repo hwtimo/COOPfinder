@@ -1358,3 +1358,26 @@ diff checks passed. Existing status, notes, delete, and one-click advance
 controls remain present. No notifications, Calendar integration, AI/provider
 request, credit activity, tracker redesign, or drag-and-drop was added. R2-6
 remains unchecked pending production verification.
+
+## R2-6 production completion
+
+Production already contained both forward-only R2-6 migrations, and all 35
+local and production migration versions aligned before deployment. Clean
+`main` was pushed and Vercel successfully deployed exact revision
+`74f2b7a80a518ae5c62e5535fd0259d9b1cabc05` to `internshipbc.dev`.
+
+Production verification confirmed that Job Detail creates exactly one
+application, links the newest eligible same-job resume version (including a
+user-authored child), and then shows `View application` instead of offering a
+duplicate create action. One-click advance persisted the next status with one
+timeline event. The existing manual status selector, private notes, and delete
+flow remained functional.
+
+Application deadline, interview date, and timezone-aware follow-up each passed
+set, change, no-op, clear, and reload verification. Each real change produced
+one minimal timeline event; repeated equal submissions produced no event.
+Before/after database counts confirmed zero new parser or tailoring
+reservations/events, no credit-ledger or balance change, and no OpenAI/provider
+activity. The temporary job, generated and edited resume versions,
+application, and timeline were deleted; all scoped fixture counts returned to
+zero. R2-6 is complete and checked.

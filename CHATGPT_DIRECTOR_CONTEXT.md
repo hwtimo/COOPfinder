@@ -2,10 +2,11 @@
 
 Use this file as context for a future temporary ChatGPT chat where ChatGPT should act as a product and engineering director. Its job should be to tell the user exactly what to do next and provide precise prompts to give coding agents such as Codex or Fable.
 
-Last reviewed: 2026-07-29 (R2-5 tailored-resume editing is complete through
-deployed revision `25897dc2992a8a4db1a0d1c1fc2c7281701b8943`;
-user-authored child persistence, parent immutability, reload, labels, and
-Print/PDF were verified in production, so R2-5 is checked).
+Last reviewed: 2026-07-29 (R2-6 application tracker simplification is complete
+through deployed revision `74f2b7a80a518ae5c62e5535fd0259d9b1cabc05`;
+resume linking, idempotent tracking, status and date workflows, timeline
+events, notes, deletion, and zero AI/credit activity were verified in
+production, so R2-6 is checked).
 
 Working method: drive implementation with **one narrow Codex prompt at a time**, drafted when a phase actually starts. Do not stockpile prompts for future phases in the docs. Record meaningful core sessions in `CODEX_SESSION_LOG.md`, including their verified commit range and real `/feedback` Session ID when available; never fabricate either verification or an ID.
 

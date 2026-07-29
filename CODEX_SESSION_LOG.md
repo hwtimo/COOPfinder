@@ -3832,6 +3832,42 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Await separate authorization to deploy and verify R2-6 in
   production.
 
+### R2-6 production deployment and verification
+
+- **Date and time:** 2026-07-29 (America/Vancouver)
+- **Development phase:** ROADMAP R2-6 completion
+- **Classification:** PASS
+- **Deployment:** Both R2-6 migrations were already present in production; all
+  35 local and production migration versions aligned. Clean `main` was pushed,
+  and Vercel deployed exact revision
+  `74f2b7a80a518ae5c62e5535fd0259d9b1cabc05` successfully to
+  `internshipbc.dev`.
+- **Application creation:** Production Job Detail created exactly one owned
+  application, linked the newest eligible same-job user-authored resume child,
+  and then exposed `View application` with no duplicate create control.
+- **Status and timeline:** One-click advance persisted `Saved` to `Tailoring`
+  with exactly one event. The manual selector then persisted `Ready` with one
+  additional event. Private notes saved and survived reload.
+- **Dates:** Deadline, interview date, and timezone-aware follow-up each passed
+  set, change, reload, no-op, and clear checks. Each category recorded three
+  events for its three real changes; repeated equal submissions left all event
+  counts unchanged.
+- **Delete and cleanup:** The normal delete control removed the application and
+  its timeline. The temporary job and two same-job resume versions were then
+  removed. Final scoped counts were zero for jobs, resume versions,
+  applications, and application timeline events.
+- **Cost boundary:** Parser reservation/event, tailoring reservation/event,
+  ledger-row, and credit-balance counts were identical before and after the
+  smoke test. No provider or OpenAI request occurred.
+- **Related implementation commits:** R2-6A–D range
+  `527988e1d3aec3a003fafcd2b44d64cd2d14ebe5` through
+  `74f2b7a80a518ae5c62e5535fd0259d9b1cabc05`.
+- **ROADMAP state:** R2-6 is complete and checked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before starting R2-7.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
