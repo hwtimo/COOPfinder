@@ -3412,6 +3412,42 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await separate authorization before the next R2-3 slice.
 
+### R2-3 production completion
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-3
+- **Classification:** PASS
+- **Root cause:** Production revision
+  `c41de40018e4cc1ae4c341bc53af1d668e60025c` had the resume drafting code but
+  Vercel Production lacked the existing server-only
+  `OPENAI_MODEL_RESUME_PROFILE_DRAFTING` setting. Model resolution therefore
+  returned the safe configuration-unavailable state before constructing an
+  OpenAI client.
+- **Configuration correction:** Added
+  `OPENAI_MODEL_RESUME_PROFILE_DRAFTING` for Vercel Production with
+  `gpt-5-mini` and redeployed the same revision. No application code,
+  persistence contract, credit behavior, schema, migration, or provider
+  boundary changed.
+- **Production verification:** A fresh disposable account verified selectable
+  PDF extraction, one successful strict AI draft, visible unconfirmed state,
+  no pre-import persistence, redirect to `/resumes/master`, preservation of
+  existing confirmed evidence and its approved manual fragment, zero
+  automatically approved fragments for imported entries, individual
+  confirmation and save of one imported entry, and honest image-only PDF
+  rejection without OCR.
+- **Trust-boundary result:** Seven imported entries persisted with
+  `confirmed: false`; the one pre-existing entry remained confirmed; only its
+  pre-existing manual fragment was approved. Confirming one imported entry and
+  saving changed the confirmed count from 1 of 8 to 2 of 8.
+- **Cleanup:** The disposable production account and its owned rows were
+  removed through the existing self-serve account-deletion flow. Temporary PDF
+  fixtures were removed locally.
+- **ROADMAP state:** R2-3 is complete and checked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before R2-4.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

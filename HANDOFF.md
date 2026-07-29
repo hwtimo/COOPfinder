@@ -1050,3 +1050,25 @@ provider, PDF, and Resumes-hub tests passed 47/47. Lint, typecheck, the
 production Next.js webpack build, and both diff checks passed. R2-3 remains
 unchecked pending the separately authorized completion and production
 verification of the resume-upload onboarding flow.
+
+## R2-3 production completion
+
+Production revision `c41de40018e4cc1ae4c341bc53af1d668e60025c` initially
+failed closed after successful PDF text extraction because Vercel Production
+did not contain the existing `OPENAI_MODEL_RESUME_PROFILE_DRAFTING` setting.
+The missing server-only setting was added for Production with the configured
+`gpt-5-mini` model, and the same revision was redeployed without a code change.
+
+A fresh disposable production account verified the complete flow on
+`internshipbc.dev`: a selectable-text PDF extracted successfully; the bounded
+OpenAI request produced the strict temporary draft; all seven imported entries
+were visibly and persistently unconfirmed; no draft data existed in Master
+Profile before import; import redirected to `/resumes/master`; existing
+confirmed evidence and its approved manual fragment remained unchanged; no
+approved fragment was created for imported entries; one imported entry was
+confirmed and saved individually; and an image-only PDF returned the honest
+no-selectable-text response without OCR. The disposable account was deleted
+after verification.
+
+R2-3 is complete and checked. Do not start R2-4 without separate
+authorization.
