@@ -32,6 +32,7 @@ export type OpenAIProviderFailureCategory =
 
 export type OpenAIProviderAdapterName =
   | "job_extraction"
+  | "resume_profile_drafting"
   | "tailoring_generation";
 
 export type OpenAIProviderDiagnostic = Readonly<{

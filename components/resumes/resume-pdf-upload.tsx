@@ -8,6 +8,7 @@ import {
   type ResumePdfUploadState,
 } from "@/app/(app)/resumes/actions";
 import { CardSection } from "@/components/app/card-section";
+import { ResumeProfileDraftPreview } from "@/components/resumes/resume-profile-draft-preview";
 import { Button } from "@/components/ui/button";
 
 const initialState: ResumePdfUploadState = { status: "idle", message: "" };
@@ -21,7 +22,7 @@ export function ResumePdfUpload() {
   return (
     <CardSection
       title="Upload resume PDF"
-      description="Extract selectable text for the next onboarding step"
+      description="Extract selectable text and prepare a temporary profile draft"
     >
       <div id="resume-upload" className="space-y-4 scroll-mt-24">
         <form action={formAction} className="grid gap-3">
@@ -45,7 +46,7 @@ export function ResumePdfUpload() {
           <div>
             <Button type="submit" disabled={pending} className="gap-1.5">
               <Upload aria-hidden />
-              {pending ? "Extracting text..." : "Extract text"}
+              {pending ? "Preparing draft..." : "Extract text and draft profile"}
             </Button>
           </div>
         </form>
@@ -89,10 +90,13 @@ export function ResumePdfUpload() {
               rows={10}
               className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-5"
             />
-            <p className="text-xs leading-5 text-muted-foreground">
-              Profile drafting is not part of this step. No evidence was
-              created or confirmed.
-            </p>
+            {state.draft.status === "ready" ? (
+              <ResumeProfileDraftPreview draft={state.draft.value} />
+            ) : (
+              <p role="alert" className="text-sm text-destructive">
+                {state.draft.message}
+              </p>
+            )}
           </section>
         ) : null}
       </div>

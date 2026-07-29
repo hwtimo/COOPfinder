@@ -44,6 +44,12 @@ export default function PrivacyPage() {
 
       <LegalSection title="Information sent to OpenAI">
         <p>
+          When you choose to draft a Master Profile from an uploaded resume,
+          InternshipBC sends the bounded text extracted from that PDF to
+          OpenAI. The returned draft remains unconfirmed and is not saved to
+          your profile in the current review step.
+        </p>
+        <p>
           When you choose Analyze and the live provider is enabled,
           InternshipBC sends the private job-description text to OpenAI to
           extract structured requirements.
@@ -80,7 +86,7 @@ export default function PrivacyPage() {
         <p>
           InternshipBC relies on Supabase for authentication and database
           storage, Vercel for application hosting, configured email and OAuth
-          providers for sign-in, and OpenAI for the two AI operations described
+          providers for sign-in, and OpenAI for the AI operations described
           above. These providers process information needed to deliver their
           part of the service.
         </p>

@@ -111,13 +111,14 @@ test("Resumes hub keeps real entry points and enables bounded PDF extraction", (
   assert.doesNotMatch(page, /Resume upload is not implemented yet/);
 });
 
-test("PDF success is explicit, temporary, and creates no profile evidence", () => {
+test("PDF success is explicit and extends into an unpersisted review draft", () => {
   assert.match(upload, /Text extracted/);
   assert.match(upload, /state\.text/);
   assert.match(upload, /readOnly/);
   assert.match(uploadAction, /This PDF and its text have not been saved/);
-  assert.match(upload, /No evidence was\s+created or confirmed/);
-  assert.doesNotMatch(upload, /saveMasterProfile|confirmed:\s*true|OpenAI/);
+  assert.match(upload, /<ResumeProfileDraftPreview draft=\{state\.draft\.value\}/);
+  assert.match(uploadAction, /generateResumeProfileDraft\(result\.text\)/);
+  assert.doesNotMatch(upload, /saveMasterProfile|confirmed:\s*true/);
 });
 
 test("Resumes hub has explicit unavailable and persisted empty states", () => {

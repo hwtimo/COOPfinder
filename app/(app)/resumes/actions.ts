@@ -4,6 +4,11 @@ import {
   extractResumePdf,
   type ResumePdfExtractionResult,
 } from "@/lib/resumes/resume-pdf-extraction";
+import {
+  generateResumeProfileDraft,
+  type GenerateResumeProfileDraftResult,
+} from "@/lib/resumes/generate-resume-profile-draft";
+import type { ResumeProfileDraftV1 } from "@/lib/resumes/resume-profile-draft-contract";
 import { getSupabaseUser } from "@/lib/supabase/user";
 
 export type ResumePdfUploadState =
@@ -16,6 +21,9 @@ export type ResumePdfUploadState =
       pageCount: number;
       characterCount: number;
       text: string;
+      draft:
+        | { status: "ready"; value: ResumeProfileDraftV1 }
+        | { status: "unavailable"; message: string };
     };
 
 function isResumePdfFile(value: FormDataEntryValue | null): value is File {
@@ -57,6 +65,24 @@ function messageForFailure(
   return "The PDF could not be read. Choose a valid, unencrypted PDF.";
 }
 
+function messageForDraftFailure(
+  result: Exclude<GenerateResumeProfileDraftResult, { status: "success" }>,
+): string {
+  if (result.status === "invalid_input" && result.reason === "text_too_long") {
+    return "The extracted text is too long to draft safely. The text preview remains available.";
+  }
+  if (result.status === "configuration_unavailable") {
+    return "Profile drafting is temporarily unavailable. The text preview remains available.";
+  }
+  if (result.status === "provider_refusal") {
+    return "A profile draft could not be prepared from this resume. The text preview remains available.";
+  }
+  if (result.status === "invalid_output") {
+    return "The generated draft could not be validated. Nothing was saved or confirmed.";
+  }
+  return "Profile drafting is temporarily unavailable. Nothing was saved or confirmed.";
+}
+
 export async function extractResumePdfAction(
   _previousState: ResumePdfUploadState,
   formData: FormData,
@@ -78,6 +104,7 @@ export async function extractResumePdfAction(
   if (result.status !== "success") {
     return { status: "error", message: messageForFailure(result.status) };
   }
+  const draftResult = await generateResumeProfileDraft(result.text);
 
   return {
     status: "success",
@@ -87,5 +114,12 @@ export async function extractResumePdfAction(
     pageCount: result.pageCount,
     characterCount: result.characterCount,
     text: result.text,
+    draft:
+      draftResult.status === "success"
+        ? { status: "ready", value: draftResult.draft }
+        : {
+            status: "unavailable",
+            message: messageForDraftFailure(draftResult),
+          },
   };
 }

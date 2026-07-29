@@ -151,7 +151,7 @@ test("returns honest scanned, page-limit, encrypted, and malformed states", asyn
   );
 });
 
-test("upload action authenticates and has no persistence or provider path", () => {
+test("upload action authenticates and preserves extraction without persistence", () => {
   const action = readFileSync("app/(app)/resumes/actions.ts", "utf8");
   const extractor = readFileSync(
     "lib/resumes/resume-pdf-extraction.ts",
@@ -162,6 +162,6 @@ test("upload action authenticates and has no persistence or provider path", () =
   assert.match(extractor, /from "unpdf"/);
   assert.doesNotMatch(
     `${action}\n${extractor}`,
-    /\.from\(|\.rpc\(|storage|upload\(|insert\(|update\(|upsert\(|openai|provider|confirmed:\s*true/i,
+    /\.from\(|\.rpc\(|storage|upload\(|insert\(|update\(|upsert\(|confirmed:\s*true/i,
   );
 });
