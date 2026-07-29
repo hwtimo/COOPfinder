@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PRIVATE_JOB_DESCRIPTION_MAX_LENGTH } from "./job-url-intake";
 
@@ -14,6 +16,28 @@ type TransitionResponse = {
   data: unknown;
   error: unknown;
 };
+
+export async function updateOwnedPastedUrlJobText(
+  supabase: SupabaseClient,
+  userId: string,
+  jobId: string,
+  rawText: string,
+  expectedSourceUrl?: string,
+): Promise<TransitionResponse> {
+  let query = supabase
+    .from("job_postings")
+    .update({ raw_text: rawText, intake_source: "pasted_text" })
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .eq("intake_source", "pasted_url");
+
+  if (expectedSourceUrl !== undefined) {
+    query = query.eq("source_url", expectedSourceUrl);
+  }
+
+  const response = await query.select("id").maybeSingle();
+  return { data: response.data, error: response.error };
+}
 
 type ManualJobDescriptionRequestContext =
   | {
@@ -102,16 +126,12 @@ async function getProductionRequestContext(): Promise<ManualJobDescriptionReques
   return {
     status: "ready",
     async updateOwnedPastedUrlJob(jobId, rawText) {
-      const response = await supabase
-        .from("job_postings")
-        .update({ raw_text: rawText, intake_source: "pasted_text" })
-        .eq("id", jobId)
-        .eq("user_id", user.id)
-        .eq("intake_source", "pasted_url")
-        .select("id")
-        .maybeSingle();
-
-      return { data: response.data, error: response.error };
+      return updateOwnedPastedUrlJobText(
+        supabase,
+        user.id,
+        jobId,
+        rawText,
+      );
     },
   };
 }

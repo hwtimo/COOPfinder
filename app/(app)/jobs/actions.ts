@@ -23,6 +23,10 @@ import {
   validatePrivateJobFormValues,
 } from "@/lib/jobs/forms";
 import {
+  fetchAndPersistOwnedJobUrl,
+  type FetchAndPersistOwnedJobUrlResult,
+} from "@/lib/jobs/fetch-and-persist-owned-job-url";
+import {
   intakeSourceAfterManualEdit,
   jobUrlFieldError,
   preparePrivateJobIntake,
@@ -127,6 +131,17 @@ export async function saveManualJobDescriptionAction(
         message: "The job description could not be saved. Try again.",
       };
   }
+}
+
+export async function fetchSavedJobUrlAction(
+  jobId: string,
+): Promise<FetchAndPersistOwnedJobUrlResult> {
+  const result = await fetchAndPersistOwnedJobUrl(jobId);
+  if (result.status === "success") {
+    revalidatePath("/jobs");
+    revalidatePath(`/jobs/${jobId}`);
+  }
+  return result;
 }
 
 async function getOrCreateCompany(

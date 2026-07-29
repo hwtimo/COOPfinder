@@ -16,7 +16,7 @@ export const JOB_URL_FETCH_MAX_RESPONSE_BYTES = 1024 * 1024;
 export const JOB_URL_FETCH_MAX_TEXT_CHARACTERS = 100_000;
 
 export type JobUrlFetchResult =
-  | { status: "success"; text: string }
+  | { status: "success"; text: string; sourceUrl: string }
   | { status: "unauthenticated" }
   | { status: "job_unavailable" }
   | { status: "source_unavailable" }
@@ -317,7 +317,7 @@ export function createJobUrlFetchTransport(
       return { status: "oversized_body" };
     }
 
-    return { status: "success", text };
+    return { status: "success", text, sourceUrl: url.toString() };
   };
 }
 

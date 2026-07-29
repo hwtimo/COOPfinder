@@ -63,6 +63,7 @@ test("loads one owned URL, resolves once, requests once, and extracts readable H
   assert.deepEqual(await fetchJobUrl(JOB_ID), {
     status: "success",
     text: "Engineer Build & test",
+    sourceUrl: "https://jobs.example.com/role",
   });
   assert.deepEqual(calls, { source: 1, dns: 1, request: 1 });
 });
