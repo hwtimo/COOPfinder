@@ -27,6 +27,7 @@ function readyVersion() {
     status: "ready" as const,
     resumeVersionId: VERSION_ID,
     versionName: "Product Developer - tailored v1",
+    versionKind: "generated_original" as const,
     review: buildTailoredResumeDocumentReviewViewModel(content.content),
   };
 }
@@ -53,6 +54,7 @@ test("older generated-content v1 renders as a safe evidence record", () => {
     status: "ready",
     resumeVersionId: VERSION_ID,
     versionName: "Developer - tailored v1",
+    versionKind: "generated_original",
     review: {
       jobHeading: { title: "Developer", companyName: "Example" },
       summaryEvidence: [{
@@ -79,6 +81,15 @@ test("review route uses only the owner-scoped immutable loader and maps safe sta
   assert.match(page, /invalid_content/);
   assert.match(loader, /\.eq\("user_id", userId\)/);
   assert.doesNotMatch(`${page}\n${loader}`, /master_profiles|job_postings|raw_text|extracted/);
+});
+
+test("generated and user-edited versions are visibly distinguished without changing review rendering", () => {
+  const page = readFileSync("app/(app)/resumes/versions/[versionId]/page.tsx", "utf8");
+  assert.match(page, /Generated original/);
+  assert.match(page, /User-edited version/);
+  assert.match(page, /result\.versionKind === "generated_original"/);
+  assert.match(page, /<TailoredResumeEditor/);
+  assert.match(page, /<TailoredResumeReview version=\{result\}/);
 });
 
 test("print control uses window.print and print styles hide controls and application chrome", () => {

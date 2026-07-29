@@ -21,6 +21,8 @@ type ResumeVersionRow = Readonly<{
   name: string;
   content: unknown;
   jobPostingId: string | null;
+  authorship: string;
+  parentVersionId: string | null;
 }>;
 
 type OwnedVersionLookup =
@@ -40,6 +42,7 @@ export type GetOwnedTailoredResumeVersionResult =
       status: "ready";
       resumeVersionId: string;
       versionName: string;
+      versionKind: "generated_original" | "user_edited";
       review:
         | TailoredResumeDocumentReviewViewModel
         | TailoringGeneratedContentReviewViewModel;
@@ -98,10 +101,17 @@ export function createGetOwnedTailoredResumeVersionLoader(
       lookup.version.content,
     );
     if (documentContent.status === "valid") {
+      if (
+        lookup.version.authorship !== "ai_generated" ||
+        lookup.version.parentVersionId !== null
+      ) {
+        return { status: "invalid_content" };
+      }
       return {
         status: "ready",
         resumeVersionId: lookup.version.id,
         versionName: lookup.version.name,
+        versionKind: "generated_original",
         review: buildTailoredResumeDocumentReviewViewModel(
           documentContent.content,
         ),
@@ -112,10 +122,18 @@ export function createGetOwnedTailoredResumeVersionLoader(
       lookup.version.content,
     );
     if (userEditedContent.status === "valid") {
+      if (
+        lookup.version.authorship !== "user_authored" ||
+        lookup.version.parentVersionId !==
+          userEditedContent.content.parentVersionId
+      ) {
+        return { status: "invalid_content" };
+      }
       return {
         status: "ready",
         resumeVersionId: lookup.version.id,
         versionName: lookup.version.name,
+        versionKind: "user_edited",
         review: buildTailoredResumeDocumentReviewViewModelFromDocument(
           userEditedContent.content.document,
         ),
@@ -127,6 +145,12 @@ export function createGetOwnedTailoredResumeVersionLoader(
       return { status: "legacy_content_unavailable" };
     }
     if (parsed.status !== "valid") return { status: "invalid_content" };
+    if (
+      lookup.version.authorship !== "ai_generated" ||
+      lookup.version.parentVersionId !== null
+    ) {
+      return { status: "invalid_content" };
+    }
     const review = buildTailoringGeneratedContentReviewViewModel(parsed.content);
     if (review.status !== "ready") return { status: "invalid_content" };
 
@@ -134,6 +158,7 @@ export function createGetOwnedTailoredResumeVersionLoader(
       status: "ready",
       resumeVersionId: lookup.version.id,
       versionName: lookup.version.name,
+      versionKind: "generated_original",
       review: review.viewModel,
     };
   };
@@ -149,7 +174,9 @@ const productionLoader = createGetOwnedTailoredResumeVersionLoader({
     if (!supabase) return { status: "unavailable" };
     const { data, error } = await supabase
       .from("resume_versions")
-      .select("id,name,content,job_posting_id")
+      .select(
+        "id,name,content,job_posting_id,authorship,parent_version_id",
+      )
       .eq("id", versionId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -162,6 +189,8 @@ const productionLoader = createGetOwnedTailoredResumeVersionLoader({
             name: data.name,
             content: data.content,
             jobPostingId: data.job_posting_id,
+            authorship: data.authorship,
+            parentVersionId: data.parent_version_id,
           }
         : null,
     };

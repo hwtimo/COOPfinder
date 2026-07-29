@@ -6,9 +6,9 @@ import { getSupabaseUser } from "@/lib/supabase/user";
 
 import {
   buildUserEditedTailoredResumeVersion,
-  type UserEditedTailoredResumeInputV1,
   type UserEditedTailoredResumeVersionContentV1,
 } from "./user-edited-tailored-resume-version";
+import type { UserEditedTailoredResumeInputV1 } from "./user-edited-tailored-resume-input";
 
 type ParentVersionRow = Readonly<{
   id: string;

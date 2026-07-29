@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { CardSection } from "@/components/app/card-section";
 import { PageHeader } from "@/components/app/page-header";
 import { ResumeVersionPrintButton } from "@/components/app/resume-version-print-button";
+import { TailoredResumeEditor } from "@/components/app/tailored-resume-editor";
 import { TailoredResumeReview } from "@/components/app/tailored-resume-review";
 import { Button } from "@/components/ui/button";
 import { getLoginHref } from "@/lib/auth/paths";
@@ -25,6 +26,23 @@ export default async function ResumeVersionPage({
 
   if (result.status === "ready") {
     const completeDocument = "identity" in result.review;
+    const editableEntries = completeDocument
+      ? result.review.sections.flatMap((section) =>
+          section.entries.map((entry) => ({
+            entryId: entry.bullets[0]?.entryId ?? "",
+            heading: entry.heading,
+            bullets: entry.bullets.map((bullet) => ({
+              fragmentId: bullet.fragmentId,
+              text: bullet.text,
+            })),
+          })),
+        )
+      : [];
+    const canEdit =
+      completeDocument &&
+      result.versionKind === "generated_original" &&
+      editableEntries.length > 0 &&
+      editableEntries.every((entry) => entry.entryId.length > 0);
     return (
       <div className="space-y-6 print:space-y-0">
         <div className="print:hidden">
@@ -32,14 +50,31 @@ export default async function ResumeVersionPage({
             title={result.versionName}
             description={
               completeDocument
-                ? "Saved immutable tailored resume"
+                ? result.versionKind === "generated_original"
+                  ? "Generated original · Saved immutable tailored resume"
+                  : "User-edited version · Saved as a new immutable version"
                 : "Saved older tailoring record"
             }
             actions={
-              completeDocument ? <ResumeVersionPrintButton /> : undefined
+              completeDocument ? (
+                <>
+                  {canEdit ? (
+                    <Button asChild variant="outline" size="sm">
+                      <a href="#edit-version">Edit</a>
+                    </Button>
+                  ) : null}
+                  <ResumeVersionPrintButton />
+                </>
+              ) : undefined
             }
           />
         </div>
+        {canEdit ? (
+          <TailoredResumeEditor
+            parentVersionId={result.resumeVersionId}
+            initialEntries={editableEntries}
+          />
+        ) : null}
         <TailoredResumeReview version={result} />
         <style>{`@media print {
           @page { size: letter; margin: 0.55in; }

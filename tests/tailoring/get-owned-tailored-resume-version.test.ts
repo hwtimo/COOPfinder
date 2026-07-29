@@ -20,6 +20,7 @@ import { readyPreflightV2, resumeSourceSnapshotV2, validTailoringPlanV2 } from "
 
 const USER_ID = "a71a0000-0000-4000-8000-000000000001";
 const VERSION_ID = "b71a0000-0000-4000-8000-000000000001";
+const PARENT_VERSION_ID = "b71a0000-0000-4000-8000-000000000002";
 const JOB_ID = "c71a0000-0000-4000-8000-000000000001";
 
 function v2Content() {
@@ -67,7 +68,14 @@ function v1Content() {
 
 type Options = Readonly<{
   user?: Readonly<{ id: string }> | null;
-  row?: Readonly<{ id: string; name: string; content: unknown; jobPostingId: string | null }> | null;
+  row?: Readonly<{
+    id: string;
+    name: string;
+    content: unknown;
+    jobPostingId: string | null;
+    authorship: string;
+    parentVersionId: string | null;
+  }> | null;
   lookupUnavailable?: boolean;
 }>;
 
@@ -88,6 +96,8 @@ function harness(options: Options = {}) {
           name: "Product Developer - tailored v2",
           content: v2Content(),
           jobPostingId: JOB_ID,
+          authorship: "ai_generated",
+          parentVersionId: null,
         } : options.row,
       };
     },
@@ -100,6 +110,7 @@ test("owner loads a v2 complete document as an immutable privacy-safe review", a
   const result = await fixture.loader(VERSION_ID);
   assert.equal(result.status, "ready");
   if (result.status !== "ready" || !("identity" in result.review)) return;
+  assert.equal(result.versionKind, "generated_original");
   assert.equal(result.review.identity.fullName, "Avery Chen");
   const bullets = result.review.sections.flatMap((section) => section.entries.flatMap((entry) => entry.bullets.map((bullet) => bullet.text)));
   assert.deepEqual(bullets, ["Built keyboard-accessible navigation.", "Improved latency by 37% in 2025."]);
@@ -113,6 +124,8 @@ test("existing v1 generated content remains readable", async () => {
     name: "Developer - tailored v1",
     content: v1Content(),
     jobPostingId: JOB_ID,
+    authorship: "ai_generated",
+    parentVersionId: null,
   } }).loader(VERSION_ID);
   assert.equal(result.status, "ready");
   if (result.status !== "ready" || !("summaryEvidence" in result.review)) return;
@@ -121,7 +134,69 @@ test("existing v1 generated content remains readable", async () => {
 
 test("user-authored child content remains readable through the immutable review loader", async () => {
   const edited = buildUserEditedTailoredResumeVersion(
-    VERSION_ID,
+    PARENT_VERSION_ID,
+    v2Content(),
+    {
+      contractVersion: USER_EDITED_TAILORED_RESUME_INPUT_CONTRACT_VERSION,
+      entries: [
+        {
+          entryId: "entry_001",
+          bullets: [
+            {
+              fragmentId: "fragment_001_001",
+              text: "User-authored wording.",
+            },
+            {
+              fragmentId: "fragment_001_002",
+              text: "Moved to the second position.",
+            },
+          ],
+        },
+      ],
+    },
+  );
+  assert.equal(edited.status, "success");
+  if (edited.status !== "success") return;
+  const result = await harness({
+    row: {
+      id: VERSION_ID,
+      name: "Product Developer - tailored v2 - edited",
+      content: edited.content,
+      jobPostingId: JOB_ID,
+      authorship: "user_authored",
+      parentVersionId: PARENT_VERSION_ID,
+    },
+  }).loader(VERSION_ID);
+  assert.equal(result.status, "ready");
+  if (result.status !== "ready" || !("identity" in result.review)) return;
+  assert.equal(result.versionKind, "user_edited");
+  assert.deepEqual(
+    result.review.sections.flatMap((section) =>
+      section.entries.flatMap((entry) =>
+        entry.bullets.map((bullet) => bullet.text),
+      ),
+    ),
+    ["User-authored wording.", "Moved to the second position."],
+  );
+});
+
+test("stored authorship and parent lineage must match the strict content envelope", async () => {
+  assert.deepEqual(
+    await harness({
+      row: {
+        id: VERSION_ID,
+        name: "Product Developer - tailored v2",
+        content: v2Content(),
+        jobPostingId: JOB_ID,
+        authorship: "user_authored",
+        parentVersionId: PARENT_VERSION_ID,
+      },
+    }).loader(VERSION_ID),
+    { status: "invalid_content" },
+  );
+
+  const edited = buildUserEditedTailoredResumeVersion(
+    PARENT_VERSION_ID,
     v2Content(),
     {
       contractVersion: USER_EDITED_TAILORED_RESUME_INPUT_CONTRACT_VERSION,
@@ -140,30 +215,32 @@ test("user-authored child content remains readable through the immutable review 
   );
   assert.equal(edited.status, "success");
   if (edited.status !== "success") return;
-  const result = await harness({
-    row: {
-      id: VERSION_ID,
-      name: "Product Developer - tailored v2 - edited",
-      content: edited.content,
-      jobPostingId: JOB_ID,
-    },
-  }).loader(VERSION_ID);
-  assert.equal(result.status, "ready");
-  if (result.status !== "ready" || !("identity" in result.review)) return;
   assert.deepEqual(
-    result.review.sections.flatMap((section) =>
-      section.entries.flatMap((entry) =>
-        entry.bullets.map((bullet) => bullet.text),
-      ),
-    ),
-    ["User-authored wording."],
+    await harness({
+      row: {
+        id: VERSION_ID,
+        name: "Product Developer - tailored v2 - edited",
+        content: edited.content,
+        jobPostingId: JOB_ID,
+        authorship: "ai_generated",
+        parentVersionId: null,
+      },
+    }).loader(VERSION_ID),
+    { status: "invalid_content" },
   );
 });
 
 test("foreign, missing, detached-job, and malformed IDs share safe not-found behavior", async () => {
   for (const fixture of [
     harness({ row: null }),
-    harness({ row: { id: VERSION_ID, name: "Product Developer - tailored v2", content: v2Content(), jobPostingId: null } }),
+    harness({ row: {
+      id: VERSION_ID,
+      name: "Product Developer - tailored v2",
+      content: v2Content(),
+      jobPostingId: null,
+      authorship: "ai_generated",
+      parentVersionId: null,
+    } }),
   ]) {
     assert.deepEqual(await fixture.loader(VERSION_ID), { status: "not_found" });
   }
@@ -173,7 +250,13 @@ test("foreign, missing, detached-job, and malformed IDs share safe not-found beh
 test("unauthenticated, unavailable, malformed, and legacy states are safe", async () => {
   assert.deepEqual(await harness({ user: null }).loader(VERSION_ID), { status: "unauthenticated" });
   assert.deepEqual(await harness({ lookupUnavailable: true }).loader(VERSION_ID), { status: "unavailable" });
-  const base = { id: VERSION_ID, name: "Developer - tailored v1", jobPostingId: JOB_ID };
+  const base = {
+    id: VERSION_ID,
+    name: "Developer - tailored v1",
+    jobPostingId: JOB_ID,
+    authorship: "ai_generated",
+    parentVersionId: null,
+  };
   assert.deepEqual(await harness({ row: { ...base, content: { unsafe: true } } }).loader(VERSION_ID), { status: "invalid_content" });
   assert.deepEqual(await harness({ row: { ...base, content: { contractVersion: "tailoring-plan-output-v1", summaryEvidenceIds: [], sections: [] } } }).loader(VERSION_ID), { status: "legacy_content_unavailable" });
 });
