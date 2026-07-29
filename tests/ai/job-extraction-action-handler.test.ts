@@ -13,7 +13,7 @@ function dependencies(
   overrides: Partial<PrivateJobExtractionActionDependencies> = {},
 ): PrivateJobExtractionActionDependencies {
   return {
-    runBridge: async () => ({ status: "persisted" }),
+    runBridge: async () => ({ status: "persisted", creditResult: "used" }),
     revalidatePath: () => undefined,
     ...overrides,
   };
@@ -25,12 +25,15 @@ test("rejects malformed job ID before bridge invocation", async () => {
     dependencies({
       runBridge: async () => {
         bridgeCalls += 1;
-        return { status: "persisted" };
+        return { status: "persisted", creditResult: "used" };
       },
     }),
   );
 
-  assert.deepEqual(await handle("not-a-uuid"), { status: "invalid_job_id" });
+  assert.deepEqual(await handle("not-a-uuid"), {
+    status: "invalid_job_id",
+    creditResult: "not_used",
+  });
   assert.equal(bridgeCalls, 0);
 });
 
@@ -40,7 +43,7 @@ test("passes a valid private job ID unchanged", async () => {
     dependencies({
       runBridge: async (jobId) => {
         receivedIds.push(jobId);
-        return { status: "persisted" };
+        return { status: "persisted", creditResult: "used" };
       },
     }),
   );
@@ -56,7 +59,7 @@ test("calls the bridge exactly once", async () => {
     dependencies({
       runBridge: async () => {
         bridgeCalls += 1;
-        return { status: "persisted" };
+        return { status: "persisted", creditResult: "used" };
       },
     }),
   );
@@ -67,21 +70,21 @@ test("calls the bridge exactly once", async () => {
 });
 
 const directMappings: PrivateJobExtractionActionResult[] = [
-  { status: "persisted" },
-  { status: "already_persisted" },
-  { status: "unauthenticated" },
-  { status: "job_unavailable" },
-  { status: "unsupported_source" },
-  { status: "configuration_unavailable" },
-  { status: "provider_refusal" },
-  { status: "provider_unavailable" },
-  { status: "invalid_structured_output" },
-  { status: "invalid_job_text" },
-  { status: "persistence_unavailable" },
-  { status: "persistence_rejected" },
-  { status: "no_credits" },
-  { status: "daily_limit" },
-  { status: "credit_unavailable" },
+  { status: "persisted", creditResult: "used" },
+  { status: "already_persisted", creditResult: "used" },
+  { status: "unauthenticated", creditResult: "not_used" },
+  { status: "job_unavailable", creditResult: "refunded" },
+  { status: "unsupported_source", creditResult: "not_used" },
+  { status: "configuration_unavailable", creditResult: "refunded" },
+  { status: "provider_refusal", creditResult: "refunded" },
+  { status: "provider_unavailable", creditResult: "refunded" },
+  { status: "invalid_structured_output", creditResult: "refunded" },
+  { status: "invalid_job_text", creditResult: "not_used" },
+  { status: "persistence_unavailable", creditResult: "refunded" },
+  { status: "persistence_rejected", creditResult: "refunded" },
+  { status: "no_credits", creditResult: "not_used" },
+  { status: "daily_limit", creditResult: "not_used" },
+  { status: "credit_unavailable", creditResult: "refund_unavailable" },
 ];
 
 for (const expected of directMappings) {
@@ -103,6 +106,7 @@ test("unknown bridge output fails closed", async () => {
 
   assert.deepEqual(await handle(JOB_ID), {
     status: "persistence_unavailable",
+    creditResult: "refund_unavailable",
   });
 });
 
@@ -117,6 +121,7 @@ test("thrown bridge failure maps without internal details", async () => {
 
   assert.deepEqual(await handle(JOB_ID), {
     status: "provider_unavailable",
+    creditResult: "refund_unavailable",
   });
 });
 
@@ -155,7 +160,7 @@ test("raw job text cannot be supplied through the handler input", async () => {
     dependencies({
       runBridge: async (jobId) => {
         receivedIds.push(jobId);
-        return { status: "persisted" };
+        return { status: "persisted", creditResult: "used" };
       },
     }),
   );
@@ -172,7 +177,7 @@ test("revalidates only the private detail path after persisted outcomes", async 
     const paths: string[] = [];
     const handle = createPrivateJobExtractionActionHandler(
       dependencies({
-        runBridge: async () => ({ status }),
+        runBridge: async () => ({ status, creditResult: "used" }),
         revalidatePath: (path) => paths.push(path),
       }),
     );

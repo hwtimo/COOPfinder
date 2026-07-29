@@ -41,10 +41,18 @@ type FinalizeParserCreditResult =
   | { status: "unconfirmed" };
 
 export type ParserCreditEnforcedJobResult =
-  | ExtractAndPersistOwnedJobResult
-  | { status: "no_credits" }
-  | { status: "daily_limit" }
-  | { status: "credit_unavailable" };
+  | (ExtractAndPersistOwnedJobResult & {
+      creditResult: ParserAnalysisCreditResult;
+    })
+  | { status: "no_credits"; creditResult: "not_used" }
+  | { status: "daily_limit"; creditResult: "not_used" }
+  | { status: "credit_unavailable"; creditResult: "refund_unavailable" };
+
+export type ParserAnalysisCreditResult =
+  | "used"
+  | "not_used"
+  | "refunded"
+  | "refund_unavailable";
 
 export type ParserAnalysisCreditCoordinatorDependencies = {
   getRequestContext: () => Promise<ParserCreditRequestContext>;
@@ -162,27 +170,36 @@ export function createParserAnalysisCreditCoordinator(
     try {
       context = await dependencies.getRequestContext();
     } catch {
-      return { status: "credit_unavailable" };
+      return {
+        status: "credit_unavailable",
+        creditResult: "refund_unavailable",
+      };
     }
     if (context.status === "unauthenticated") {
-      return { status: "unauthenticated" };
+      return { status: "unauthenticated", creditResult: "not_used" };
     }
     if (context.status === "unavailable") {
-      return { status: "credit_unavailable" };
+      return {
+        status: "credit_unavailable",
+        creditResult: "refund_unavailable",
+      };
     }
 
     const reservation = await reserveParserCredit(context, jobId);
     switch (reservation.status) {
       case "no_credits":
-        return { status: "no_credits" };
+        return { status: "no_credits", creditResult: "not_used" };
       case "daily_limit":
-        return { status: "daily_limit" };
+        return { status: "daily_limit", creditResult: "not_used" };
       case "unsupported_source":
-        return { status: "unsupported_source" };
+        return { status: "unsupported_source", creditResult: "not_used" };
       case "invalid_input":
-        return { status: "invalid_job_text" };
+        return { status: "invalid_job_text", creditResult: "not_used" };
       case "unavailable":
-        return { status: "credit_unavailable" };
+        return {
+          status: "credit_unavailable",
+          creditResult: "refund_unavailable",
+        };
       case "reserved":
         break;
     }
@@ -207,10 +224,16 @@ export function createParserAnalysisCreditCoordinator(
       dependencies.reportDiagnostic(
         succeeded ? "consume_unconfirmed" : "refund_unconfirmed",
       );
-      return { status: "credit_unavailable" };
+      return {
+        status: "credit_unavailable",
+        creditResult: "refund_unavailable",
+      };
     }
 
-    return bridgeResult;
+    return {
+      ...bridgeResult,
+      creditResult: succeeded ? "used" : "refunded",
+    };
   };
 }
 

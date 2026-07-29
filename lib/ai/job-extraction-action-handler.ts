@@ -3,24 +3,11 @@ import "server-only";
 import { isUuid } from "@/lib/jobs/queries";
 
 import type { ParserCreditEnforcedJobResult } from "./parser-analysis-credit-coordinator";
+import type { ParserAnalysisCreditResult } from "./parser-analysis-credit-coordinator";
 
 export type PrivateJobExtractionActionResult =
-  | { status: "persisted" }
-  | { status: "already_persisted" }
-  | { status: "unauthenticated" }
-  | { status: "job_unavailable" }
-  | { status: "unsupported_source" }
-  | { status: "invalid_job_id" }
-  | { status: "configuration_unavailable" }
-  | { status: "provider_refusal" }
-  | { status: "provider_unavailable" }
-  | { status: "invalid_structured_output" }
-  | { status: "invalid_job_text" }
-  | { status: "persistence_unavailable" }
-  | { status: "persistence_rejected" }
-  | { status: "no_credits" }
-  | { status: "daily_limit" }
-  | { status: "credit_unavailable" };
+  | ParserCreditEnforcedJobResult
+  | { status: "invalid_job_id"; creditResult: "not_used" };
 
 export type PrivateJobExtractionActionDependencies = {
   runBridge: (jobId: string) => Promise<unknown>;
@@ -56,14 +43,32 @@ function isActionStatus(
 }
 
 function safeBridgeResult(value: unknown): ParserCreditEnforcedJobResult | null {
-  if (typeof value !== "object" || value === null || !("status" in value)) {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("status" in value) ||
+    !("creditResult" in value)
+  ) {
     return null;
   }
 
   const status = value.status;
-  if (!isActionStatus(status)) return null;
+  const creditResult = value.creditResult;
+  const creditResults = new Set<ParserAnalysisCreditResult>([
+    "used",
+    "not_used",
+    "refunded",
+    "refund_unavailable",
+  ]);
+  if (
+    !isActionStatus(status) ||
+    typeof creditResult !== "string" ||
+    !creditResults.has(creditResult as ParserAnalysisCreditResult)
+  ) {
+    return null;
+  }
 
-  return { status } as ParserCreditEnforcedJobResult;
+  return { status, creditResult } as ParserCreditEnforcedJobResult;
 }
 
 export function createPrivateJobExtractionActionHandler(
@@ -71,18 +76,26 @@ export function createPrivateJobExtractionActionHandler(
 ): (jobId: string) => Promise<PrivateJobExtractionActionResult> {
   return async function handlePrivateJobExtraction(jobId) {
     if (typeof jobId !== "string" || !isUuid(jobId)) {
-      return { status: "invalid_job_id" };
+      return { status: "invalid_job_id", creditResult: "not_used" };
     }
 
     let bridgeResult: unknown;
     try {
       bridgeResult = await dependencies.runBridge(jobId);
     } catch {
-      return { status: "provider_unavailable" };
+      return {
+        status: "provider_unavailable",
+        creditResult: "refund_unavailable",
+      };
     }
 
     const safeResult = safeBridgeResult(bridgeResult);
-    if (!safeResult) return { status: "persistence_unavailable" };
+    if (!safeResult) {
+      return {
+        status: "persistence_unavailable",
+        creditResult: "refund_unavailable",
+      };
+    }
 
     if (
       safeResult.status === "persisted" ||

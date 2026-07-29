@@ -46,8 +46,8 @@ function fetchedAnalysisFeedback(
   return {
     tone: feedback.tone,
     message: succeeded
-      ? feedback.message
-      : `The job description was fetched and saved. ${feedback.message}`,
+      ? `${feedback.message} ${feedback.creditMessage}`
+      : `The job description was fetched and saved. ${feedback.message} ${feedback.creditMessage}`,
     fetched: true,
     refresh: succeeded,
   };

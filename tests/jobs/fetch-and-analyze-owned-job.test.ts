@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { PrivateJobExtractionActionResult } from "../../lib/ai/job-extraction-action-handler";
 import { createFetchAndAnalyzeOwnedJobHandler } from "../../lib/jobs/fetch-and-analyze-owned-job";
 
 const JOB_ID = "46c24649-4b46-4ef4-8daf-49f575e6fe84";
@@ -16,12 +17,12 @@ test("successful preparation invokes existing Analyze exactly once", async () =>
     async analyze(jobId) {
       calls.analyze += 1;
       assert.equal(jobId, JOB_ID);
-      return { status: "persisted" };
+      return { status: "persisted", creditResult: "used" };
     },
   });
   assert.deepEqual(await run(JOB_ID), {
     status: "analysis_result",
-    analysis: { status: "persisted" },
+    analysis: { status: "persisted", creditResult: "used" },
   });
   assert.deepEqual(calls, { fetch: 1, analyze: 1 });
 });
@@ -45,7 +46,7 @@ test("every fetch failure skips Analyze, provider, and credit paths", async () =
         calls.analyze += 1;
         calls.provider += 1;
         calls.credit += 1;
-        return { status: "persisted" };
+        return { status: "persisted", creditResult: "used" };
       },
     });
     assert.deepEqual(await run(JOB_ID), {
@@ -57,24 +58,25 @@ test("every fetch failure skips Analyze, provider, and credit paths", async () =
 });
 
 test("analysis failures are returned unchanged after fetched text persistence", async () => {
-  for (const status of [
-    "no_credits",
-    "daily_limit",
-    "provider_unavailable",
-    "invalid_structured_output",
-    "persistence_unavailable",
-  ] as const) {
+  const failures = [
+    { status: "no_credits", creditResult: "not_used" },
+    { status: "daily_limit", creditResult: "not_used" },
+    { status: "provider_unavailable", creditResult: "refunded" },
+    { status: "invalid_structured_output", creditResult: "refunded" },
+    { status: "persistence_unavailable", creditResult: "refunded" },
+  ] satisfies PrivateJobExtractionActionResult[];
+  for (const failure of failures) {
     const run = createFetchAndAnalyzeOwnedJobHandler({
       async fetchAndPersist() {
         return { status: "success" };
       },
       async analyze() {
-        return { status };
+        return failure;
       },
     });
     assert.deepEqual(await run(JOB_ID), {
       status: "analysis_result",
-      analysis: { status },
+      analysis: failure,
     });
   }
 });
@@ -89,6 +91,6 @@ test("orchestrator reuses boundaries without provider, credit, persistence, or f
   assert.match(source, /^import "server-only";/);
   assert.doesNotMatch(
     source,
-    /supabase|openai|responses\.create|reserve|finalize|refund|job_postings|raw_text|fetch\(/i,
+    /supabase|openai|responses\.create|reserve_parser|finalize_parser|refund_parser|job_postings|raw_text|fetch\(/i,
   );
 });

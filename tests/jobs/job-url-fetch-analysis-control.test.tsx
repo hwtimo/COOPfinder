@@ -46,19 +46,19 @@ test("credit and analysis failures reuse existing safe feedback after fetch pers
   assert.deepEqual(
     jobUrlFetchAnalysisFeedback({
       status: "analysis_result",
-      analysis: { status: "no_credits" },
+      analysis: { status: "no_credits", creditResult: "not_used" },
     }),
     {
       tone: "error",
       message:
-        "The job description was fetched and saved. You have used your available job analyses.",
+        "The job description was fetched and saved. You have used your available job analyses. No analysis credit was used.",
       fetched: true,
       refresh: false,
     },
   );
   const providerFailure = jobUrlFetchAnalysisFeedback({
     status: "analysis_result",
-    analysis: { status: "provider_unavailable" },
+    analysis: { status: "provider_unavailable", creditResult: "refunded" },
   });
   assert.match(providerFailure.message, /fetched and saved/);
   assert.match(providerFailure.message, /temporarily unavailable/);
@@ -109,7 +109,7 @@ test("runner refreshes only after successful analysis", async () => {
     async invoke() {
       return {
         status: "analysis_result",
-        analysis: { status: "persisted" },
+        analysis: { status: "persisted", creditResult: "used" },
       };
     },
     refresh() {

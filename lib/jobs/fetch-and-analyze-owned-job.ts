@@ -47,7 +47,10 @@ export function createFetchAndAnalyzeOwnedJobHandler(
     try {
       analysis = await dependencies.analyze(jobId);
     } catch {
-      analysis = { status: "provider_unavailable" };
+      analysis = {
+        status: "provider_unavailable",
+        creditResult: "refund_unavailable",
+      };
     }
     return { status: "analysis_result", analysis };
   };

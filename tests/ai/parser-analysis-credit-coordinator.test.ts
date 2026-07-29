@@ -145,14 +145,29 @@ const blockedMappings: Array<{
     | "unavailable";
   expected: ParserCreditEnforcedJobResult;
 }> = [
-  { reserveStatus: "no_credits", expected: { status: "no_credits" } },
-  { reserveStatus: "daily_limit", expected: { status: "daily_limit" } },
+  {
+    reserveStatus: "no_credits",
+    expected: { status: "no_credits", creditResult: "not_used" },
+  },
+  {
+    reserveStatus: "daily_limit",
+    expected: { status: "daily_limit", creditResult: "not_used" },
+  },
   {
     reserveStatus: "unsupported_source",
-    expected: { status: "unsupported_source" },
+    expected: { status: "unsupported_source", creditResult: "not_used" },
   },
-  { reserveStatus: "invalid_input", expected: { status: "invalid_job_text" } },
-  { reserveStatus: "unavailable", expected: { status: "credit_unavailable" } },
+  {
+    reserveStatus: "invalid_input",
+    expected: { status: "invalid_job_text", creditResult: "not_used" },
+  },
+  {
+    reserveStatus: "unavailable",
+    expected: {
+      status: "credit_unavailable",
+      creditResult: "refund_unavailable",
+    },
+  },
 ];
 
 for (const { reserveStatus, expected } of blockedMappings) {
@@ -178,7 +193,7 @@ test("successful analysis reserves, invokes once, persists once, and consumes", 
 
   const result = await harness.coordinate(JOB_ID);
 
-  assert.deepEqual(result, { status: "persisted" });
+  assert.deepEqual(result, { status: "persisted", creditResult: "used" });
   assert.deepEqual(counters, { provider: 1, persistence: 1 });
   assert.deepEqual(
     harness.calls.map(({ name }) => name),
@@ -200,6 +215,7 @@ test("an unchanged successful persistence still consumes the new analysis credit
 
   assert.deepEqual(await harness.coordinate(JOB_ID), {
     status: "already_persisted",
+    creditResult: "used",
   });
   assert.equal(harness.calls[1]?.parameters.p_succeeded, true);
 });
@@ -216,6 +232,7 @@ test("provider failure refunds without persistence and preserves old analysis", 
 
   assert.deepEqual(await harness.coordinate(JOB_ID), {
     status: "provider_unavailable",
+    creditResult: "refunded",
   });
   assert.deepEqual(counters, { provider: 1, persistence: 0 });
   assert.equal(harness.calls[1]?.parameters.p_succeeded, false);
@@ -234,6 +251,7 @@ test("structured validation failure refunds and preserves old analysis", async (
 
   assert.deepEqual(await harness.coordinate(JOB_ID), {
     status: "invalid_structured_output",
+    creditResult: "refunded",
   });
   assert.deepEqual(counters, { provider: 1, persistence: 0 });
   assert.equal(harness.calls[1]?.parameters.p_succeeded, false);
@@ -250,6 +268,7 @@ test("persistence failure refunds and never reports success", async () => {
 
   assert.deepEqual(await harness.coordinate(JOB_ID), {
     status: "persistence_unavailable",
+    creditResult: "refunded",
   });
   assert.deepEqual(counters, { provider: 1, persistence: 1 });
   assert.equal(harness.calls[1]?.parameters.p_succeeded, false);
@@ -265,7 +284,10 @@ test("a transport failure retries finalization once without repeating work", asy
     ],
   });
 
-  assert.deepEqual(await harness.coordinate(JOB_ID), { status: "persisted" });
+  assert.deepEqual(await harness.coordinate(JOB_ID), {
+    status: "persisted",
+    creditResult: "used",
+  });
   assert.deepEqual(counters, { provider: 1, persistence: 1 });
   assert.equal(
     harness.calls.filter(({ name }) => name === "finalize_parser_analysis_credit")
@@ -289,6 +311,7 @@ test("a refund transport failure retries once without repeating provider work", 
 
   assert.deepEqual(await harness.coordinate(JOB_ID), {
     status: "provider_unavailable",
+    creditResult: "refunded",
   });
   assert.deepEqual(counters, { provider: 1, persistence: 0 });
   assert.equal(
@@ -310,6 +333,7 @@ test("unconfirmed finalization fails closed after one retry", async () => {
 
   assert.deepEqual(await harness.coordinate(JOB_ID), {
     status: "credit_unavailable",
+    creditResult: "refund_unavailable",
   });
   assert.deepEqual(counters, { provider: 1, persistence: 1 });
   assert.deepEqual(harness.diagnostics, ["consume_unconfirmed"]);
@@ -326,7 +350,10 @@ test("missing request authentication never invokes RPC or provider", async () =>
     reportDiagnostic: () => undefined,
   });
 
-  assert.deepEqual(await coordinate(JOB_ID), { status: "unauthenticated" });
+  assert.deepEqual(await coordinate(JOB_ID), {
+    status: "unauthenticated",
+    creditResult: "not_used",
+  });
   assert.equal(bridgeCalls, 0);
 });
 
@@ -345,6 +372,27 @@ test("request-context failure blocks the provider with a safe result", async () 
 
   assert.deepEqual(await coordinate(JOB_ID), {
     status: "credit_unavailable",
+    creditResult: "refund_unavailable",
   });
   assert.equal(bridgeCalls, 0);
+});
+
+test("an unconfirmed refund never claims that the credit was refunded", async () => {
+  const counters = { provider: 0, persistence: 0 };
+  const harness = coordinatorHarness({
+    runBridge: extractionBridge(counters, {
+      extractionStatus: "provider_unavailable",
+    }),
+    finalizeResponses: [
+      { data: null, error: { code: "first_failure" } },
+      { data: null, error: { code: "retry_failure" } },
+    ],
+  });
+
+  assert.deepEqual(await harness.coordinate(JOB_ID), {
+    status: "credit_unavailable",
+    creditResult: "refund_unavailable",
+  });
+  assert.deepEqual(counters, { provider: 1, persistence: 0 });
+  assert.deepEqual(harness.diagnostics, ["refund_unconfirmed"]);
 });
