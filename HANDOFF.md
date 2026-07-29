@@ -1381,3 +1381,27 @@ reservations/events, no credit-ledger or balance change, and no OpenAI/provider
 activity. The temporary job, generated and edited resume versions,
 application, and timeline were deleted; all scoped fixture counts returned to
 zero. R2-6 is complete and checked.
+
+## R2-7A Analyze / Analyze Again status UX
+
+Implementation commit `4aeda9f7ef21a23addef760f3a0c74b6de56747d`
+replaces the bare Analyze pending state with an ordered, truthful three-step
+status surface. The disabled in-flight state explicitly says that an already
+running analysis will not use another credit, while the existing synchronous
+submission guard continues to prevent a duplicate action call.
+
+The parser-credit coordinator now returns an explicit sanitized credit result:
+`used`, `not_used`, `refunded`, or `refund_unavailable`. The UI maps that
+server-confirmed value to separate credit copy for every typed Analyze result;
+it never infers a refund. A failed or uncertain finalization reports that
+refund status is unavailable. Analyze Again still refreshes only after a
+successful persisted result, so a failed attempt leaves the prior analysis
+visible and unchanged. Reservation IDs, provider details, prompts, and
+internal errors remain server-only.
+
+Focused Analyze, extraction action, parser-credit coordination, prior-analysis
+preservation, and URL-fetch integration tests passed 98/98. Lint, typecheck,
+the production Next.js webpack build, `git diff --check`, and
+`git diff --cached --check` passed. No schema, migration, provider path,
+credit policy, Generate UX, or unrelated design work changed. R2-7 remains
+unchecked pending its remaining slice and production verification.

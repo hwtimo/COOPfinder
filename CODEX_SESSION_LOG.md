@@ -3868,6 +3868,37 @@ only when necessary to explain configuration; never record their values.
   verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await separate authorization before starting R2-7.
 
+### R2-7A Analyze / Analyze Again status UX
+
+- **Date and time:** 2026-07-29 (America/Vancouver)
+- **Development phase:** ROADMAP R2-7A
+- **Classification:** PASS for this bounded Analyze status slice
+- **Implementation:** Commit
+  `4aeda9f7ef21a23addef760f3a0c74b6de56747d` adds an ordered three-step
+  Analyze pending surface, disables duplicate submission, and explains that
+  the already-running request will not use another credit.
+- **Credit truth:** The existing parser-credit coordinator now returns only
+  the sanitized explicit outcomes `used`, `not_used`, `refunded`, or
+  `refund_unavailable`. Typed failures display a fixed safe reason and the
+  corresponding credit result. Unconfirmed consume/refund finalization never
+  claims a refund and instead reports that refund status is unavailable.
+- **Preservation:** Analyze Again refreshes only for persisted success, so
+  provider, validation, persistence, or finalization failure leaves the
+  previously saved analysis unchanged. Reservation identifiers, provider
+  details, prompts, and internal errors remain server-only.
+- **Verification:** Focused Analyze, action-handler, parser-credit,
+  prior-analysis-preservation, and URL-fetch integration tests passed 98/98.
+  Lint, typecheck, production Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **Scope:** No schema, migration, Analyze persistence path, parser-credit
+  policy, Generate UX, provider request, or redesign was added or changed.
+- **ROADMAP state:** R2-7 remains incomplete and unchecked.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization for the remaining R2-7 work
+  and production verification.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
