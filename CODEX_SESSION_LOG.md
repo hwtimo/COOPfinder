@@ -3448,6 +3448,43 @@ only when necessary to explain configuration; never record their values.
   already-verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await separate authorization before R2-4.
 
+### R2-4A bounded server-side URL fetch transport
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-4A
+- **Classification:** PASS for this bounded implementation slice
+- **Implementation:** Commit
+  `2eb819618e4f5c86f301cf2c3e6e380fcc7c6124` adds a server-only coordinator
+  that authenticates through the request-bound Supabase client, selects only
+  the saved `source_url` for the authenticated owner and requested private job,
+  and performs at most one outbound HTTP(S) request.
+- **SSRF boundary:** Existing URL normalization is reapplied. All DNS answers
+  must be public; private, loopback, link-local, shared, multicast,
+  documentation, benchmark, transition, and reserved IPv4/IPv6 addresses are
+  blocked. The request is pinned to a validated address, credentials and
+  non-default ports are rejected, and redirects are returned for manual
+  fallback rather than followed.
+- **Resource and content bounds:** The transport uses an 8-second timeout,
+  1 MiB body cap, 100,000-character extracted-text cap, no retry, and accepts
+  only uncompressed HTML or plain text. HTML comments, scripts, styles,
+  noscript/template/SVG content, tags, and excess whitespace are removed
+  deterministically.
+- **Side-effect boundary:** There is no UI, route, persistence, Analyze,
+  parser/tailoring credit, provider, OpenAI, public-board, crawling, adapter,
+  CAPTCHA/login-wall bypass, or browser-automation behavior. Fetched text is
+  returned only from the server-only helper.
+- **Verification:** All DNS and network behavior was mocked. Focused transport,
+  URL-intake, and manual-transition tests passed 88/88. Lint, typecheck,
+  production Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **ROADMAP state:** R2-4 remains incomplete and unchecked because R2-4A adds
+  only the isolated transport foundation.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before integrating the bounded
+  transport with the saved-job preparation flow.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

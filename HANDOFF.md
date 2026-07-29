@@ -1072,3 +1072,34 @@ after verification.
 
 R2-3 is complete and checked. Do not start R2-4 without separate
 authorization.
+
+## R2-4A bounded server-side URL fetch transport
+
+Implementation commit `2eb819618e4f5c86f301cf2c3e6e380fcc7c6124`
+adds a server-only transport foundation for one authenticated owner's saved
+job URL. The coordinator authenticates with the request-bound Supabase client
+and reads only `source_url` from the owner-and-job-scoped private row. It has no
+route, UI, persistence, Analyze, credit, provider, OpenAI, or public-board
+integration.
+
+The transport accepts normalized HTTP/HTTPS URLs only, rejects credentials,
+non-default ports, localhost and unsafe literals, validates every DNS answer,
+and pins the single outbound request to one validated public address. Private,
+loopback, link-local, shared, multicast, documentation, benchmark, transition,
+and reserved IPv4/IPv6 ranges fail closed. Redirects are not followed; there
+are no retries, adapters, crawling, browser automation, or access-wall bypass.
+
+The request has an 8-second timeout and a 1 MiB response limit. Only
+uncompressed `text/html` and `text/plain` are accepted. Deterministic
+extraction removes comments, scripts, styles, noscript/template/SVG content,
+HTML markup, and excess whitespace; extracted text is limited to 100,000
+characters. Results are fixed typed states for success, authentication or
+ownership unavailability, missing/blocked sources, redirects, timeouts,
+oversized bodies, unsupported content, HTTP/network failure, empty text, and
+transport unavailability.
+
+All network and DNS behavior in tests is mocked; no real website was fetched.
+Focused URL transport, intake, and manual-transition tests passed 88/88. Lint,
+typecheck, production Next.js webpack build, and both diff checks passed.
+R2-4 remains unchecked because no UI, persistence, or Analyze integration is
+included in R2-4A.
