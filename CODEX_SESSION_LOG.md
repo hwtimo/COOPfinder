@@ -3757,6 +3757,42 @@ only when necessary to explain configuration; never record their values.
   verified Codex session; `/feedback` was not rerun.
 - **Next action:** Await separate authorization for the next R2-6 slice.
 
+### R2-6C one-click application status advance
+
+- **Date and time:** 2026-07-29 (America/Vancouver)
+- **Development phase:** ROADMAP R2-6C
+- **Classification:** PASS for this bounded status-action slice
+- **Implementation:** Commit
+  `592cfebf6dfc304032c325d2f0a1be24622f8789` adds a clear next-status action
+  to owned Application Detail and leaves the existing manual status selector
+  available.
+- **Progression:** `Saved → Tailoring → Ready → Applied → Interview → Offer`.
+  `Offer` and `Rejected` are terminal and expose no invalid advance action.
+  The next status and `Advance to …` label are visible before submission.
+- **Persistence and isolation:** The control reuses the existing request-bound
+  Server Action and atomic `update_application_status` RPC. The RPC continues
+  to derive ownership from `auth.uid()`, lock the owned application row, update
+  status/applied-at, and insert exactly one minimal `status_changed` timeline
+  event for a real transition.
+- **Duplicate behavior:** A synchronous client guard and pending disabled state
+  prevent duplicate in-flight clicks. Concurrent same-target calls serialize;
+  after the first transition, the existing RPC returns `unchanged` before its
+  event insert. The existing action refreshes Application Detail so the
+  persisted status and timeline are rendered.
+- **Verification:** Focused status, RPC, timeline, ownership, rendering, and
+  prior application-workflow tests passed 31/31. Lint, typecheck, production
+  Next.js webpack build, `git diff --check`, and
+  `git diff --cached --check` passed.
+- **Scope:** No schema change, migration, AI/provider request, credit activity,
+  date control, tracker redesign, drag-and-drop, or manual-status regression
+  was added or performed.
+- **ROADMAP state:** R2-6 remains incomplete and unchecked pending subsequent
+  slices and production verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization for the next R2-6 slice.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown

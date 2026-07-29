@@ -1301,3 +1301,27 @@ Focused selection, application persistence, workflow, and rendering tests
 passed 35/35. Lint, typecheck, production Next.js webpack build, and both diff
 checks passed. R2-6 remains unchecked pending later tracker slices and
 production verification.
+
+## R2-6C one-click application status advance
+
+Implementation commit `592cfebf6dfc304032c325d2f0a1be24622f8789`
+adds one explicit next-status action to Application Detail while preserving the
+existing manual status selector. The deterministic progression is
+`Saved → Tailoring → Ready → Applied → Interview → Offer`; both `Offer` and
+`Rejected` are terminal and render no advance action.
+
+The control displays the next status and an `Advance to …` button before
+submission. It reuses the existing authenticated Server Action and atomic
+`update_application_status` RPC, so the owner-scoped row lock, applied-at
+behavior, seven canonical statuses, timeline metadata, and path refresh remain
+unchanged. A successful transition refreshes the detail and its persisted
+timeline. The synchronous submission guard and pending disabled state prevent
+duplicate in-flight clicks; concurrent same-target RPC calls serialize, and
+the later no-op returns without inserting another event.
+
+Focused status progression, RPC, timeline, owner-isolation, rendering, and
+prior application-workflow tests passed 31/31. Lint, typecheck, production
+Next.js webpack build, and both diff checks passed. No schema change, migration,
+AI/provider request, credit activity, date control, tracker redesign, or
+drag-and-drop was added. R2-6 remains unchecked pending later tracker slices
+and production verification.
