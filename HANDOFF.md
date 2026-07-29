@@ -1164,3 +1164,36 @@ Focused orchestration, UI, transport, persistence, parser-credit, Analyze, and
 Profile Match tests passed 186/186. Lint, typecheck, production Next.js webpack
 build, and both diff checks passed. R2-4 remains unchecked pending production
 verification.
+
+## R2-5A immutable user-edited resume-version persistence
+
+Implementation commit `750ae23539fe825c7bf3a369403058c0de2236a7`
+adds the persistence foundation for user-authored edits without changing the
+generated original. A strict server-only coordinator authenticates the request,
+loads only an owned generated v2 version, validates the requested retained
+bullets against that immutable parent, and permits only bullet wording changes,
+removal, and within-entry ordering.
+
+The final normalized document is inserted atomically as a new
+`resume_versions` row. The child preserves the owned job relation, records
+`authorship = 'user_authored'`, links through `parent_version_id`, and carries a
+strict user-edit content envelope. Parent content and metadata are never
+updated or deleted. Invalid, empty, foreign, missing, already-edited, or
+unavailable parents fail closed before insertion. No provider, OpenAI, credit,
+reservation, ledger, or UI path is involved.
+
+Forward-only migration
+`20260729050747_add_user_edited_resume_versions.sql` adds the self-referential
+parent link and bounded authorship field to the existing table, with no
+parallel table or backfill. Existing rows retain the default
+`ai_generated`/no-parent state. Browser INSERT, UPDATE, and DELETE policies are
+removed, leaving owner SELECT access while trusted server persistence remains
+append-only. The migration is applied to the linked development project; all
+33 local and remote migrations align, the existing two generated versions
+remain unchanged, and no new resume-version security-advisor finding was
+introduced.
+
+Focused persistence, schema, loader, generated-document, finalization,
+reservation, and application-workflow tests passed 53/53. Lint, typecheck, the
+production Next.js webpack build, and both diff checks passed. R2-5 remains
+unchecked because editing UI and Print/PDF integration are later slices.

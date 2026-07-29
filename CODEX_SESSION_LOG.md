@@ -3562,6 +3562,52 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Await separate authorization to deploy and verify the
   bounded URL fetch-and-analyze flow in production.
 
+### R2-5A immutable user-edited resume-version persistence
+
+- **Date and time:** 2026-07-28 (America/Vancouver)
+- **Development phase:** ROADMAP R2-5A
+- **Classification:** PASS for this bounded implementation slice
+- **Implementation:** Commit
+  `750ae23539fe825c7bf3a369403058c0de2236a7` adds a strict server-only
+  coordinator that authenticates the request, loads an owned generated v2
+  resume version, and validates a complete retained-bullet edit request against
+  the immutable parent. Users may change bullet wording, omit bullets, and
+  reorder retained bullets within their original entry.
+- **Persistence:** One atomic INSERT creates a new child `resume_versions` row
+  with the same owned job relation, `authorship = 'user_authored'`, and
+  `parent_version_id` pointing to the generated original. The strict child
+  content envelope marks its document as user-authored. Parent content and
+  metadata are never modified or deleted.
+- **Validation and isolation:** Unknown or duplicated entries/fragments,
+  blank or malformed documents, missing/foreign parents, detached job
+  relations, and edited children used as parents fail before persistence.
+  The production read uses the request-bound owner scope; insertion uses the
+  existing server-only admin boundary. No caller-supplied user ID is accepted.
+- **Schema:** Forward-only migration
+  `20260729050747_add_user_edited_resume_versions.sql` adds only
+  `parent_version_id` and `authorship` to the existing table. Existing rows
+  remain `ai_generated` with no parent. Direct browser INSERT, UPDATE, and
+  DELETE policies are removed so resume versions remain append-only; owner
+  SELECT remains.
+- **Linked development verification:** The migration is applied. All 33 local
+  and remote migrations align. Both pre-existing generated versions retained
+  their original state, zero user-authored fixture rows were created, and the
+  security advisor added no resume-version finding.
+- **Side-effect boundary:** No UI, route, OpenAI/provider request, credit,
+  reservation, ledger, generation, Print/PDF, or parent mutation was added or
+  performed.
+- **Verification:** Focused persistence, migration, owner-loader,
+  generated-document, finalization, reservation, and application-workflow
+  tests passed 53/53. Lint, typecheck, production Next.js webpack build,
+  `git diff --check`, and `git diff --cached --check` passed.
+- **ROADMAP state:** R2-5 remains incomplete and unchecked because this slice
+  contains only the persistence foundation.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization before adding the tailored
+  resume editing UI and Print/PDF integration.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
