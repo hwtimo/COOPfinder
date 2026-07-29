@@ -20,7 +20,6 @@ const PRIVATE_JOB_COLUMNS = [
   "deadline",
   "source_url",
   "raw_text",
-  "match_score",
   "status",
   "coop_eligible",
   "work_authorization",
@@ -59,7 +58,6 @@ type PrivateJobRow = {
   deadline: string | null;
   source_url: string | null;
   raw_text: string | null;
-  match_score: number | null;
   status: PrivateJobStatus;
   coop_eligible: boolean;
   work_authorization: PrivateJobWorkAuthorization | null;
@@ -135,7 +133,6 @@ function toPrivateJob(row: PrivateJobRow): PrivateJob {
     deadline: row.deadline,
     sourceUrl: row.source_url,
     rawText: row.raw_text,
-    matchScore: row.match_score,
     status: row.status,
     coopEligible: row.coop_eligible,
     workAuthorization: row.work_authorization,

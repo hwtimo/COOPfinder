@@ -41,7 +41,6 @@ export type PrivateJob = {
   deadline: string | null;
   sourceUrl: string | null;
   rawText: string | null;
-  matchScore: number | null;
   status: PrivateJobStatus;
   coopEligible: boolean;
   workAuthorization: PrivateJobWorkAuthorization | null;

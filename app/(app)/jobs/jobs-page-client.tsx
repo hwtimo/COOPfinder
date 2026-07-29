@@ -30,7 +30,6 @@ import type {
   PrivateJobWorkAuthorization,
   PrivateJobWorkMode,
 } from "@/lib/jobs/types";
-import { cn } from "@/lib/utils";
 
 type DeadlineFilter = "all" | "overdue" | "today" | "48h" | "7d" | "later";
 
@@ -76,14 +75,6 @@ function matchesDeadlineFilter(
   if (filter === "48h") return days >= 0 && days <= 2;
   if (filter === "7d") return days >= 0 && days <= 7;
   return days > 7;
-}
-
-function matchTone(match: number | null) {
-  if (match === null) return "bg-muted text-text-secondary";
-  if (match >= 80) return "bg-success-soft text-success";
-  if (match >= 70) return "bg-info-soft text-info";
-  if (match >= 50) return "bg-warning-soft text-warning";
-  return "bg-muted text-text-secondary";
 }
 
 function FilterSelect({
@@ -445,7 +436,7 @@ export function JobsPageClient({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1220px] text-sm">
+              <table className="w-full min-w-[1100px] text-sm">
                 <thead className="bg-card">
                   <tr className="border-b text-left text-xs text-muted-foreground">
                     <th className="px-5 py-2.5 font-medium">Company</th>
@@ -454,7 +445,6 @@ export function JobsPageClient({
                     <th className="px-5 py-2.5 font-medium">Term</th>
                     <th className="px-5 py-2.5 font-medium">Work mode</th>
                     <th className="px-5 py-2.5 font-medium">Deadline</th>
-                    <th className="px-5 py-2.5 font-medium">Estimated match</th>
                     <th className="px-5 py-2.5 font-medium">Status</th>
                     <th className="px-5 py-2.5 font-medium">Last updated</th>
                     <th className="px-5 py-2.5 text-right font-medium">Actions</th>
@@ -509,18 +499,6 @@ export function JobsPageClient({
                               label={formatPrivateJobDeadline(job.deadline)}
                             />
                           )}
-                        </td>
-                        <td className="px-5 py-3">
-                          <span
-                            className={cn(
-                              "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums",
-                              matchTone(job.matchScore),
-                            )}
-                          >
-                            {job.matchScore === null
-                              ? "Not analyzed"
-                              : `${job.matchScore}%`}
-                          </span>
                         </td>
                         <td className="px-5 py-3">
                           <StatusBadge status={job.status} />
