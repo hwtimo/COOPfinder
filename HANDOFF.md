@@ -1197,3 +1197,27 @@ Focused persistence, schema, loader, generated-document, finalization,
 reservation, and application-workflow tests passed 53/53. Lint, typecheck, the
 production Next.js webpack build, and both diff checks passed. R2-5 remains
 unchecked because editing UI and Print/PDF integration are later slices.
+
+## R2-5B tailored-resume editing UI
+
+Implementation commit `663d45d97a67343824effe15e4b0fd33e673ed4c`
+connects owned generated v2 resume versions to the R2-5A append-only
+persistence boundary. Generated originals now expose an accessible editor for
+changing bullet wording, removing bullets, and reordering bullets within their
+existing entry. Saving creates and opens a new user-authored child version;
+the generated parent remains immutable.
+
+The review route validates persisted authorship and parent metadata before
+rendering and labels versions as `Generated original` or `User-edited version`.
+Only generated originals can open the editor. Empty or malformed submissions,
+foreign or missing parents, and unavailable persistence return fixed sanitized
+states. The client bundle uses a dedicated input contract and has no provider,
+credit, reservation, ledger, database, or server-only document dependency.
+
+Print/PDF continues to render the currently opened persisted version, so a
+user-edited child reloads and prints its saved bullet wording and order. No AI
+request, credit use, schema change, parent update, or redesign was added.
+
+Focused editor, persistence, owner-loader, migration, and review tests passed
+26/26. Lint, typecheck, production Next.js webpack build, and both diff checks
+passed. R2-5 remains unchecked pending production deployment and verification.

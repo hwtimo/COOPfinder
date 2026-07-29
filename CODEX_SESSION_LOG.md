@@ -3608,6 +3608,47 @@ only when necessary to explain configuration; never record their values.
 - **Next action:** Await separate authorization before adding the tailored
   resume editing UI and Print/PDF integration.
 
+### R2-5B tailored-resume editing UI
+
+- **Date and time:** 2026-07-29 (America/Vancouver)
+- **Development phase:** ROADMAP R2-5B
+- **Classification:** PASS for this bounded implementation slice
+- **Implementation:** Commit
+  `663d45d97a67343824effe15e4b0fd33e673ed4c` adds an accessible editor to
+  owned generated v2 resume versions. Users can change bullet wording, remove
+  bullets, and reorder bullets within their original entry.
+- **Save and lineage:** The Server Action validates a strict bounded input and
+  reuses the R2-5A owner-scoped coordinator. One successful save creates a new
+  immutable `user_authored` child, redirects to that persisted version, and
+  never updates or deletes the generated parent.
+- **Review and Print/PDF:** The owner loader validates stored authorship and
+  parent metadata. Review pages distinguish `Generated original` from
+  `User-edited version`; only the former exposes Edit. The existing review and
+  Print/PDF surfaces always use the currently opened persisted document, so a
+  child retains its edited wording and order after reload.
+- **Validation and isolation:** Empty or malformed edits, missing or foreign
+  versions, lineage mismatches, and unavailable persistence use fixed
+  non-sensitive outcomes. Authentication and ownership remain request-bound;
+  no caller-supplied owner ID is accepted.
+- **Client boundary correction:** Production build inspection found that the
+  initial client editor imported a server document module transitively through
+  its input type. The input schema was split into a client-safe module, and a
+  focused regression assertion prevents `node:crypto` or the server document
+  module from entering the editor bundle.
+- **Side-effect boundary:** No provider/OpenAI request, credit, reservation,
+  ledger event, database schema change, generated-parent mutation, or redesign
+  was added or performed.
+- **Verification:** Focused editor, persistence, owner-loader, migration, and
+  review tests passed 26/26. Lint, typecheck, production Next.js webpack build,
+  `git diff --check`, and `git diff --cached --check` passed.
+- **ROADMAP state:** R2-5 remains incomplete and unchecked pending production
+  deployment and verification.
+- **Real `/feedback` Session ID:**
+  `019f6955-16f0-7213-ac51-66050c8d6f54`. This work continued in the same
+  already-verified Codex session; `/feedback` was not rerun.
+- **Next action:** Await separate authorization to deploy and verify generated
+  original editing, child persistence, reload, and Print/PDF in production.
+
 Use the reusable template below for the next qualifying session.
 
 ```markdown
